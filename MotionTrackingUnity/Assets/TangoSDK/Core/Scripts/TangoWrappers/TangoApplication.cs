@@ -47,6 +47,7 @@ namespace Tango
         public bool m_motionTrackingAutoReset = true;
 		public bool m_enableAreaLearning = false;
 		public bool m_enableADFSaveLoad = false;
+        public bool m_enableUXLibrary = true;
 
 		private static string m_tangoServiceVersion = string.Empty;
 
@@ -71,6 +72,8 @@ namespace Tango
 		private bool m_isServiceConnected = false;
 		private bool m_shouldReconnectService = false;
 		private bool m_isDisconnecting = false;
+
+		private bool m_shouldFirePermissionsEvent = false;
 
 		/// <summary>
 		/// Gets the tango service version.
@@ -354,12 +357,14 @@ namespace Tango
 			if(!m_isServiceConnected)
 			{
 				m_isServiceConnected = true;
+				AndroidHelper.PerformanceLog("Unity _TangoConnect start");
 				if (TangoServiceAPI.TangoService_connect(m_callbackContext, TangoConfig.GetConfig()) != Common.ErrorType.TANGO_SUCCESS)
 	            {
 					Debug.Log(CLASS_NAME + ".Connect() Could not connect to the Tango Service!");
 	            }
 	            else
-	            {
+				{
+					AndroidHelper.PerformanceLog("Unity _TangoConnect end");
 					Debug.Log(CLASS_NAME + ".Connect() Tango client connected to service!");
 	            }
 			}
@@ -430,7 +435,7 @@ namespace Tango
 				m_shouldReconnectService = true;
 				_SuspendTangoServices();
 			}
-			Debug.Log("androidOnPause");
+			Debug.Log("androidOnPause done");
 		}
 
 		/// <summary>
@@ -444,7 +449,7 @@ namespace Tango
 				m_shouldReconnectService = false;
 				_ResumeTangoServices();
 			}
-			Debug.Log ("androidOnResume");
+			Debug.Log ("androidOnResume done");
 		}
 
 		/// <summary>
@@ -457,42 +462,65 @@ namespace Tango
 		{
 			Debug.Log("Activity returned result code : " + resultCode);
 
-			// was it accepted?
-			if(resultCode == (int)Common.AndroidResult.SUCCESS)
-			{
-				Debug.Log("Toggle these permissions");
-				if(requestCode == Common.TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE)
-				{
-					m_requiredPermissions ^= PermissionsTypes.MOTION_TRACKING;
-				}
-				else if(requestCode == Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE)
-				{
-					m_requiredPermissions ^= PermissionsTypes.AREA_LEARNING;
-				}
+            switch (requestCode)
+            {
+                case Common.TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE:
+                {
+                    if(resultCode == (int)Common.AndroidResult.SUCCESS)
+                    {
+                        _FlipBitAndCheckPermissions(PermissionsTypes.MOTION_TRACKING);
+                    }
+                    else
+                    {
+                        _PermissionWasDenied();
+                    }
+                    break;
+                }
+                case Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE:
+                {
+                    if(resultCode == (int)Common.AndroidResult.SUCCESS)
+                    {
+                        _FlipBitAndCheckPermissions(PermissionsTypes.AREA_LEARNING);
+                    }
+                    else
+                    {
+                        _PermissionWasDenied();
+                    }
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+            Debug.Log("Activity returned result end");
+		}
 
-				// are we still waiting on permissions?
-				if(m_requiredPermissions == 0) // all permissions are good!
-				{
-					Debug.Log("All permissions have been accepted!");
-					if(m_permissionEvent != null)
-					{
-						Debug.Log("Firing permission event with value TRUE!");
-						m_permissionEvent(true);
-					}
-				}
-				else
-				{
-					Debug.Log("Firing permission event with value FALSE!");
-					_RequestNextPermission();
-				}
-			}
-			else
+        /// <summary>
+        /// Start exceptions listener.
+        /// </summary>
+        /// <returns>The start exceptions listener.</returns>
+        private IEnumerator _StartExceptionsListener()
+        {
+            AndroidHelper.ShowStandardTangoExceptionsUI();
+            
+            while (!AndroidHelper.FindTangoExceptionsUILayout())
+            {
+                yield return 0;
+            }
+            
+            AndroidHelper.SetTangoExceptionsListener();
+        }
+
+		/// <summary>
+		/// Monobehavior update function.
+		/// </summary>
+		private void Update()
+		{
+			if(m_shouldFirePermissionsEvent)
 			{
-				m_requiredPermissions = PermissionsTypes.NONE;
-				if(m_permissionEvent != null)
-				{
-					m_permissionEvent(false);
-				}
+				_SendPermissionEvent(m_requiredPermissions == 0);
+				m_shouldFirePermissionsEvent = false;
 			}
 		}
 
@@ -518,20 +546,49 @@ namespace Tango
 			}
 		}
 
-		/// <summary>
-		/// Request next permission.
-		/// </summary>
-		private void _RequestNextPermission()
-		{
+        /// <summary>
+        /// Flip a permission bit and check to see if all permissions were accepted.
+        /// </summary>
+        /// <param name="permission">Permission.</param>
+        private void _FlipBitAndCheckPermissions(PermissionsTypes permission)
+        {
+            m_requiredPermissions ^= permission;
+            
+            if(m_requiredPermissions == 0) // all permissions are good!
+            {
+                Debug.Log("All permissions have been accepted!");
+				m_shouldFirePermissionsEvent = true;
+            }
+            else
+            {
+                _RequestNextPermission();
+            }
+        }
+
+        /// <summary>
+        /// A Tango permission was denied.
+        /// </summary>
+        private void _PermissionWasDenied()
+        {
+            m_requiredPermissions = PermissionsTypes.NONE;
+            if(m_permissionEvent != null)
+            {
+                _SendPermissionEvent(false);
+            }
+        }
+        
+        /// <summary>
+        /// Request next permission.
+        /// </summary>
+        private void _RequestNextPermission()
+        {
+            Debug.Log("TangoApplication._RequestNextPermission()");
+
 			// if no permissions are needed let's kick-off the Tango connect
 			if(m_requiredPermissions == PermissionsTypes.NONE)
-			{
-				if(m_permissionEvent != null)
-				{
-					Debug.Log("No permissions needed. Firing permission event with value TRUE!");
-                    m_permissionEvent(true);
-                }
-            }
+            {
+				m_shouldFirePermissionsEvent = true;
+			}
 
             if((m_requiredPermissions & PermissionsTypes.MOTION_TRACKING) == PermissionsTypes.MOTION_TRACKING)
 			{
@@ -556,6 +613,28 @@ namespace Tango
 				}
 			}
 		}
+
+        /// <summary>
+        /// Sends the permission event.
+        /// </summary>
+        /// <param name="permissions">If set to <c>true</c> permissions.</param>
+        private void _SendPermissionEvent(bool permissions)
+        {
+            if (m_enableUXLibrary && permissions)
+            {
+                if(gameObject.GetComponent<EventController>() == null)
+                {
+                    gameObject.AddComponent<EventController>();
+                }
+                
+                StartCoroutine(_StartExceptionsListener());
+            }
+
+            if(m_permissionEvent != null)
+            {
+                m_permissionEvent(permissions);
+            }
+        }
 
         #region NATIVE_FUNCTIONS
         /// <summary>

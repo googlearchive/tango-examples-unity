@@ -376,13 +376,21 @@ namespace Tango
         private int count;
 
         /// <summary>
+        /// Count of all Area Description Files (Read only).
+        /// </summary>
+        public int Count
+        {
+            get {return count;}
+        }
+        
+        /// <summary>
         /// Initializes a new instance of the <see cref="Tango.UUID_list"/> class.
         /// </summary>
         public UUID_list()
         {
             UUIDs = null;
         }
-
+        
         /// <summary>
         /// Populates the UUID list.
         /// </summary>
@@ -405,7 +413,7 @@ namespace Tango
                 UUIDs[i].PrepareUUIDMetaData();
             }
         }
-
+        
         /// <summary>
         /// Returns the latest ADF UUID found in the list
         /// </summary>
@@ -417,6 +425,20 @@ namespace Tango
                 return null;
             }
             return UUIDs[count - 1];
+        }
+
+        /// <summary>
+        /// Query specific ADF.
+        /// </summary>
+        /// <returns>UUIDUnityHolder object that contains the last ADF saved.</returns>
+        /// <param name="index">Index.</param>
+        public UUIDUnityHolder GetADFAtIndex(int index)
+        {
+            if(UUIDs == null || (index < 0 || index >= count))
+            {
+                return null;
+            }
+            return UUIDs[index];
         }
 
         /// <summary>

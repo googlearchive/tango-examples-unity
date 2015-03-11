@@ -23,7 +23,7 @@ using Tango;
 public class GUIController : MonoBehaviour {
 	private const float m_updateFrequency = 1.0f;
 	
-	public EventController m_tangoEventController;
+	public EventLogger m_tangoEventController;
 	public PoseController m_tangoPoseController;
 	public Pointcloud m_pointcloud;
 

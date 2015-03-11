@@ -27,6 +27,7 @@ public class AndroidHelper : MonoBehaviour
 	private const string PERMISSION_REQUESTER = "com.projecttango.permissionrequester.RequestManagerActivity";
 #pragma warning disable 414
 	private static AndroidJavaObject m_unityActivity = null;
+	private static AndroidJavaObject m_tangoHelper = null;
 #pragma warning restore 414
 
 	private static AndroidLifecycleCallbacks m_callbacks;
@@ -118,6 +119,12 @@ public class AndroidHelper : MonoBehaviour
 	#endif
 	}
 
+	public static AndroidJavaObject GetTangoHelperObject()
+	{
+		m_tangoHelper = new AndroidJavaObject("com.projecttango.unity.TangoUnityHelper", GetUnityActivity());
+		return m_tangoHelper;
+	}
+
 	/// <summary>
 	/// Gets the current application label.
 	/// </summary>
@@ -185,6 +192,15 @@ public class AndroidHelper : MonoBehaviour
 		}
 
 		return null;
+	}
+
+	public static void PerformanceLog(string message)
+	{
+		AndroidJavaObject unityActivity = GetUnityActivity();
+		if(unityActivity != null)
+		{
+			unityActivity.Call("logAndroidErrorMessage", message);
+		}
 	}
 
 	/// <summary>
@@ -284,6 +300,24 @@ public class AndroidHelper : MonoBehaviour
 		}
 	}
 
+	public static void ParseTangoEvent(double timestamp, int eventType, string key, string value)
+	{
+		AndroidJavaObject tangoObject = GetTangoHelperObject();
+		if(tangoObject != null)
+		{
+			tangoObject.Call("showTangoEvent", timestamp, eventType, key, value);
+		}
+	}
+
+	public static void ParseTangoPoseStatus(int poseStatus)
+	{
+		AndroidJavaObject tangoObject = GetTangoHelperObject();
+		if(tangoObject != null)
+		{
+			tangoObject.Call("showTangoPoseStatus", poseStatus);
+		}
+	}
+
 	/// <summary>
 	/// Determines if is tango core present.
 	/// </summary>
@@ -309,11 +343,10 @@ public class AndroidHelper : MonoBehaviour
 	/// <returns><c>true</c> if application has tango permissions; otherwise, <c>false</c>.</returns>
 	public static bool ApplicationHasTangoPermissions(string permissionType)
 	{
-		AndroidJavaObject unityActivity = GetUnityActivity();
-		
-		if(unityActivity != null)
+		AndroidJavaObject tangoObject = GetTangoHelperObject();
+		if(tangoObject != null)
 		{
-			return unityActivity.Call<bool>("hasPermission", permissionType);
+			return tangoObject.Call<bool>("hasPermission", permissionType);
         }
         
         return false;
@@ -341,6 +374,46 @@ public class AndroidHelper : MonoBehaviour
 		if(callFinish)
 		{
 			AndroidFinish();
+		}
+	}
+
+	/// <summary>
+	/// Shows the standard tango exceptions UI.
+	/// </summary>
+	public static void ShowStandardTangoExceptionsUI()
+	{
+		AndroidJavaObject tangoObject = GetTangoHelperObject();
+		if(tangoObject != null)
+		{
+			Debug.Log("Show UX exceptions");
+			tangoObject.Call("enableTangoExceptions");
+		}
+	}
+
+    /// <summary>
+    /// Finds the tango exceptions user interface layout.
+    /// </summary>
+    public static bool FindTangoExceptionsUILayout()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+        if(tangoObject != null)
+        {
+            Debug.Log("Find UX exceptions layout");
+            return tangoObject.Call<bool>("findExceptionsLayout");
+        }
+        return false;
+    }
+
+	/// <summary>
+	/// Sets the tango exceptions listener.
+	/// </summary>
+	public static void SetTangoExceptionsListener()
+	{
+		AndroidJavaObject tangoObject = GetTangoHelperObject();
+		if(tangoObject != null)
+		{
+			Debug.Log("Setting UX callbacks");
+			tangoObject.Call("setTangoExceptionsListener", UxExceptionListener.GetInstance);
 		}
 	}
 

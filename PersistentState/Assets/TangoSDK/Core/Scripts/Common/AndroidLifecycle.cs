@@ -25,7 +25,7 @@ public delegate void OnActivityResultEventHandler(int requestCode, int resultCod
 /// </summary>
 public class AndroidLifecycleCallbacks : AndroidJavaProxy 
 {	
-	public AndroidLifecycleCallbacks() : base("com.projecttango.unity.TangoUnityActivity$AndroidLifecycleListener"){}
+	public AndroidLifecycleCallbacks() : base("com.google.unity.GoogleUnityActivity$AndroidLifecycleListener"){}
 	
 	private static event OnPauseEventHandler m_onPause;
 	private static event OnResumeEventHandler m_onResume;

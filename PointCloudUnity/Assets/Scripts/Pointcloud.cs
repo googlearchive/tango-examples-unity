@@ -126,7 +126,7 @@ public class Pointcloud : DepthListener
             quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
             m_ssTd = Matrix4x4.TRS(position, quat, Vector3.one);
 
-            Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
+			Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
 			print("---------------------------------------------------------------");
 			print("uwTuc = " + uwTuc.ToString());
 			print("m_uwTss = " + m_uwTss.ToString());

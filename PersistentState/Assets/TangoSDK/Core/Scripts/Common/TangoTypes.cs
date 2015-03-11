@@ -382,7 +382,7 @@ namespace Tango
         {
             get {return count;}
         }
-
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.UUID_list"/> class.
         /// </summary>
@@ -390,7 +390,7 @@ namespace Tango
         {
             UUIDs = null;
         }
-
+        
         /// <summary>
         /// Populates the UUID list.
         /// </summary>
@@ -413,7 +413,7 @@ namespace Tango
                 UUIDs[i].PrepareUUIDMetaData();
             }
         }
-
+        
         /// <summary>
         /// Returns the latest ADF UUID found in the list
         /// </summary>
