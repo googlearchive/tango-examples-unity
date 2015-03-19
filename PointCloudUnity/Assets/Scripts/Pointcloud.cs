@@ -72,7 +72,7 @@ public class Pointcloud : DepthListener
         m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
 		m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
-		m_cTuc.SetColumn (1, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
+		m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
 		m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
 		m_cTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
@@ -184,7 +184,7 @@ public class Pointcloud : DepthListener
                     if( i < xyzij.xyz_count )
                     {
                         m_vertices[i].x = allPositions[i * 3];
-                        m_vertices[i].y = allPositions[(i * 3) + 1];
+                        m_vertices[i].y = -allPositions[(i * 3) + 1];
                         m_vertices[i].z = allPositions[(i * 3) + 2];
 
 						m_overallZ += m_vertices[i].z;
