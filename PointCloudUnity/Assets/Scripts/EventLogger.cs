@@ -21,28 +21,28 @@ using Tango;
 /// Get Tango events from Tango Service and log on GUI.
 /// </summary>
 public class EventLogger : TangoEventListener {
-	[HideInInspector]
-	public string m_eventString;
-	private TangoApplication m_tangoApplication;
-	
-	/// <summary>
-	/// Initialize the controller.
-	/// </summary>
-	void Start ()
-	{
-		m_eventString = string.Empty;
-		m_tangoApplication = FindObjectOfType<TangoApplication>();
-	}
-	
-	/// <summary>
-	/// Handle the callback sent by the Tango Service
-	/// when a new Tango event is sampled.
-	/// DO NOT USE THE UNITY API FROM INSIDE THIS FUNCTION!
-	/// </summary>
-	/// <param name="callbackContext">Callback context.</param>
-	/// <param name="tangoEvent">Tango event.</param>
-	protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
-	{
-		m_eventString = tangoEvent.event_key + ": " + tangoEvent.event_value;
-	}
+    [HideInInspector]
+    public string m_eventString;
+    private TangoApplication m_tangoApplication;
+    
+    /// <summary>
+    /// Initialize the controller.
+    /// </summary>
+    void Start ()
+    {
+        m_eventString = string.Empty;
+        m_tangoApplication = FindObjectOfType<TangoApplication>();
+    }
+    
+    /// <summary>
+    /// Handle the callback sent by the Tango Service
+    /// when a new Tango event is sampled.
+    /// DO NOT USE THE UNITY API FROM INSIDE THIS FUNCTION!
+    /// </summary>
+    /// <param name="callbackContext">Callback context.</param>
+    /// <param name="tangoEvent">Tango event.</param>
+    protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+    {
+        m_eventString = tangoEvent.event_key + ": " + tangoEvent.event_value;
+    }
 }

@@ -29,18 +29,18 @@ public class Pointcloud : DepthListener
     public float m_overallZ = 0.0f;
     [HideInInspector]
     public int m_pointsCount = 0;
-	[HideInInspector]
-	public float m_depthDeltaTime = 0.0f;
+    [HideInInspector]
+    public float m_depthDeltaTime = 0.0f;
 
-	private TangoApplication m_tangoApplication;
+    private TangoApplication m_tangoApplication;
 
     // Matrices for transforming pointcloud to world coordinates.
-	// Full equation is:
-	//   Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
-	private Matrix4x4 m_uwTss = new Matrix4x4 ();
+    // Full equation is:
+    //   Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
+    private Matrix4x4 m_uwTss = new Matrix4x4 ();
     private Matrix4x4 m_ssTd = new Matrix4x4 ();
-	private Matrix4x4 m_imuTd = new Matrix4x4 ();
-	private Matrix4x4 m_imuTc = new Matrix4x4();
+    private Matrix4x4 m_imuTd = new Matrix4x4 ();
+    private Matrix4x4 m_imuTc = new Matrix4x4();
     private Matrix4x4 m_cTuc = new Matrix4x4 ();
 
     // Some const value.
@@ -54,43 +54,43 @@ public class Pointcloud : DepthListener
     private int[] m_triangles;
     private bool m_isDirty;
     
-	// Logging data.
+    // Logging data.
     private double m_previousDepthDeltaTime = 0.0;
-	private bool m_isExtrinsicQuerable = false;
+    private bool m_isExtrinsicQuerable = false;
 
     /// <summary>
     /// Use this for initialization.
     /// </summary>
     public void Start() 
     {
-		m_tangoApplication = FindObjectOfType<TangoApplication>();
-		m_isDirty = false;
+        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_isDirty = false;
 
         m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (1, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
         m_uwTss.SetColumn (2, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
-		m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
-		m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
-		m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
-		m_cTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
+        m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
+        m_cTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
-		m_vertices = new Vector3[VERT_COUNT];
-		m_triangles = new int[VERT_COUNT];
-		// Assign triangles, note: this is just for visualizing point in the mesh data.
-		for (int i = 0; i < VERT_COUNT; i++)
-		{
-			m_triangles[i] = i;
-		}
+        m_vertices = new Vector3[VERT_COUNT];
+        m_triangles = new int[VERT_COUNT];
+        // Assign triangles, note: this is just for visualizing point in the mesh data.
+        for (int i = 0; i < VERT_COUNT; i++)
+        {
+            m_triangles[i] = i;
+        }
 
-		m_mesh = GetComponent<MeshFilter>().mesh;
+        m_mesh = GetComponent<MeshFilter>().mesh;
 
-		m_mesh.Clear();
-		m_mesh.vertices = m_vertices;
-		m_mesh.triangles = m_triangles;
-		m_mesh.RecalculateBounds();
-		m_mesh.RecalculateNormals();
+        m_mesh.Clear();
+        m_mesh.vertices = m_vertices;
+        m_mesh.triangles = m_triangles;
+        m_mesh.RecalculateBounds();
+        m_mesh.RecalculateNormals();
     }
 
     /// <summary>
@@ -100,25 +100,25 @@ public class Pointcloud : DepthListener
     {
         if (m_isDirty)
         {
-			double timestamp = 0.0;
-			TangoCoordinateFramePair pair;
-			TangoPoseData poseData = new TangoPoseData();
+            double timestamp = 0.0;
+            TangoCoordinateFramePair pair;
+            TangoPoseData poseData = new TangoPoseData();
 
-			pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-			pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-			PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-			Vector3 position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-			Quaternion quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
-			m_imuTd = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
-			
-			pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-			pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
-			PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-			position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-			quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
-			m_imuTc = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+            PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
+            Vector3 position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
+            Quaternion quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
+            m_imuTd = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
             
-			// Query pose to transform point cloud to world coordinates.
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
+            PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
+            position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
+            quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
+            m_imuTc = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+            
+            // Query pose to transform point cloud to world coordinates.
             pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             PoseProvider.GetPoseAtTime(poseData, m_previousDepthDeltaTime, pair);
@@ -126,22 +126,22 @@ public class Pointcloud : DepthListener
             quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
             m_ssTd = Matrix4x4.TRS(position, quat, Vector3.one);
 
-			Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
-			print("---------------------------------------------------------------");
-			print("uwTuc = " + uwTuc.ToString());
-			print("m_uwTss = " + m_uwTss.ToString());
-			print("m_ssTd = " + m_ssTd.ToString());
-			print("m_imuTd = " + m_imuTd.ToString());
-			print("m_imuTc = " + m_imuTc.ToString());
-			print("m_cTuc = " + m_cTuc.ToString());
-			print("---------------------------------------------------------------");
-			transform.position = uwTuc.GetColumn(3);
-			transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
+            Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
+            print("---------------------------------------------------------------");
+            print("uwTuc = " + uwTuc.ToString());
+            print("m_uwTss = " + m_uwTss.ToString());
+            print("m_ssTd = " + m_ssTd.ToString());
+            print("m_imuTd = " + m_imuTd.ToString());
+            print("m_imuTc = " + m_imuTc.ToString());
+            print("m_cTuc = " + m_cTuc.ToString());
+            print("---------------------------------------------------------------");
+            transform.position = uwTuc.GetColumn(3);
+            transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
 
-			m_mesh.Clear();
-			m_mesh.vertices = m_vertices;
-			m_mesh.triangles = m_triangles;
-			m_mesh.SetIndices(m_triangles, MeshTopology.Points, 0);
+            m_mesh.Clear();
+            m_mesh.vertices = m_vertices;
+            m_mesh.triangles = m_triangles;
+            m_mesh.SetIndices(m_triangles, MeshTopology.Points, 0);
 
             m_isDirty = false;
         }
@@ -173,7 +173,7 @@ public class Pointcloud : DepthListener
         {
             int numberOfActiveVertices = xyzij.xyz_count;
             m_pointsCount = numberOfActiveVertices;
-			float validPointCount = 0;
+            float validPointCount = 0;
             if(numberOfActiveVertices > 0)
             {
                 float[] allPositions = new float[numberOfActiveVertices * 3];
@@ -187,8 +187,8 @@ public class Pointcloud : DepthListener
                         m_vertices[i].y = -allPositions[(i * 3) + 1];
                         m_vertices[i].z = allPositions[(i * 3) + 2];
 
-						m_overallZ += m_vertices[i].z;
-						++validPointCount;
+                        m_overallZ += m_vertices[i].z;
+                        ++validPointCount;
                     }
                     else
                     {
@@ -197,15 +197,15 @@ public class Pointcloud : DepthListener
                 }
                 m_isDirty = true;
             }
-			// Don't divide by zero!
-			if (validPointCount != 0)
-			{
-				m_overallZ = m_overallZ / validPointCount;
-			} 
-			else
-			{
-				m_overallZ = 0;
-			}
+            // Don't divide by zero!
+            if (validPointCount != 0)
+            {
+                m_overallZ = m_overallZ / validPointCount;
+            } 
+            else
+            {
+                m_overallZ = 0;
+            }
         }
     }
 }
