@@ -51,10 +51,20 @@ public class PoseController : PoseListener
     private Vector3 m_tangoPosition;
     private bool m_isDirty = false;
 
-    // Matrix for Tango coordinate frame to Unity coordinate frame conversion.
-    // Start of service frame with respect to Unity world frame.
+    // We use couple of matrix transformation to convert the pose from Tango coordinate
+    // frame to Unity coordinate frame.
+    // The full equation is:
+    //     Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
+    //
+    // uwTuc: Unity camera with respect to Unity world, this is the desired matrix.
+    // m_uwTss: Constant matrix converting start of service frame to Unity world frame.
+    // ssTd: Device frame with repect to start of service frame, this matrix denotes the 
+    //       pose transform we get from pose callback.
+    // m_dTuc: Constant matrix converting Unity world frame frame to device frame.
+    //
+    // Please see the coordinate system section online for more information:
+    //     https://developers.google.com/project-tango/overview/coordinate-systems
     private Matrix4x4 m_uwTss;
-    // Unity camera frame with respect to device frame.
     private Matrix4x4 m_dTuc;
 
     // Flag for initilizing Tango.
@@ -65,12 +75,14 @@ public class PoseController : PoseListener
     /// </summary>
     private void Awake()
     {
+        // Constant matrix converting start of service frame to Unity world frame.
         m_uwTss = new Matrix4x4();
         m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (1, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
         m_uwTss.SetColumn (2, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
+        // Constant matrix converting Unity world frame frame to device frame.
         m_dTuc = new Matrix4x4();
         m_dTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
         m_dTuc.SetColumn (1, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
@@ -139,7 +151,10 @@ public class PoseController : PoseListener
         }
         if (m_isDirty)
         {
+            // Construct the start of service with respect to device matrix from the pose.
             Matrix4x4 ssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
+
+            // Converting from Tango coordinate frame to Unity coodinate frame.
             Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
             
             // Extract new local position

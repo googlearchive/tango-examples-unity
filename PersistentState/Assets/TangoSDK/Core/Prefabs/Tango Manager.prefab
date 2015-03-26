@@ -43,6 +43,8 @@ MonoBehaviour:
   m_enableDepth: 0
   m_motionTrackingAutoReset: 1
   m_enableAreaLearning: 0
+  m_enableADFSaveLoad: 0
+  m_enableUXLibrary: 0
 --- !u!1001 &100100000
 Prefab:
   m_ObjectHideFlags: 1

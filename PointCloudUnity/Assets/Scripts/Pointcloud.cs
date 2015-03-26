@@ -35,6 +35,7 @@ public class Pointcloud : DepthListener
     private TangoApplication m_tangoApplication;
 
     // Matrices for transforming pointcloud to world coordinates.
+    // This equation will take account of the camera sensors extrinsic.
     // Full equation is:
     //   Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
     private Matrix4x4 m_uwTss = new Matrix4x4 ();
@@ -104,37 +105,49 @@ public class Pointcloud : DepthListener
             TangoCoordinateFramePair pair;
             TangoPoseData poseData = new TangoPoseData();
 
+            // Query the extrinsics between IMU and device frame.
             pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-            Vector3 position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-            Quaternion quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
+            Vector3 position = new Vector3((float)poseData.translation[0],
+                                           (float)poseData.translation[1],
+                                           (float)poseData.translation[2]);
+            Quaternion quat = new Quaternion((float)poseData.orientation[0],
+                                             (float)poseData.orientation[1],
+                                             (float)poseData.orientation[2],
+                                             (float)poseData.orientation[3]);
             m_imuTd = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
             
+            // Query the extrinsics between IMU and color camera frame.
             pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
             PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-            position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-            quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
+            position = new Vector3((float)poseData.translation[0],
+                                   (float)poseData.translation[1],
+                                   (float)poseData.translation[2]);
+            quat = new Quaternion((float)poseData.orientation[0],
+                                  (float)poseData.orientation[1],
+                                  (float)poseData.orientation[2],
+                                  (float)poseData.orientation[3]);
             m_imuTc = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
             
-            // Query pose to transform point cloud to world coordinates.
+            // Query pose to transform point cloud to world coordinates, here we are using the timestamp
+            // that we get from depth.
             pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             PoseProvider.GetPoseAtTime(poseData, m_previousDepthDeltaTime, pair);
-            position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-            quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
+            position = new Vector3((float)poseData.translation[0],
+                                   (float)poseData.translation[1],
+                                   (float)poseData.translation[2]);
+            quat = new Quaternion((float)poseData.orientation[0],
+                                  (float)poseData.orientation[1],
+                                  (float)poseData.orientation[2],
+                                  (float)poseData.orientation[3]);
             m_ssTd = Matrix4x4.TRS(position, quat, Vector3.one);
 
+            // The transformation matrix that represents the pointcloud's pose.
             Matrix4x4 uwTuc = m_uwTss * m_ssTd * Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
-            print("---------------------------------------------------------------");
-            print("uwTuc = " + uwTuc.ToString());
-            print("m_uwTss = " + m_uwTss.ToString());
-            print("m_ssTd = " + m_ssTd.ToString());
-            print("m_imuTd = " + m_imuTd.ToString());
-            print("m_imuTc = " + m_imuTc.ToString());
-            print("m_cTuc = " + m_cTuc.ToString());
-            print("---------------------------------------------------------------");
+
             transform.position = uwTuc.GetColumn(3);
             transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
 
@@ -183,6 +196,8 @@ public class Pointcloud : DepthListener
                 {
                     if( i < xyzij.xyz_count )
                     {
+                        // Note that we are doing a simple axis switch to convert the point from
+                        // depth camera coordinate frame to Unity coordinate frame.
                         m_vertices[i].x = allPositions[i * 3];
                         m_vertices[i].y = -allPositions[(i * 3) + 1];
                         m_vertices[i].z = allPositions[(i * 3) + 2];

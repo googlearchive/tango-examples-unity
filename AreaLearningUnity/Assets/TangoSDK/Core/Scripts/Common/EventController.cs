@@ -13,14 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-using UnityEngine;
 using System;
+using UnityEngine;
 using Tango;
 
 /// <summary>
 /// Get Tango events from Tango Service and log on GUI.
 /// </summary>
-public class EventController : TangoEventListener {
+public class EventController : TangoEventListener
+{
     private string m_eventString;
     private TangoApplication m_tangoApplication;
 	private TangoEvent m_previousEvent;
@@ -37,6 +38,9 @@ public class EventController : TangoEventListener {
 		m_previousEvent = new TangoEvent();
     }
 
+    /// <summary>
+    /// Send tango event to be parsed by the UX library.
+    /// </summary>
 	private void Update()
 	{
 		if(m_dirty)
@@ -55,32 +59,10 @@ public class EventController : TangoEventListener {
     /// <param name="tangoEvent">Tango event.</param>
     protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
     {
-        //m_eventString = tangoEvent.event_key + ": " + tangoEvent.event_value;
-
 		m_previousEvent.timestamp = tangoEvent.timestamp;
 		m_previousEvent.type = tangoEvent.type;
 		m_previousEvent.event_key = tangoEvent.event_key;
 		m_previousEvent.event_value = tangoEvent.event_value;
 		m_dirty = true;
-
-		//Debug.Log(m_eventString);
-    }
-
-    /// <summary>
-    /// GUI function logs Tango event on screen.
-    /// </summary>
-    void OnGUI() 
-    {
-        Color oldColor = GUI.color;
-        GUI.color = Color.black;
-        if (m_tangoApplication.HasRequestedPermissions())
-        {
-            // Event logging.
-            GUI.Label(new Rect(Common.UI_LABEL_START_X,
-                               Common.UI_EVENT_LABEL_START_Y, 
-                               Common.UI_LABEL_SIZE_X ,
-                               Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + String.Format(Common.UX_TANGO_SYSTEM_EVENT, m_eventString) + "</size>");
-            GUI.color = oldColor;
-        }
     }
 }
