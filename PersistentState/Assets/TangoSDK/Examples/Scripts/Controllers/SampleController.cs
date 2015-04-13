@@ -22,7 +22,7 @@ using System;
 /// This is a basic movement controller based on
 /// pose estimation returned from the Tango Service.
 /// </summary>
-public class SampleController : PoseListener
+public class SampleController : MonoBehaviour, ITangoPose
 {
 	public enum TrackingTypes
 	{
@@ -240,7 +240,7 @@ public class SampleController : PoseListener
 	/// </summary>
 	/// <param name="callbackContext">Callback context.</param>
 	/// <param name="pose">Pose.</param>
-	protected override void _OnPoseAvailable(IntPtr callbackContext, TangoPoseData pose)
+	public void OnTangoPoseAvailable(TangoPoseData pose)
 	{
 		int currentIndex = 0;
 		

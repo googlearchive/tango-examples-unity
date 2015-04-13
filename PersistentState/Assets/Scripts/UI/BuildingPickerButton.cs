@@ -18,21 +18,21 @@ using System.Collections;
 
 public class BuildingPickerButton : TouchableObject {
 
-	public int buildingId;
-	
-	protected override void OnTouch() {
-	}
+    public int buildingId;
+    
+    protected override void OnTouch() {
+    }
 
-	protected override void OutTouch() {
-		if (!Statics.isPlacingObject)
-			BuildingManager.instance.CreateBulding(buildingId);
-	}
+    protected override void OutTouch() {
+        if (!Statics.isPlacingObject)
+            BuildingManager.instance.CreateBulding(buildingId);
+    }
 
-	protected override void TouchUp() {
-		
-	}
+    protected override void TouchUp() {
+        
+    }
 
-	protected override void Update() {
-		base.Update();
-	}
+    protected override void Update() {
+        base.Update();
+    }
 }

@@ -17,34 +17,33 @@ using UnityEngine;
 using System.Collections;
 
 public class StartSceneCameraController : MonoBehaviour {
+    public float spinningSpeed;
+    public Vignetting vignetting;
+    // Use this for initialization
+    void Start () {
+        StartCoroutine(ColorChromEffect());
+    }
+    
+    // Update is called once per frame
+    void Update () {
+        gameObject.transform.Rotate(new Vector3(0.0f, spinningSpeed, 0.0f));
+    }
 
-	public float spinningSpeed;
-	public Vignetting vignetting;
-	// Use this for initialization
-	void Start () {
-		StartCoroutine(ColorChromEffect());
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		gameObject.transform.Rotate(new Vector3(0.0f, spinningSpeed, 0.0f));
-	}
-
-	float counter = 0.0f;
-	float totalTime = 1.0f;
-	IEnumerator ColorChromEffect () {
-		while (true) {
-			counter += Time.deltaTime;
-			if (counter <= totalTime) {
-				vignetting.chromaticAberration = Mathf.Lerp(-6.0f, 6.0f, counter/totalTime);
-			}
-			if (counter > totalTime && counter <= 2*totalTime) {
-				vignetting.chromaticAberration = Mathf.Lerp(6.0f, -6.0f, (counter-totalTime)/totalTime);
-			}
-			if (counter > 2*totalTime) {
-				counter = 0.0f;
-			}
-			yield return null;
-		}
-	}
+    float counter = 0.0f;
+    float totalTime = 1.0f;
+    IEnumerator ColorChromEffect () {
+        while (true) {
+            counter += Time.deltaTime;
+            if (counter <= totalTime) {
+                vignetting.chromaticAberration = Mathf.Lerp(-6.0f, 6.0f, counter/totalTime);
+            }
+            if (counter > totalTime && counter <= 2*totalTime) {
+                vignetting.chromaticAberration = Mathf.Lerp(6.0f, -6.0f, (counter-totalTime)/totalTime);
+            }
+            if (counter > 2*totalTime) {
+                counter = 0.0f;
+            }
+            yield return null;
+        }
+    }
 }

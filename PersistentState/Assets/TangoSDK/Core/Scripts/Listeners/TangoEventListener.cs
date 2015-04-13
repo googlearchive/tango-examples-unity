@@ -15,32 +15,99 @@
  */
 using System;
 using UnityEngine;
-using Tango;
 
-/// <summary>
-/// Abstract base class that can be used to
-/// automatically register for onEventAvailable
-/// callbacks from the Tango Service.
-/// </summary>
-public abstract class TangoEventListener : MonoBehaviour
+namespace Tango
 {
-    public TangoEvents.TangoService_onEventAvailable m_onEventAvaialableCallback;
+    public delegate void OnTangoEventAvailableEventHandler(TangoEvent tangoEvent);
 
     /// <summary>
-    /// Sets the callback.
+    /// Abstract base class that can be used to
+    /// automatically register for onEventAvailable
+    /// callbacks from the Tango Service.
     /// </summary>
-    public virtual void SetCallback()
+    public class TangoEventListener
     {
-		m_onEventAvaialableCallback = new TangoEvents.TangoService_onEventAvailable(_onEventAvailable);
-		TangoEvents.SetCallback(m_onEventAvaialableCallback);
-		Debug.Log("------------------------Tango event callback set!");
-    }
+        private TangoEvents.TangoService_onEventAvailable m_onEventAvaialableCallback;
+        private OnTangoEventAvailableEventHandler m_onTangoEventAvailable;
+        private TangoEvent m_previousEvent;
+        private bool m_isDirty;
 
-    /// <summary>
-    /// Handle the callback sent by the Tango Service
-    /// when a new event is issued.
-    /// </summary>
-    /// <param name="callbackContext">Callback context.</param>
-    /// <param name="tangoEvent">Tango event.</param>
-    protected abstract void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent);
+        /// <summary>
+        /// Sets the callback.
+        /// </summary>
+        public virtual void SetCallback()
+        {
+    		m_onEventAvaialableCallback = new TangoEvents.TangoService_onEventAvailable(_onEventAvailable);
+    		TangoEvents.SetCallback(m_onEventAvaialableCallback);
+            m_previousEvent = new TangoEvent();
+            m_isDirty = false;
+        }
+
+		/// <summary>
+		/// Sends if tango event available.
+		/// </summary>
+		/// <param name="usingUXLibrary">If set to <c>true</c> using UX library.</param>
+        public void SendIfTangoEventAvailable(bool usingUXLibrary)
+		{
+			if(m_isDirty)
+			{
+				if(usingUXLibrary)
+				{
+					AndroidHelper.ParseTangoEvent(m_previousEvent.timestamp,
+					                              (int)m_previousEvent.type,
+					                              m_previousEvent.event_key,
+					                              m_previousEvent.event_value);
+				}
+
+	            if(m_onTangoEventAvailable != null)
+	            {
+	                m_onTangoEventAvailable(m_previousEvent);
+				}
+
+				m_isDirty = true;
+			}
+        }
+
+        /// <summary>
+        /// Registers the on tango event available.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoEventAvailable += handler;
+            }
+        }
+
+        /// <summary>
+        /// Unregisters the on tango event available.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoEventAvailable -= handler;
+            }
+        }
+
+        /// <summary>
+        /// Handle the callback sent by the Tango Service
+        /// when a new event is issued.
+        /// </summary>
+        /// <param name="callbackContext">Callback context.</param>
+        /// <param name="tangoEvent">Tango event.</param>
+        protected void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+        {
+            if(tangoEvent != null)
+            {
+                m_previousEvent.timestamp = tangoEvent.timestamp;
+                m_previousEvent.type = tangoEvent.type;
+                m_previousEvent.event_key = tangoEvent.event_key;
+                m_previousEvent.event_value = tangoEvent.event_value;
+                m_isDirty = true;
+            }
+        }
+    }
 }

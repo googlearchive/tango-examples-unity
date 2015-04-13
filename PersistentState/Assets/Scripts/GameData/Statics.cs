@@ -17,27 +17,27 @@ using UnityEngine;
 using System.Collections;
 
 public enum TangoPoseStates {
-	Connecting,
-	Relocalizing, // Relocalizing means running under motion tracking mode.
-	Running,
-	Unknown
+    Connecting,
+    Relocalizing, // Relocalizing means running under motion tracking mode.
+    Running,
+    Unknown
 }
 
 public class Statics {
-	// Game states.
-	public static bool isPlacingObject = false;
+    // Game states.
+    public static bool isPlacingObject = false;
 
-	// Tango states.
-	public static TangoPoseStates currentTangoState;
+    // Tango states.
+    public static TangoPoseStates currentTangoState;
 
-	// String consts.
-	public static string curADFId = "";
-	public static string curADFName = "";
-	public static string debugString = "statics";
-	public static string uiPanelConnectingService = "Connecting Tango Service";
-	public static string uiPanelRelocalizing = "Walk around to relocalize";
+    // String consts.
+    public static string curADFId = "";
+    public static string curADFName = "";
+    public static string debugString = "statics";
+    public static string uiPanelConnectingService = "Connecting Tango Service";
+    public static string uiPanelRelocalizing = "Walk around to relocalize";
 
-	// UI const.
-	public static float buildingPickerSlideInPosX = 6.65f;
-	public static float buildingPickerSlideOutPosX = 8.3f;
+    // UI const.
+    public static float buildingPickerSlideInPosX = 6.65f;
+    public static float buildingPickerSlideOutPosX = 8.3f;
 }

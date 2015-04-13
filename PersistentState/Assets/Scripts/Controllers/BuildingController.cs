@@ -17,19 +17,19 @@ using UnityEngine;
 using System.Collections;
 
 public class BuildingController : MonoBehaviour {
-	public GameObject buildingOutfit;
+    public GameObject buildingOutfit;
 
-	// Use this for initialization
-	void Start () {
-	
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	
-	}
+    // Use this for initialization
+    void Start () {
+    
+    }
+    
+    // Update is called once per frame
+    void Update () {
+    
+    }
 
-	public void SetBuildingOutfitColor (Color color) {
-		buildingOutfit.renderer.material.color = color;
-	}
+    public void SetBuildingOutfitColor (Color color) {
+        buildingOutfit.renderer.material.color = color;
+    }
 }

@@ -23,7 +23,7 @@ using Tango;
 /// <summary>
 /// Point cloud visualize using depth frame API.
 /// </summary>
-public class Pointcloud : DepthListener
+public class Pointcloud : MonoBehaviour, ITangoDepth
 {
     public SampleController m_poseController;
     [HideInInspector]
@@ -140,35 +140,34 @@ public class Pointcloud : DepthListener
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="xyzij">Xyzij.</param>
-    protected override void _OnDepthAvailable(IntPtr callbackContext, TangoXYZij xyzij)
+	public void OnTangoDepthAvailable(Tango.TangoUnityDepth xyzij)
     {
         // Calculate the time since the last successful depth data
         // collection.
         if (m_previousDepthDeltaTime == 0.0)
         {
-            m_previousDepthDeltaTime = xyzij.timestamp;
+            m_previousDepthDeltaTime = xyzij.m_timestamp;
         }
         else
         {
             m_numberOfDepthSamples++;
-            m_timeSinceLastDepthFrame = xyzij.timestamp - m_previousDepthDeltaTime;
-            m_previousDepthDeltaTime = xyzij.timestamp;
+            m_timeSinceLastDepthFrame = xyzij.m_timestamp - m_previousDepthDeltaTime;
+            m_previousDepthDeltaTime = xyzij.m_timestamp;
         }
 
         // Fill in the data to draw the point cloud.
         if (xyzij != null && m_vertices != null)
         {
-            int numberOfActiveVertices = xyzij.xyz_count;
+            int numberOfActiveVertices = xyzij.m_pointCount;
             m_pointsCount = numberOfActiveVertices;
 
             if(numberOfActiveVertices > 0)
             {
                 float[] allPositions = new float[numberOfActiveVertices * 3];
-                Marshal.Copy(xyzij.xyz[0], allPositions, 0, allPositions.Length);
                 
                 for(int i = 0; i < m_vertices.Length; ++i)
                 {
-                    if( i < xyzij.xyz_count )
+                    if( i < xyzij.m_pointCount )
                     {
                         m_vertices[i].x = allPositions[i * 3];
                         m_vertices[i].y = allPositions[(i * 3) + 1];

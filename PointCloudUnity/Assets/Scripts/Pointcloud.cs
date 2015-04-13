@@ -23,7 +23,7 @@ using Tango;
 /// <summary>
 /// Point cloud visualize using depth frame API.
 /// </summary>
-public class Pointcloud : DepthListener
+public class Pointcloud : MonoBehaviour, ITangoDepth
 {
     [HideInInspector]
     public float m_overallZ = 0.0f;
@@ -65,6 +65,7 @@ public class Pointcloud : DepthListener
     public void Start() 
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_tangoApplication.Register(this);
         m_isDirty = false;
 
         m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
@@ -167,40 +168,37 @@ public class Pointcloud : DepthListener
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="xyzij">Xyzij.</param>
-    protected override void _OnDepthAvailable(IntPtr callbackContext, TangoXYZij xyzij)
+    public void OnTangoDepthAvailable(TangoUnityDepth tangoDepth)
     {
         // Calculate the time since the last successful depth data
         // collection.
         if (m_previousDepthDeltaTime == 0.0)
         {
-            m_previousDepthDeltaTime = xyzij.timestamp;
+            m_previousDepthDeltaTime = tangoDepth.m_timestamp;
         }
         else
         {
-            m_depthDeltaTime = (float)((xyzij.timestamp - m_previousDepthDeltaTime) * 1000.0);
-            m_previousDepthDeltaTime = xyzij.timestamp;
+            m_depthDeltaTime = (float)((tangoDepth.m_timestamp - m_previousDepthDeltaTime) * 1000.0);
+            m_previousDepthDeltaTime = tangoDepth.m_timestamp;
         }
 
         // Fill in the data to draw the point cloud.
-        if (xyzij != null && m_vertices != null)
+        if (tangoDepth != null && m_vertices != null)
         {
-            int numberOfActiveVertices = xyzij.xyz_count;
+            int numberOfActiveVertices = tangoDepth.m_pointCount;
             m_pointsCount = numberOfActiveVertices;
             float validPointCount = 0;
             if(numberOfActiveVertices > 0)
             {
-                float[] allPositions = new float[numberOfActiveVertices * 3];
-                Marshal.Copy(xyzij.xyz[0], allPositions, 0, allPositions.Length);
-                
                 for(int i = 0; i < m_vertices.Length; ++i)
                 {
-                    if( i < xyzij.xyz_count )
+                    if(i < tangoDepth.m_pointCount)
                     {
                         // Note that we are doing a simple axis switch to convert the point from
                         // depth camera coordinate frame to Unity coordinate frame.
-                        m_vertices[i].x = allPositions[i * 3];
-                        m_vertices[i].y = -allPositions[(i * 3) + 1];
-                        m_vertices[i].z = allPositions[(i * 3) + 2];
+                        m_vertices[i].x = tangoDepth.m_vertices[i].x;
+                        m_vertices[i].y = -tangoDepth.m_vertices[i].y;
+                        m_vertices[i].z = tangoDepth.m_vertices[i].z;
 
                         m_overallZ += m_vertices[i].z;
                         ++validPointCount;

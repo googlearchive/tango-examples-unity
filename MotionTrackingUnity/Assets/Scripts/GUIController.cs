@@ -21,11 +21,38 @@ using Tango;
 /// FPS counter.
 /// </summary>
 public class GUIController : MonoBehaviour {
-    private const float m_updateFrequency = 1.0f;
+    
+    public const float UI_LABEL_START_X = 15.0f;
+    public const float UI_LABEL_START_Y = 15.0f;
+    public const float UI_LABEL_SIZE_X = 1920.0f;
+    public const float UI_LABEL_SIZE_Y = 35.0f;
+    public const float UI_LABEL_GAP_Y = 3.0f;
+    public const float UI_BUTTON_SIZE_X = 125.0f;
+    public const float UI_BUTTON_SIZE_Y = 65.0f;
+    public const float UI_BUTTON_GAP_X = 5.0f;
+    public const float UI_CAMERA_BUTTON_OFFSET = UI_BUTTON_SIZE_X + UI_BUTTON_GAP_X; 
+    public const float UI_LABEL_OFFSET = UI_LABEL_GAP_Y + UI_LABEL_SIZE_Y;
+    public const float UI_FPS_LABEL_START_Y = UI_LABEL_START_Y + UI_LABEL_OFFSET;
+    public const float UI_EVENT_LABEL_START_Y = UI_FPS_LABEL_START_Y + UI_LABEL_OFFSET;
+    public const float UI_POSE_LABEL_START_Y = UI_EVENT_LABEL_START_Y + UI_LABEL_OFFSET;
+    public const float UI_DEPTH_LABLE_START_Y = UI_POSE_LABEL_START_Y + UI_LABEL_OFFSET;
+    public const string UI_FLOAT_FORMAT = "F3";
+    public const string UI_FONT_SIZE = "<size=25>";
 
-    public EventLogger m_tangoEventController;
+    public const float UI_TANGO_VERSION_X = UI_LABEL_START_X;
+    public const float UI_TANGO_VERSION_Y = UI_LABEL_START_Y;
+    public const float UI_TANGO_APP_SPECIFIC_START_X = UI_TANGO_VERSION_X;
+    public const float UI_TANGO_APP_SPECIFIC_START_Y = UI_TANGO_VERSION_Y + (UI_LABEL_OFFSET * 2);
+
+    public const string UX_SERVICE_VERSION = "Service version: {0}";
+    public const string UX_TANGO_SERVICE_VERSION = "Tango service version: {0}";
+    public const string UX_TANGO_SYSTEM_EVENT = "Tango system event: {0}";
+    public const string UX_TARGET_TO_BASE_FRAME = "Target->{0}, Base->{1}:";
+    public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
+    public const float SECOND_TO_MILLISECOND = 1000.0f;
     public PoseController m_tangoPoseController;
 
+    private const float m_updateFrequency = 1.0f;
     private string m_FPSText;
     private int m_currentFPS;
     private int m_framesSinceUpdate;
@@ -101,9 +128,9 @@ public class GUIController : MonoBehaviour {
         else
         {
             return string.Format("{0}, {1}, {2}", 
-                                 vec.x.ToString(Common.UI_FLOAT_FORMAT),
-                                 vec.y.ToString(Common.UI_FLOAT_FORMAT),
-                                 vec.z.ToString(Common.UI_FLOAT_FORMAT));
+                                 vec.x.ToString(UI_FLOAT_FORMAT),
+                                 vec.y.ToString(UI_FLOAT_FORMAT),
+                                 vec.z.ToString(UI_FLOAT_FORMAT));
         }
     }
     
@@ -119,10 +146,10 @@ public class GUIController : MonoBehaviour {
         else
         {
             return string.Format("{0}, {1}, {2}, {3}",
-                                 quat.x.ToString(Common.UI_FLOAT_FORMAT),
-                                 quat.y.ToString(Common.UI_FLOAT_FORMAT),
-                                 quat.z.ToString(Common.UI_FLOAT_FORMAT),
-                                 quat.w.ToString(Common.UI_FLOAT_FORMAT));
+                                 quat.x.ToString(UI_FLOAT_FORMAT),
+                                 quat.y.ToString(UI_FLOAT_FORMAT),
+                                 quat.z.ToString(UI_FLOAT_FORMAT),
+                                 quat.w.ToString(UI_FLOAT_FORMAT));
         }
     }
     
@@ -156,7 +183,7 @@ public class GUIController : MonoBehaviour {
         }
         else
         {
-            return (frameDeltaTime * Common.SECOND_TO_MILLISECOND).ToString(Common.UI_FLOAT_FORMAT);
+            return (frameDeltaTime * SECOND_TO_MILLISECOND).ToString(UI_FLOAT_FORMAT);
         }
     }
 
@@ -167,49 +194,40 @@ public class GUIController : MonoBehaviour {
             Color oldColor = GUI.color;
             GUI.color = Color.white;
             
-            if (GUI.Button(new Rect(Common.UI_BUTTON_GAP_X, 
-                                    Screen.height - (Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y),
-                                    Common.UI_BUTTON_SIZE_X + 100, 
-                                    Common.UI_BUTTON_SIZE_Y), "<size=20>Reset motion tracking</size>"))
+            if (GUI.Button(new Rect(UI_BUTTON_GAP_X, 
+                                    Screen.height - (UI_BUTTON_SIZE_Y + UI_LABEL_GAP_Y),
+                                    UI_BUTTON_SIZE_X + 100, 
+                                    UI_BUTTON_SIZE_Y), "<size=20>Reset motion tracking</size>"))
             {
                 PoseProvider.ResetMotionTracking();
             }
 
             GUI.color = Color.black;
-            GUI.Label(new Rect(Common.UI_LABEL_START_X, 
-                               Common.UI_LABEL_START_Y, 
-                               Common.UI_LABEL_SIZE_X , 
-                               Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + String.Format(Common.UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
+            GUI.Label(new Rect(UI_LABEL_START_X, 
+                               UI_LABEL_START_Y, 
+                               UI_LABEL_SIZE_X , 
+                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
 
-            GUI.Label(new Rect(Common.UI_LABEL_START_X, 
-                               Common.UI_FPS_LABEL_START_Y, 
-                               Common.UI_LABEL_SIZE_X , 
-                               Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + m_FPSText + "</size>");
-
-            GUI.Label(new Rect(Common.UI_LABEL_START_X,
-                               Common.UI_EVENT_LABEL_START_Y, 
-                               Common.UI_LABEL_SIZE_X ,
-                               Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + String.Format(Common.UX_TANGO_SYSTEM_EVENT, m_tangoEventController.m_eventString) + "</size>");
-
+            GUI.Label(new Rect(UI_LABEL_START_X, 
+                               UI_FPS_LABEL_START_Y, 
+                               UI_LABEL_SIZE_X , 
+                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + m_FPSText + "</size>");
             // MOTION TRACKING
-            GUI.Label( new Rect(Common.UI_LABEL_START_X, 
-                                Common.UI_POSE_LABEL_START_Y,
-                                Common.UI_LABEL_SIZE_X , 
-                                Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + String.Format(Common.UX_TARGET_TO_BASE_FRAME,
+            GUI.Label( new Rect(UI_LABEL_START_X, 
+                        UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET,
+                                UI_LABEL_SIZE_X , 
+                                UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME,
                                                                          "Device",
                                                                          "Start") + "</size>");
             
-            GUI.Label( new Rect(Common.UI_LABEL_START_X, 
-                                Common.UI_POSE_LABEL_START_Y + Common.UI_LABEL_OFFSET,
-                                Common.UI_LABEL_SIZE_X , 
-                                Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + String.Format(Common.UX_STATUS,
+            GUI.Label( new Rect(UI_LABEL_START_X, 
+                                UI_POSE_LABEL_START_Y,
+                                UI_LABEL_SIZE_X , 
+                                UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_STATUS,
                                                                          _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status),
                                                                          _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount),
-                                                                         _GetLogginStringFromFrameDeltaTime(m_tangoPoseController.m_frameDeltaTime),
                                                                          _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
-                                                                         _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation)) + "</size>");
-
-            
+                                                                         _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation)) + "</size>");            
             GUI.color = oldColor;
         }
     }

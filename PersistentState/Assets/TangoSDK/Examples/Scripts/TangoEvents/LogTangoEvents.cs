@@ -31,8 +31,8 @@ public class LogTangoEvents : TangoEventListener
         m_lastTangoEventIssued = string.Empty;
 	}
 	
-    protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
-    {
-        Debug.Log("Tango event fired : " + tangoEvent.event_value);
-    }
+//    protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+//    {
+//        Debug.Log("Tango event fired : " + tangoEvent.event_value);
+//    }
 }

@@ -20,44 +20,44 @@ using Tango;
 using System.IO;
 
 public class TangoInitializer : MonoBehaviour {
-	public TangoApplication tangoApplication; 
+    public TangoApplication tangoApplication; 
 
-	private bool isInitialized = false;
-	private bool shouldInitTango = false;
+    private bool isInitialized = false;
+    private bool shouldInitTango = false;
 
-	void Start () {
-		tangoApplication = FindObjectOfType<TangoApplication>();
-		if(tangoApplication != null) {
-			if(AndroidHelper.IsTangoCorePresent()) {
-				// Request Tango permissions
-				tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
-				tangoApplication.RequestNecessaryPermissionsAndConnect();
-			}
-		} else {
-			Debug.Log("No Tango Manager found in scene.");
-		}
-	}
+    void Start () {
+        tangoApplication = FindObjectOfType<TangoApplication>();
+        if(tangoApplication != null) {
+            if(AndroidHelper.IsTangoCorePresent()) {
+                // Request Tango permissions
+                tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
+                tangoApplication.RequestNecessaryPermissionsAndConnect();
+            }
+        } else {
+            Debug.Log("No Tango Manager found in scene.");
+        }
+    }
 
-	private void Update()
-	{
-		if(shouldInitTango) {
-			tangoApplication.InitApplication();
-			isInitialized = true;
-			shouldInitTango = false;
-		}
-	}
+    private void Update()
+    {
+        if(shouldInitTango) {
+            tangoApplication.InitApplication();
+            isInitialized = true;
+            shouldInitTango = false;
+        }
+    }
 
-	private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted) {
-		if(permissionsGranted && !isInitialized) {
-			isInitialized = true;
-			shouldInitTango = true;
-			tangoApplication.InitApplication();
-			EventManager.instance.TangoServiceInitializd();
-		}
-		else if (!permissionsGranted)
-		{
-			AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-		}
-	}
+    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted) {
+        if(permissionsGranted && !isInitialized) {
+            isInitialized = true;
+            shouldInitTango = true;
+            tangoApplication.InitApplication();
+            EventManager.instance.TangoServiceInitializd();
+        }
+        else if (!permissionsGranted)
+        {
+            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
+        }
+    }
 
 }

@@ -120,9 +120,15 @@ public class AndroidHelper : MonoBehaviour
 	}
 
 	public static AndroidJavaObject GetTangoHelperObject()
-	{
-		m_tangoHelper = new AndroidJavaObject("com.projecttango.unity.TangoUnityHelper", GetUnityActivity());
+    {
+    #if UNITY_ANDROID && !UNITY_EDITOR
+        if(m_tangoHelper == null)
+        {
+		    m_tangoHelper = new AndroidJavaObject("com.projecttango.unity.TangoUnityHelper", GetUnityActivity());
+        }
 		return m_tangoHelper;
+    #endif
+        return null;
 	}
 
 	/// <summary>

@@ -22,51 +22,51 @@ using UnityEngine;
 /// </summary>
 public class ADFPickerButton : TouchableObject
 {
-	public GameObject content;
-	public float normaledScaleFactor = 0.95f;
-	public TextMesh titleTextObj;
-	public TextMesh subtitleTextObj;
-	public GameObject checkerObject;
-	private Vector3 touchScaleSize;
-	private Vector3 untouchedScaleSize;
+    public GameObject content;
+    public float normaledScaleFactor = 0.95f;
+    public TextMesh titleTextObj;
+    public TextMesh subtitleTextObj;
+    public GameObject checkerObject;
+    private Vector3 touchScaleSize;
+    private Vector3 untouchedScaleSize;
 
-	void Start() {
-		m_raycastCamera = GameObject.FindGameObjectWithTag("UICamera").camera;
-		touchScaleSize = normaledScaleFactor * content.transform.localScale;
-		untouchedScaleSize = content.transform.localScale;
-	}
+    void Start() {
+        m_raycastCamera = GameObject.FindGameObjectWithTag("UICamera").camera;
+        touchScaleSize = normaledScaleFactor * content.transform.localScale;
+        untouchedScaleSize = content.transform.localScale;
+    }
 
-	protected override void OnTouch() {
-		content.gameObject.transform.localScale = touchScaleSize;
-	}
+    protected override void OnTouch() {
+        content.gameObject.transform.localScale = touchScaleSize;
+    }
 
-	protected override void OutTouch() {
-		content.gameObject.transform.localScale = untouchedScaleSize;
-	}
+    protected override void OutTouch() {
+        content.gameObject.transform.localScale = untouchedScaleSize;
+    }
 
-	protected override void TouchUp() {
-		content.gameObject.transform.localScale = untouchedScaleSize;
-		if (Statics.curADFId == subtitleTextObj.text) {
-			Statics.curADFId = "";
-			Statics.curADFName = "";
-		} else {
-			Statics.curADFId = subtitleTextObj.text;
-			Statics.curADFName = titleTextObj.text;
-		}
-	}
+    protected override void TouchUp() {
+        content.gameObject.transform.localScale = untouchedScaleSize;
+        if (Statics.curADFId == subtitleTextObj.text) {
+            Statics.curADFId = "";
+            Statics.curADFName = "";
+        } else {
+            Statics.curADFId = subtitleTextObj.text;
+            Statics.curADFName = titleTextObj.text;
+        }
+    }
 
-	protected override void Update() {
-		base.Update();
-		if (Statics.curADFId != subtitleTextObj.text) {
-			checkerObject.SetActive(false);
-		}
-		else {
-			checkerObject.SetActive(true);
-		}
-	}
+    protected override void Update() {
+        base.Update();
+        if (Statics.curADFId != subtitleTextObj.text) {
+            checkerObject.SetActive(false);
+        }
+        else {
+            checkerObject.SetActive(true);
+        }
+    }
 
-	public void SetTitles(string title, string subtitle) {
-		titleTextObj.text = title;
-		subtitleTextObj.text = subtitle;
-	}
+    public void SetTitles(string title, string subtitle) {
+        titleTextObj.text = title;
+        subtitleTextObj.text = subtitle;
+    }
 }

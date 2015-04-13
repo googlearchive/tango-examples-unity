@@ -20,7 +20,7 @@ using Tango;
 /// <summary>
 /// Get Tango events from Tango Service and log on GUI.
 /// </summary>
-public class EventController : TangoEventListener
+public class EventController : MonoBehaviour
 {
     private string m_eventString;
     private TangoApplication m_tangoApplication;
@@ -34,7 +34,7 @@ public class EventController : TangoEventListener
     void Start ()
     {
         m_eventString = string.Empty;
-        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_tangoApplication = GameObject.FindObjectOfType<TangoApplication>();
 		m_previousEvent = new TangoEvent();
     }
 
@@ -57,12 +57,12 @@ public class EventController : TangoEventListener
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="tangoEvent">Tango event.</param>
-    protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
-    {
-		m_previousEvent.timestamp = tangoEvent.timestamp;
-		m_previousEvent.type = tangoEvent.type;
-		m_previousEvent.event_key = tangoEvent.event_key;
-		m_previousEvent.event_value = tangoEvent.event_value;
-		m_dirty = true;
-    }
+//    protected override void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+//    {
+//		m_previousEvent.timestamp = tangoEvent.timestamp;
+//		m_previousEvent.type = tangoEvent.type;
+//		m_previousEvent.event_key = tangoEvent.event_key;
+//		m_previousEvent.event_value = tangoEvent.event_value;
+//		m_dirty = true;
+//    }
 }

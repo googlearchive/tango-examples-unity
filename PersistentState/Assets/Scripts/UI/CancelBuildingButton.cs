@@ -17,31 +17,31 @@ using UnityEngine;
 using System.Collections;
 
 public class CancelBuildingButton : TouchableObject {
-	public GameObject content;
-	public float normaledScaleFactor = 0.95f;
-	private Vector3 touchScaleSize;
-	private Vector3 untouchedScaleSize;
-	
-	void Start() {
-		m_raycastCamera = GameObject.FindGameObjectWithTag("UICamera").camera;
-		touchScaleSize = normaledScaleFactor * content.transform.localScale;
-		untouchedScaleSize = content.transform.localScale;
-	}
+    public GameObject content;
+    public float normaledScaleFactor = 0.95f;
+    private Vector3 touchScaleSize;
+    private Vector3 untouchedScaleSize;
+    
+    void Start() {
+        m_raycastCamera = GameObject.FindGameObjectWithTag("UICamera").camera;
+        touchScaleSize = normaledScaleFactor * content.transform.localScale;
+        untouchedScaleSize = content.transform.localScale;
+    }
 
-	protected override void OnTouch() {
-		content.gameObject.transform.localScale = touchScaleSize;
-	}
+    protected override void OnTouch() {
+        content.gameObject.transform.localScale = touchScaleSize;
+    }
 
-	protected override void OutTouch() {
-		content.gameObject.transform.localScale = untouchedScaleSize;
-	}
+    protected override void OutTouch() {
+        content.gameObject.transform.localScale = untouchedScaleSize;
+    }
 
-	protected override void TouchUp() {
-		content.gameObject.transform.localScale = untouchedScaleSize;
-		BuildingManager.instance.CancelBuildingPlacement ();
-	}
+    protected override void TouchUp() {
+        content.gameObject.transform.localScale = untouchedScaleSize;
+        BuildingManager.instance.CancelBuildingPlacement ();
+    }
 
-	protected override void Update() {
-		base.Update();
-	}
+    protected override void Update() {
+        base.Update();
+    }
 }

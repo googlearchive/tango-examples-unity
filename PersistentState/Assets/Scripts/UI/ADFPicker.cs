@@ -19,36 +19,36 @@ using System.Collections.Generic;
 using Tango;
 
 public class ADFPicker : MonoBehaviour {
-	public Vector3 buttonOffsets;
-	public GameObject adfPickerButtonPrototype;
+    public Vector3 buttonOffsets;
+    public GameObject adfPickerButtonPrototype;
 
-	// Use this for initialization
-	void Awake () {
-		EventManager.tangoServiceInitilized += HandleEventTangoInitialized;
-	}
+    // Use this for initialization
+    void Awake () {
+        EventManager.tangoServiceInitilized += HandleEventTangoInitialized;
+    }
 
-	void HandleEventTangoInitialized() {
-		PoseProvider.RefreshADFList();
-		RefreshADFPickerList(PoseProvider.GetCachedADFList());
-	}
+    void HandleEventTangoInitialized() {
+        PoseProvider.RefreshADFList();
+        RefreshADFPickerList(PoseProvider.GetCachedADFList());
+    }
 
-	void RefreshADFPickerList(UUID_list list) {
-		foreach (Transform child in transform)  {
-			Destroy(transform.gameObject);
-		}
-		int numberOfADFs = list.Count;
-		Vector3 startPosition = transform.position;
-		for (int i = 0; i < numberOfADFs; i++) {
-			UUIDUnityHolder adf = list.GetADFAtIndex(i);
-			Dictionary<string, string> adfMeta = adf.uuidMetaData.GetMetaDataKeyValues();
-			string uuid = adfMeta["id"];
-			string name = adfMeta["name"];
-			GameObject button = (GameObject) Instantiate(adfPickerButtonPrototype, startPosition+i*buttonOffsets, Quaternion.identity);
-			button.GetComponent<ADFPickerButton>().SetTitles(name, uuid);
-		}
-	}
+    void RefreshADFPickerList(UUID_list list) {
+        foreach (Transform child in transform)  {
+            Destroy(transform.gameObject);
+        }
+        int numberOfADFs = list.Count;
+        Vector3 startPosition = transform.position;
+        for (int i = 0; i < numberOfADFs; i++) {
+            UUIDUnityHolder adf = list.GetADFAtIndex(i);
+            Dictionary<string, string> adfMeta = adf.uuidMetaData.GetMetaDataKeyValues();
+            string uuid = adfMeta["id"];
+            string name = adfMeta["name"];
+            GameObject button = (GameObject) Instantiate(adfPickerButtonPrototype, startPosition+i*buttonOffsets, Quaternion.identity);
+            button.GetComponent<ADFPickerButton>().SetTitles(name, uuid);
+        }
+    }
 
-	void OnDestory () {
-		EventManager.tangoServiceInitilized -= HandleEventTangoInitialized;
-	}
+    void OnDestory () {
+        EventManager.tangoServiceInitilized -= HandleEventTangoInitialized;
+    }
 }

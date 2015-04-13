@@ -19,6 +19,7 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using System.Reflection;
 
 namespace Tango
 {
@@ -44,10 +45,13 @@ namespace Tango
 
         public bool m_enableMotionTracking = true;
         public bool m_enableDepth = true;
+        public bool m_enableVideoOverlay = false;
         public bool m_motionTrackingAutoReset = true;
 		public bool m_enableAreaLearning = false;
 		public bool m_enableADFSaveLoad = false;
         public bool m_enableUXLibrary = true;
+        public bool m_useExperimentalVideoOverlay = true;
+        public bool m_useExperimentalADF = false;
 
 		private static string m_tangoServiceVersion = string.Empty;
 
@@ -73,7 +77,24 @@ namespace Tango
 		private bool m_shouldReconnectService = false;
 		private bool m_isDisconnecting = false;
 
-		private bool m_shouldFirePermissionsEvent = false;
+        private bool m_sendPermissions = false;
+        private bool m_permissionsSuccessful = false;
+
+        private PoseListener m_poseListener;
+        private DepthListener m_depthListener;
+        private VideoOverlayListener m_videoOverlayListener;
+        private TangoEventListener m_tangoEventListener;
+
+        private Texture2D m_videoOverlayTexture;
+
+        /// <summary>
+        /// Gets the video overlay texture.
+        /// </summary>
+        /// <returns>The video overlay texture.</returns>
+        public Texture2D GetVideoOverlayTexture()
+        {
+            return m_videoOverlayTexture;
+        }
 
 		/// <summary>
 		/// Gets the tango service version.
@@ -88,6 +109,164 @@ namespace Tango
 
 			return m_tangoServiceVersion;
 		}
+
+        /// <summary>
+        /// Register the specified tangoObject.
+        /// </summary>
+        /// <param name="tangoObject">Tango object.</param>
+		public void Register(System.Object tangoObject)
+		{
+			if(m_enableMotionTracking)
+			{
+				ITangoPose poseHandler = tangoObject as ITangoPose;
+
+				if(poseHandler != null)
+				{
+                    RegisterOnTangoPoseEvent(poseHandler.OnTangoPoseAvailable);
+				}
+			}
+
+			if(m_enableDepth)
+			{
+                ITangoDepth depthHandler = tangoObject as ITangoDepth;
+
+                if(depthHandler != null)
+                {
+                    RegisterOnTangoDepthEvent(depthHandler.OnTangoDepthAvailable);
+                }
+			}
+            
+            if(m_enableVideoOverlay)
+            {
+                if(m_useExperimentalVideoOverlay)
+                {
+                    IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
+
+                    if(videoOverlayHandler != null)
+                    {
+                        RegisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
+                    }
+                }
+                else
+                {
+                    ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
+                    
+                    if(videoOverlayHandler != null)
+                    {
+                        UnregisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
+                    }
+                }
+            }
+		}
+
+        /// <summary>
+        /// Unregister the specified tangoObject.
+        /// </summary>
+        /// <param name="tangoObject">Tango object.</param>
+        public void Unregister(System.Object tangoObject)
+        {
+            if(m_enableMotionTracking)
+            {
+                ITangoPose poseHandler = tangoObject as ITangoPose;
+                
+                if(poseHandler != null)
+                {
+                    UnregisterOnTangoPoseEvent(poseHandler.OnTangoPoseAvailable);
+                }
+            }
+            
+            if(m_enableDepth)
+            {
+                ITangoDepth depthHandler = tangoObject as ITangoDepth;
+                
+                if(depthHandler != null)
+                {
+                    UnregisterOnTangoDepthEvent(depthHandler.OnTangoDepthAvailable);
+                }
+            }
+
+            if(m_enableVideoOverlay)
+            {
+                if(m_useExperimentalVideoOverlay)
+                {
+                    IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
+                    
+                    if(videoOverlayHandler != null)
+                    {
+                        UnregisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
+                    }
+                }
+                else
+                {
+                    ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
+                    
+                    if(videoOverlayHandler != null)
+                    {
+                        UnregisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Registers the on tango pose event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
+        {
+            if(m_poseListener != null)
+            {
+                m_poseListener.RegisterTangoPoseAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Registers the on tango depth event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
+        {
+            if(m_depthListener != null)
+            {
+                m_depthListener.RegisterOnTangoDepthAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Registers the on tango event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
+        {
+            if(m_tangoEventListener != null)
+            {
+                m_tangoEventListener.RegisterOnTangoEventAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Registers the on tango video overlay.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
+        {
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.RegisterOnTangoImageAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Registers the on experimental tango video overlay.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void RegisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
+        {
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.RegisterOnExperimentalTangoImageAvailable(handler);
+            }
+        }
 
 		/// <summary>
 		/// Determines if has requested permissions.
@@ -109,6 +288,66 @@ namespace Tango
 				m_permissionEvent += permissionsEventHandler;
 			}
 		}
+
+        /// <summary>
+        /// Unregisters the on tango pose event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
+        {
+            if(m_poseListener != null)
+            {
+                m_poseListener.UnregisterTangoPoseAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Unregisters the on tango depth event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
+        {
+            if(m_depthListener != null)
+            {
+                m_depthListener.UnregisterOnTangoDepthAvailable(handler);
+            }
+        }
+        
+        /// <summary>
+        /// Unregisters the on tango event.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
+        {
+            if(m_tangoEventListener != null)
+            {
+                m_tangoEventListener.UnregisterOnTangoEventAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Unregisters the on tango video overlay.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
+        {
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.UnregisterOnTangoImageAvailable(handler);
+            }
+        }
+        
+        /// <summary>
+        /// Unregisters the on experimental tango video overlay.
+        /// </summary>
+        /// <param name="handler">Handler.</param>
+        public void UnregisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
+        {
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.UnregisterOnExperimentalTangoImageAvailable(handler);
+            }
+        }
 
 		/// <summary>
 		/// Removes the permissions callback.
@@ -150,9 +389,8 @@ namespace Tango
 		{
 			_InitializeMotionTracking(UUID);
 			_InitializeDepth();
-			_InitializeOverlay();
+			//_InitializeOverlay();
 			_SetEventCallbacks();
-			_InitializeOverlay();
 		}
 		
 		/// <summary>
@@ -192,22 +430,17 @@ namespace Tango
 			Debug.Log("Suspending Tango Service");
 			_TangoDisconnect();
 		}
+
 		/// <summary>
 		/// Set callbacks on all PoseListener objects.
 		/// </summary>
 		/// <param name="framePairs">Frame pairs.</param>
         private void _SetMotionTrackingCallbacks(TangoCoordinateFramePair[] framePairs)
         {
-            PoseListener[] poseListeners = FindObjectsOfType<PoseListener>();
-
-            foreach (PoseListener poseListener in poseListeners)
+            if(m_poseListener != null)
             {
-                if (poseListener != null)
-                {
-                    poseListener.AutoReset = m_motionTrackingAutoReset;
-
-                    poseListener.SetCallback(framePairs);
-                }
+                m_poseListener.AutoReset = m_motionTrackingAutoReset;
+                m_poseListener.SetCallback(framePairs);
             }
         }
 
@@ -216,14 +449,9 @@ namespace Tango
 		/// </summary>
         private void _SetDepthCallbacks()
         {
-            DepthListener[] depthListeners = FindObjectsOfType<DepthListener>();
-
-            foreach (DepthListener depthListener in depthListeners)
+            if (m_depthListener != null)
             {
-                if (depthListener != null)
-                {
-                    depthListener.SetCallback();
-                }
+                m_depthListener.SetCallback();
             }
         }
 
@@ -232,14 +460,9 @@ namespace Tango
         /// </summary>
         private void _SetEventCallbacks()
         {
-            TangoEventListener[] eventListeners = FindObjectsOfType<TangoEventListener>();
-
-            foreach (TangoEventListener eventListener in eventListeners)
+            if (m_tangoEventListener != null)
             {
-                if (eventListener != null)
-                {
-                    eventListener.SetCallback();
-                }
+                m_tangoEventListener.SetCallback();
             }
         }
 
@@ -248,15 +471,10 @@ namespace Tango
 		/// </summary>
 		private void _SetVideoOverlayCallbacks()
 		{
-			VideoOverlayListener[] videoOverlayListeners = FindObjectsOfType<VideoOverlayListener>();
-			
-			foreach (VideoOverlayListener videoOverlayListener in videoOverlayListeners)
-			{
-				if (videoOverlayListener != null)
-				{
-					videoOverlayListener.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
-				}
-			}
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, true, m_videoOverlayTexture);
+            }
 		}
 		
 		/// <summary>
@@ -270,7 +488,8 @@ namespace Tango
 				Debug.Log("Area Learning is enabled.");
                 if(!string.IsNullOrEmpty(UUID))
                 {
-                        TangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, UUID);
+                    TangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, UUID);
+                    TangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
                 }
                 
                 TangoCoordinateFramePair areaDescription;
@@ -513,25 +732,36 @@ namespace Tango
         }
 
 		/// <summary>
-		/// Monobehavior update function.
-		/// </summary>
-		private void Update()
-		{
-			if(m_shouldFirePermissionsEvent)
-			{
-				_SendPermissionEvent(m_requiredPermissions == 0);
-				m_shouldFirePermissionsEvent = false;
-			}
-		}
-
-		/// <summary>
 		/// Awake this instance.
 		/// </summary>
 		private void Awake()
-		{
+        {
 			AndroidHelper.RegisterPauseEvent(_androidOnPause);
 			AndroidHelper.RegisterResumeEvent(_androidOnResume);
 			AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
+
+            if(m_enableMotionTracking)
+            {
+                m_poseListener = new PoseListener();
+            }
+
+            if(m_enableDepth)
+            {
+                m_depthListener = new DepthListener();
+            }
+
+            if(m_enableUXLibrary)
+            {
+                m_tangoEventListener = new TangoEventListener();
+            }
+
+            if(m_enableVideoOverlay)
+            {
+                m_videoOverlayTexture = new Texture2D(Screen.width, Screen.height, TextureFormat.RGBA32, false);
+                m_videoOverlayTexture.Apply();
+
+                m_videoOverlayListener = new VideoOverlayListener();
+            }
 		}
 
 		/// <summary>
@@ -557,7 +787,7 @@ namespace Tango
             if(m_requiredPermissions == 0) // all permissions are good!
             {
                 Debug.Log("All permissions have been accepted!");
-				m_shouldFirePermissionsEvent = true;
+                _SendPermissionEvent(true);
             }
             else
             {
@@ -587,7 +817,7 @@ namespace Tango
 			// if no permissions are needed let's kick-off the Tango connect
 			if(m_requiredPermissions == PermissionsTypes.NONE)
             {
-				m_shouldFirePermissionsEvent = true;
+                _SendPermissionEvent(true);
 			}
 
             if((m_requiredPermissions & PermissionsTypes.MOTION_TRACKING) == PermissionsTypes.MOTION_TRACKING)
@@ -622,17 +852,46 @@ namespace Tango
         {
             if (m_enableUXLibrary && permissions)
             {
-                if(gameObject.GetComponent<EventController>() == null)
-                {
-                    gameObject.AddComponent<EventController>();
-                }
-                
                 StartCoroutine(_StartExceptionsListener());
             }
 
-            if(m_permissionEvent != null)
+            m_sendPermissions = true;
+            m_permissionsSuccessful = permissions;
+        }
+
+        /// <summary>
+        /// Disperse any events related to Tango functionality.
+        /// </summary>
+        private void Update()
+        {
+            if(m_sendPermissions)
             {
-                m_permissionEvent(permissions);
+                _InitializeOverlay();
+                if(m_permissionEvent != null)
+                {
+                    m_permissionEvent(m_permissionsSuccessful);
+                }
+                m_sendPermissions = false;
+            }
+
+            if(m_poseListener != null)
+            {
+                m_poseListener.SendPoseIfAvailable(m_enableUXLibrary);
+            }
+
+            if(m_tangoEventListener != null)
+            {
+                m_tangoEventListener.SendIfTangoEventAvailable(m_enableUXLibrary);
+            }
+
+            if(m_depthListener != null)
+            {
+                m_depthListener.SendDepthIfAvailable();
+            }
+
+            if(m_videoOverlayListener != null)
+            {
+                m_videoOverlayListener.SendIfVideoOverlayAvailable();
             }
         }
 

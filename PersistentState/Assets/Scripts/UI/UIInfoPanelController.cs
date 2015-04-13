@@ -17,56 +17,56 @@ using UnityEngine;
 using System.Collections;
 
 public class UIInfoPanelController : MonoBehaviour {
-	public GameObject background;
-	public TextMesh textMesh;
-	// Use this for initialization
-	void Start () {
-		EventManager.gameDataSaved += GameDataSaved;
-		EventManager.tangoPoseStatedChanged += TangoPoseStateChanged;
-	}
-	
-	// Update is called once per frame
-	void Update () {
-	}
+    public GameObject background;
+    public TextMesh textMesh;
+    // Use this for initialization
+    void Start () {
+        EventManager.gameDataSaved += GameDataSaved;
+        EventManager.tangoPoseStatedChanged += TangoPoseStateChanged;
+    }
+    
+    // Update is called once per frame
+    void Update () {
+    }
 
-	void GameDataSaved(bool successed) {
-		if (successed) {
-			StartCoroutine(ShowText("Game Saved", 1.5f));
-		}
-	}
+    void GameDataSaved(bool successed) {
+        if (successed) {
+            StartCoroutine(ShowText("Game Saved", 1.5f));
+        }
+    }
 
-	void TangoPoseStateChanged(TangoPoseStates curState) {
-		if (curState == TangoPoseStates.Connecting) {
-			SetPanelShown(true);
-			textMesh.text = Statics.uiPanelConnectingService;
-		}
-		else if (curState == TangoPoseStates.Relocalizing) {
-			SetPanelShown(true);
-			textMesh.text = Statics.uiPanelRelocalizing;
-		}
-		else if (curState == TangoPoseStates.Running) {
-			SetPanelShown(false);
-		}
-	}
+    void TangoPoseStateChanged(TangoPoseStates curState) {
+        if (curState == TangoPoseStates.Connecting) {
+            SetPanelShown(true);
+            textMesh.text = Statics.uiPanelConnectingService;
+        }
+        else if (curState == TangoPoseStates.Relocalizing) {
+            SetPanelShown(true);
+            textMesh.text = Statics.uiPanelRelocalizing;
+        }
+        else if (curState == TangoPoseStates.Running) {
+            SetPanelShown(false);
+        }
+    }
 
-	void SetPanelShown(bool isShowing) {
-		background.renderer.enabled = isShowing;
-		textMesh.gameObject.SetActive(isShowing);
-	}
+    void SetPanelShown(bool isShowing) {
+        background.renderer.enabled = isShowing;
+        textMesh.gameObject.SetActive(isShowing);
+    }
 
-	float counter = 0.0f;
-	IEnumerator ShowText(string text, float timeLength) {
-		textMesh.text = text;
-		while (counter <= timeLength) {
-			SetPanelShown(true);
-			counter += Time.deltaTime;
-			yield return null;
-		}
-		SetPanelShown(false);
-		textMesh.text = "";
-		counter = 0.0f;
-		yield return null;
-	}
+    float counter = 0.0f;
+    IEnumerator ShowText(string text, float timeLength) {
+        textMesh.text = text;
+        while (counter <= timeLength) {
+            SetPanelShown(true);
+            counter += Time.deltaTime;
+            yield return null;
+        }
+        SetPanelShown(false);
+        textMesh.text = "";
+        counter = 0.0f;
+        yield return null;
+    }
 
 
 }

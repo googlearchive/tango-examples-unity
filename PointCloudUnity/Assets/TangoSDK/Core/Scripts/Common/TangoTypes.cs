@@ -41,7 +41,7 @@ namespace Tango
         public int ij_rows;
         
         [MarshalAs(UnmanagedType.I4)]
-        public IntPtr ij_cols;
+        public int ij_cols;
         
         public IntPtr ij;
 
@@ -165,6 +165,7 @@ namespace Tango
     /// for a pixel at point (x_px, y_px) in pixel coordinates, the corrected output
     /// position would be (x_corr, y_corr).
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public class TangoCameraIntrinsics
     {
         /// <summary>
@@ -493,5 +494,68 @@ namespace Tango
         }
 
     }
+
+    public class TangoUnityImageData
+    {
+        /// <summary>
+        /// The width of the image data.
+        /// </summary>
+        public UInt32 width;
+        
+        /// <summary>
+        /// The height of the image data.
+        /// </summary>
+        public UInt32 height;
+        
+        /// <summary>
+        /// The number of pixels per scanline of the image data.
+        /// </summary>
+        public UInt32 stride;
+        
+        /// <summary>
+        /// The timestamp of this image.
+        /// </summary>
+        public double timestamp;
+        
+        /// <summary>
+        /// The frame number of this image.
+        /// </summary>
+        public Int64 frame_number;
+        
+        /// <summary>
+        /// The pixel format of the data.
+        /// </summary>
+        public TangoEnums.TangoImageFormatType format;
+        
+        /// <summary>
+        /// Pixels in HAL_PIXEL_FORMAT_YV12 format. Y samples of width x height are
+        /// first, followed by V samples, with half the stride and half the lines of
+        /// the Y data, followed by a U samples with the same dimensions as the V
+        /// sample. This is stored in the API as a dynamic byte array (uint8_t*).
+        /// </summary>
+        public byte[] data;
+    }
   
+    /// <summary>
+    /// Tango depth that is more Unity friendly.
+    /// </summary>
+    public class TangoUnityDepth
+    {
+        public int m_version;
+        public int m_pointCount;
+        public Vector3[] m_vertices;
+        public double m_timestamp;
+        public int m_ijRows;
+        public int m_ijColumns;
+        public Vector2[] m_ij;
+
+        public TangoUnityDepth()
+        {
+            m_vertices = new Vector3[61440];
+            m_ij = new Vector2[61440];
+            m_version = -1;
+            m_timestamp = 0.0;
+            m_pointCount = m_ijRows = m_ijColumns = 0;
+        }
+    }
 }

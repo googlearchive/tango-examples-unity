@@ -17,47 +17,47 @@ using UnityEngine;
 using System.Collections;
 
 public class GameCameraEffectController : MonoBehaviour {
-	public Vignetting vignetting;
-	public DepthOfField34 depthOfField;
-	// Use this for initialization
-	void Start () {
-	
-	}
+    public Vignetting vignetting;
+    public DepthOfField34 depthOfField;
+    // Use this for initialization
+    void Start () {
+    
+    }
 
-	float counter = 0.0f;
-	float totalTime = 1.0f;
-	bool savedStartStateOfEffects = false;
+    float counter = 0.0f;
+    float totalTime = 1.0f;
+    bool savedStartStateOfEffects = false;
 
-	float chromaticAberration;
-	float blury;
-	// Update is called once per frame
-	void Update () {
-		if (Statics.currentTangoState == TangoPoseStates.Connecting || Statics.currentTangoState == TangoPoseStates.Relocalizing) {
-			depthOfField.smoothness = 0.1f;
-			counter += Time.deltaTime;
-			if (counter <= totalTime) {
-				vignetting.chromaticAberration = Mathf.Lerp(-36.0f, 36.0f, counter/totalTime);
-			}
-			if (counter > totalTime && counter <= 2*totalTime) {
-				vignetting.chromaticAberration = Mathf.Lerp(36.0f, -36.0f, (counter-totalTime)/totalTime);
-			}
-			if (counter > 2*totalTime) {
-				counter = 0.0f;
-			}
-			savedStartStateOfEffects = false;
-		}
-		else {
-			if (!savedStartStateOfEffects) {
-				counter = 0.0f;
-				savedStartStateOfEffects = true;
-				chromaticAberration = vignetting.chromaticAberration;
-				blury = depthOfField.smoothness;
-			}
-			counter += Time.deltaTime;
-			if (counter <= 2.0f) {
-				vignetting.chromaticAberration = Mathf.Lerp(chromaticAberration, 0.2f, counter/2.0f);
-				depthOfField.smoothness = Mathf.Lerp(blury, 3.84f, counter/2.0f);
-			}
-		}
-	}
+    float chromaticAberration;
+    float blury;
+    // Update is called once per frame
+    void Update () {
+        if (Statics.currentTangoState == TangoPoseStates.Connecting || Statics.currentTangoState == TangoPoseStates.Relocalizing) {
+            depthOfField.smoothness = 0.1f;
+            counter += Time.deltaTime;
+            if (counter <= totalTime) {
+                vignetting.chromaticAberration = Mathf.Lerp(-36.0f, 36.0f, counter/totalTime);
+            }
+            if (counter > totalTime && counter <= 2*totalTime) {
+                vignetting.chromaticAberration = Mathf.Lerp(36.0f, -36.0f, (counter-totalTime)/totalTime);
+            }
+            if (counter > 2*totalTime) {
+                counter = 0.0f;
+            }
+            savedStartStateOfEffects = false;
+        }
+        else {
+            if (!savedStartStateOfEffects) {
+                counter = 0.0f;
+                savedStartStateOfEffects = true;
+                chromaticAberration = vignetting.chromaticAberration;
+                blury = depthOfField.smoothness;
+            }
+            counter += Time.deltaTime;
+            if (counter <= 2.0f) {
+                vignetting.chromaticAberration = Mathf.Lerp(chromaticAberration, 0.2f, counter/2.0f);
+                depthOfField.smoothness = Mathf.Lerp(blury, 3.84f, counter/2.0f);
+            }
+        }
+    }
 }

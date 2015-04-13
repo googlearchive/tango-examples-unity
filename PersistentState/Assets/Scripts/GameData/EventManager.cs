@@ -17,56 +17,56 @@ using UnityEngine;
 using System.Collections;
 
 public class EventManager : MonoBehaviour {
-	private static EventManager _instance;
+    private static EventManager _instance;
 
-	public static EventManager instance {
-		get {
-			if(_instance == null) {
-				_instance = GameObject.FindObjectOfType<EventManager>();
-				DontDestroyOnLoad(_instance.gameObject);
-			}
-			
-			return _instance;
-		}
-	}
+    public static EventManager instance {
+        get {
+            if(_instance == null) {
+                _instance = GameObject.FindObjectOfType<EventManager>();
+                DontDestroyOnLoad(_instance.gameObject);
+            }
+            
+            return _instance;
+        }
+    }
 
-	public delegate void TangoServiceInitilizedHandler();
-	public static event TangoServiceInitilizedHandler tangoServiceInitilized;
+    public delegate void TangoServiceInitilizedHandler();
+    public static event TangoServiceInitilizedHandler tangoServiceInitilized;
 
-	public delegate void GameDataSavedHandler(bool successed);
-	public static event GameDataSavedHandler gameDataSaved;
+    public delegate void GameDataSavedHandler(bool successed);
+    public static event GameDataSavedHandler gameDataSaved;
 
-	public delegate void TangoPoseStateHandler(TangoPoseStates currentState);
-	public static event TangoPoseStateHandler tangoPoseStatedChanged;
+    public delegate void TangoPoseStateHandler(TangoPoseStates currentState);
+    public static event TangoPoseStateHandler tangoPoseStatedChanged;
 
-	void Awake () {
-		if(_instance == null) {
-			_instance = this;
-			DontDestroyOnLoad(this);
-		}
-		else {
-			if(this != _instance)
-			{
-				Destroy(this.gameObject);
-			}
-		}
-	}
+    void Awake () {
+        if(_instance == null) {
+            _instance = this;
+            DontDestroyOnLoad(this);
+        }
+        else {
+            if(this != _instance)
+            {
+                Destroy(this.gameObject);
+            }
+        }
+    }
 
-	public void TangoServiceInitializd () {
-		if (tangoServiceInitilized != null) {
-			tangoServiceInitilized();
-		}
-	}
+    public void TangoServiceInitializd () {
+        if (tangoServiceInitilized != null) {
+            tangoServiceInitilized();
+        }
+    }
 
-	public void GameDataSaved(bool successed) {
-		if (gameDataSaved != null) {
-			gameDataSaved(successed);
-		}
-	}
+    public void GameDataSaved(bool successed) {
+        if (gameDataSaved != null) {
+            gameDataSaved(successed);
+        }
+    }
 
-	public void TangoPoseStateChanged(TangoPoseStates currentState) {
-		if (tangoPoseStatedChanged != null) {
-			tangoPoseStatedChanged(currentState);
-		}
-	}
+    public void TangoPoseStateChanged(TangoPoseStates currentState) {
+        if (tangoPoseStatedChanged != null) {
+            tangoPoseStatedChanged(currentState);
+        }
+    }
 }

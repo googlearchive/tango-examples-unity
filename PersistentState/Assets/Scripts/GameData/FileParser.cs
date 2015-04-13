@@ -20,35 +20,27 @@ using System.IO;
 using System.Text;
 
 public class FileParser : MonoBehaviour {
-	public static void SaveBuildingDataToPath(List<Building> buildingList, string path) {
-		print ("jasonps, saving to path: " + path);
-		StringBuilder strBuilder = new StringBuilder();
-		foreach(Building iter in buildingList) {
+    public static void SaveBuildingDataToPath(List<Building> buildingList, string path) {
+        StringBuilder strBuilder = new StringBuilder();
+        foreach(Building iter in buildingList) {
+            strBuilder.Append(iter.buildingId.ToString() + ",");
+            strBuilder.Append(iter.buildingObject.transform.position.x.ToString() + ",");
+            strBuilder.Append(iter.buildingObject.transform.position.z.ToString() + "\n");
+        }
+        System.IO.File.WriteAllText(path, strBuilder.ToString());
+    }
 
-			strBuilder.Append(iter.buildingId.ToString() + ",");
-			print ("jasonps, saving to buildingId: " + iter.buildingId.ToString());
-			strBuilder.Append(iter.buildingObject.transform.position.x.ToString() + ",");
-			print ("jasonps, saving to position: " + iter.buildingObject.transform.position.x.ToString());
-			strBuilder.Append(iter.buildingObject.transform.position.z.ToString() + "\n");
-		}
-		print ("jasonps, end");
-		System.IO.File.WriteAllText(path, strBuilder.ToString());
-	}
-
-	public static void GetVectorListFromPath(out List<Building> buildList, string path) {
-		string line = "";
-		buildList = new List<Building>();
-		// Null terminator causes problem in the file syste.
-
-		print("jasonps loaded path: " + path);
-		StreamReader file = new StreamReader(path);
-		while ((line = file.ReadLine()) != null) {
-			print("jasonps:" + line);
-			Building b = new Building();
-			string[] ints = line.Split(',');
-			b = BuildingManager.instance.InstantiateBuilding(int.Parse(ints[0]), float.Parse(ints[1]), float.Parse(ints[2]));
-			b.buildingObject.GetComponent<BuildingController> ().buildingOutfit.SetActive (false);
-			buildList.Add(b);
-		}
-	}
+    public static void GetVectorListFromPath(out List<Building> buildList, string path) {
+        string line = "";
+        buildList = new List<Building>();
+        // Null terminator causes problem in the file syste.
+        StreamReader file = new StreamReader(path);
+        while ((line = file.ReadLine()) != null) {
+            Building b = new Building();
+            string[] ints = line.Split(',');
+            b = BuildingManager.instance.InstantiateBuilding(int.Parse(ints[0]), float.Parse(ints[1]), float.Parse(ints[2]));
+            b.buildingObject.GetComponent<BuildingController> ().buildingOutfit.SetActive (false);
+            buildList.Add(b);
+        }
+    }
 }

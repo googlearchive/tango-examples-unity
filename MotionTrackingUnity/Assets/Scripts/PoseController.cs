@@ -22,7 +22,7 @@ using System;
 /// This is a basic movement controller based on
 /// pose estimation returned from the Tango Service.
 /// </summary>
-public class PoseController : PoseListener
+public class PoseController : MonoBehaviour , ITangoPose
 {
     public enum TrackingTypes
     {
@@ -44,6 +44,7 @@ public class PoseController : PoseListener
     public int m_frameCount;
     [HideInInspector]
     public TangoEnums.TangoPoseStatusType m_status;
+    private bool m_isProcessing = false;
     private float m_prevFrameTimestamp;
 
     // Tango pose data.
@@ -112,6 +113,7 @@ public class PoseController : PoseListener
                 // Request Tango permissions
                 m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
                 m_tangoApplication.RequestNecessaryPermissionsAndConnect();
+                m_tangoApplication.Register(this);
                 m_tangoServiceVersionName = TangoApplication.GetTangoServiceVersion();
             }
             else
@@ -207,8 +209,9 @@ public class PoseController : PoseListener
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="pose">Pose.</param>
-    protected override void _OnPoseAvailable(IntPtr callbackContext, TangoPoseData pose)
+    public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
     {
+        m_isProcessing = true;
         // Get out of here if the pose is null
         if (pose == null)
         {
@@ -233,6 +236,23 @@ public class PoseController : PoseListener
                                                  (float)pose.orientation [1],
                                                  (float)pose.orientation [2],
                                                  (float)pose.orientation [3]);
+                // Reset the current status frame count if the status code changed.
+                if (pose.status_code != m_status)
+                {
+                    m_frameCount = 0;
+                }
+                
+                // Update the stats for the pose for the debug text
+                m_status = pose.status_code;
+                m_frameCount++;
+                
+                // Compute delta frame timestamp.
+                m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
+                Debug.Log("Event Timestamp:" + pose.timestamp);
+                m_prevFrameTimestamp = (float)pose.timestamp;
+                
+                // Switch m_isDirty to true, so that the new pose get rendered in update.
+                m_isDirty = (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID);
             }
             else // if the current pose is not valid we set the pose to identity
             {
@@ -240,23 +260,7 @@ public class PoseController : PoseListener
                 m_tangoRotation = Quaternion.identity;
             }
         }
-        
-        // Reset the current status frame count if the status code changed.
-        if (pose.status_code != m_status)
-        {
-            m_frameCount = 0;
-        }
-        
-        // Update the stats for the pose for the debug text
-        m_status = pose.status_code;
-        m_frameCount++;
-        
-        // Compute delta frame timestamp.
-        m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
-        m_prevFrameTimestamp = (float)pose.timestamp;
-        
-        // Switch m_isDirty to true, so that the new pose get rendered in update.
-        m_isDirty = (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID);
+
     }
     
     private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)

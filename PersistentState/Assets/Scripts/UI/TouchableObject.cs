@@ -27,55 +27,55 @@ public class TouchableObject : MonoBehaviour
 
      // Flag for Editor mode testing
     private bool m_isOutTouch = true;
-	
+    
     /// <summary>
     /// Called every frame.
     /// </summary>
-	protected virtual void Update()
+    protected virtual void Update()
     {
         if (Input.GetKeyDown(KeyCode.Mouse0))
-		{
+        {
             if (_RayCastToSelfObject())
-			{
-				TouchDown();
-			}
-		}
+            {
+                TouchDown();
+            }
+        }
         if (Input.GetKey(KeyCode.Mouse0))
-		{
+        {
             if (_RayCastToSelfObject())
-			{
+            {
                 m_isOutTouch = false;
-				OnTouch();
-			}
-			else
-			{
+                OnTouch();
+            }
+            else
+            {
                 if (!m_isOutTouch)
-				{
+                {
                     m_isOutTouch = true;
-					OutTouch();
-				}
-			}
-		}
+                    OutTouch();
+                }
+            }
+        }
         if (Input.GetKeyUp(KeyCode.Mouse0))
-		{
+        {
             if (_RayCastToSelfObject())
-			{
-				TouchUp();
-			}
-		}
-	}
+            {
+                TouchUp();
+            }
+        }
+    }
 
     /// <summary>
     /// Overridable initialize function.
     /// </summary>
-	protected virtual void Init()
+    protected virtual void Init()
     {
     }
 
     /// <summary>
     /// Touch event similar to key down.
     /// </summary>
-	protected virtual void TouchDown()
+    protected virtual void TouchDown()
     {
     }
 
@@ -84,7 +84,7 @@ public class TouchableObject : MonoBehaviour
     /// </summary>
     protected virtual void OnTouch()
     {
-    }	
+    }    
 
     /// <summary>
     /// Called every frame.

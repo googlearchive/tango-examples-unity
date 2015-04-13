@@ -17,12 +17,12 @@ using UnityEngine;
 using System.Collections;
 
 public class StartSceneUIManager : MonoBehaviour {
-	public TextMesh curADFId;
-	public TextMesh curADFName;
+    public TextMesh curADFId;
+    public TextMesh curADFName;
 
-	// Update is called once per frame
-	void Update () {
-		curADFId.text = Statics.curADFId;
-		curADFName.text = Statics.curADFName;
-	}
+    // Update is called once per frame
+    void Update () {
+        curADFId.text = Statics.curADFId;
+        curADFName.text = Statics.curADFName;
+    }
 }
