@@ -22,7 +22,7 @@ using System;
 /// This is a basic movement controller based on
 /// pose estimation returned from the Tango Service.
 /// </summary>
-public class PoseController : PoseListener
+public class PoseController : MonoBehaviour , ITangoPose
 {
     public enum TrackingTypes
     {
@@ -70,14 +70,14 @@ public class PoseController : PoseListener
     /// </summary>
     private void Awake()
     {
-		// Constant matrix converting start of service frame to Unity world frame.
+        // Constant matrix converting start of service frame to Unity world frame.
         m_uwTss = new Matrix4x4();
         m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (1, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
         m_uwTss.SetColumn (2, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
         m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
         
-		// Constant matrix converting Unity world frame frame to device frame.
+        // Constant matrix converting Unity world frame frame to device frame.
         m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
         m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
         m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
@@ -106,6 +106,7 @@ public class PoseController : PoseListener
                 // Request Tango permissions
                 m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
                 m_tangoApplication.RequestNecessaryPermissionsAndConnect();
+                m_tangoApplication.Register(this);
                 m_tangoServiceVersionName = TangoApplication.GetTangoServiceVersion();
             }
             else
@@ -207,7 +208,7 @@ public class PoseController : PoseListener
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="pose">Pose.</param>
-    protected override void _OnPoseAvailable(IntPtr callbackContext, TangoPoseData pose)
+    public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
     {
         // Get out of here if the pose is null
         if (pose == null)

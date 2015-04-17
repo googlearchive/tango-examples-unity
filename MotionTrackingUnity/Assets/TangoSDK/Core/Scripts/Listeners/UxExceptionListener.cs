@@ -229,6 +229,162 @@ public class UxExceptionListener : AndroidJavaProxy
 		}
 	}
 
+    /// <summary>
+    /// Unregisters the on moving too fast.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnMovingTooFast(onMovingTooFastEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onMovingTooFast -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on camera over exposed.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnCameraOverExposed(onCameraOverExposedEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onCameraOverExposed -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on camer under exposed.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnCamerUnderExposed(onCameraUnderExposedEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onCameraUnderExposed -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on too few features.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnTooFewFeatures(onTooFewFeaturesEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onTooFewFeatures -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on too few points.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnTooFewPoints(onTooFewPointsEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onTooFewPoints -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on lying on surface.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnLyingOnSurface(onLyingOnSurfaceEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onLyingOnSurface -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on application not responding.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnApplicationNotResponding(onApplicationNotRespondingEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onApplicationNotResponding -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on update needed.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnUpdateNeeded(onUpdateNeededEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onUpdateNeeded -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on motion tracking invalid.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnMotionTrackingInvalid(onMotionTrackingInvalidEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onMotionTrackingInvalid -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on tango service not responding.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnTangoServiceNotResponding(onTangoServiceNotRespondingEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onTangoServiceNotResponding -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on app not responding.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnAppNotResponding(onAppNotRespondingEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onAppNotResponding -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on version update needed.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnVersionUpdateNeeded(onVersionUpdateNeededEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onVersionUpdateNeeded -= handler;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on incompatible VM found.
+    /// </summary>
+    /// <param name="handler">Handler.</param>
+    public void UnregisterOnIncompatibleVMFound(onIncompatibleVMFoundEventHandler handler)
+    {
+        if(handler != null)
+        {
+            m_onIncompatibleVMFound -= handler;
+        }
+    }
+
     void onMovingTooFast(string movement)
 	{
 		if(m_onMovingTooFast != null)
