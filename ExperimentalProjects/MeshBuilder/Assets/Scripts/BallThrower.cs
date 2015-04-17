@@ -43,7 +43,7 @@ public class BallThrower : MonoBehaviour {
 	
 		if (Input.GetKeyDown (KeyCode.Space)) {
 			ballArray[currentBallID].transform.position = mainCamera.transform.position - mainCamera.transform.up*ballPrefab.transform.localScale.y;
-			ballArray[currentBallID].rigidbody.velocity = mainCamera.transform.forward * forwardVelocity + mainCamera.transform.up*forwardVelocity/2;
+			ballArray[currentBallID].GetComponent<Rigidbody>().velocity = mainCamera.transform.forward * forwardVelocity + mainCamera.transform.up*forwardVelocity/2;
 			ballArray[currentBallID].SetActive(true);
 			currentBallID = (currentBallID + 1)%ballArray.Length;
 		}
@@ -52,7 +52,7 @@ public class BallThrower : MonoBehaviour {
 			if (Input.GetTouch(i).phase == TouchPhase.Began) {
 
 				ballArray[currentBallID].transform.position = mainCamera.transform.position - mainCamera.transform.up*ballPrefab.transform.localScale.y;
-				ballArray[currentBallID].rigidbody.velocity = mainCamera.transform.forward * forwardVelocity + mainCamera.transform.up*forwardVelocity/2;
+				ballArray[currentBallID].GetComponent<Rigidbody>().velocity = mainCamera.transform.forward * forwardVelocity + mainCamera.transform.up*forwardVelocity/2;
 				ballArray[currentBallID].SetActive(true);
 				currentBallID = (currentBallID + 1)%ballArray.Length;
 			}

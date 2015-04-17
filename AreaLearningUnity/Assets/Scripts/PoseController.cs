@@ -61,9 +61,9 @@ public class PoseController : MonoBehaviour, ITangoPose
     [HideInInspector]
     public bool m_isRelocalized = false;
 
-    // These matrix is used for compute extrinsics corrected pose transformation.
-    // The corrected pose will take in the extrinsics between different sensor,
-    // and compute the percise estimated pose from it.
+    // This matrix is used to compute the extrinsics for the corrected pose transformation.
+    // The corrected pose will take in extrinsics between different sensors, and compute an
+    // estimated pose from it.
     // These technics are useful when the percise pose is need, for example AR or
     // mesh reconstruction.
     // See the point cloud example to see how to use them, in this script, we just
@@ -86,9 +86,9 @@ public class PoseController : MonoBehaviour, ITangoPose
     private bool m_shouldInitTango = false;
     
     /// <summary>
-    /// Determines whether the motion tracking is localized.
+    /// Determines whether motion tracking is localized.
     /// </summary>
-    /// <returns><c>true</c> if the motion tracking is localized; otherwise, <c>false</c>.</returns>
+    /// <returns><c>true</c> if motion tracking is localized; otherwise, <c>false</c>.</returns>
     public bool IsLocalized()
     {
         return m_isRelocalized;

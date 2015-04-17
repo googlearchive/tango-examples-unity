@@ -223,6 +223,8 @@ public class PoseController : MonoBehaviour , ITangoPose
         if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
             pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
         {
+            // Update the stats for the pose for the debug text
+            m_status = pose.status_code;
             if(pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
             {
                 // Cache the position and rotation to be set in the update function.
@@ -241,14 +243,10 @@ public class PoseController : MonoBehaviour , ITangoPose
                 {
                     m_frameCount = 0;
                 }
-                
-                // Update the stats for the pose for the debug text
-                m_status = pose.status_code;
                 m_frameCount++;
-                
+
                 // Compute delta frame timestamp.
                 m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
-                Debug.Log("Event Timestamp:" + pose.timestamp);
                 m_prevFrameTimestamp = (float)pose.timestamp;
                 
                 // Switch m_isDirty to true, so that the new pose get rendered in update.
