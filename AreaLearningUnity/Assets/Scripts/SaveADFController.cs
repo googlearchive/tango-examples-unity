@@ -55,7 +55,7 @@ public class SaveADFController : MonoBehaviour {
     /// </summary>
     private void OnGUI()
     {
-        if(m_tangoApplication.m_enableADFSaveLoad)
+		if(m_tangoApplication.m_enableAreaLearning)
         {
             if (GUI.Button(new Rect(Common.UI_BUTTON_GAP_X, 
                                     Screen.height - (Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y),
