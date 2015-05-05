@@ -61,7 +61,6 @@ public class PoseController : MonoBehaviour, ITangoPose
     [HideInInspector]
     public bool m_isRelocalized = false;
     
-    private bool m_alreadyInitialized = false;
     private TangoApplication m_tangoApplication;
     private Vector3 m_startingOffset;
     private Quaternion m_startingRotation;
@@ -266,9 +265,8 @@ public class PoseController : MonoBehaviour, ITangoPose
     
     private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
     {
-        if(permissionsGranted && !m_alreadyInitialized)
+        if(permissionsGranted)
         {
-            Debug.Log("SampleController._OnApplicationPermissionsEvent()");
             m_tangoApplication.InitApplication();
 
             if(m_useADF)
@@ -283,7 +281,6 @@ public class PoseController : MonoBehaviour, ITangoPose
             {
                 m_tangoApplication.InitProviders(string.Empty);
             }
-            m_alreadyInitialized = true;
             m_tangoApplication.ConnectToService();
         }
         else if (!permissionsGranted)

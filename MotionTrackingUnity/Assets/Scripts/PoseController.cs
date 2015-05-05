@@ -32,7 +32,6 @@ public class PoseController : MonoBehaviour , ITangoPose
         RELOCALIZED
     }
     
-    private bool m_alreadyInitialized = false;
     private TangoApplication m_tangoApplication;
 
     // Tango pose data for debug logging and transform update.
