@@ -275,9 +275,9 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             m_occupancyManager.depthPointCount = tangoDepth.m_pointCount;
             for (int i = 0; i < tangoDepth.m_pointCount; i+=3)
             {
-                m_depthPoints[3*i] = tangoDepth.m_vertices[i].x;
-                m_depthPoints[3*i + 1] = tangoDepth.m_vertices[i].y;
-                m_depthPoints[3*i + 2] = tangoDepth.m_vertices[i].z;
+                m_depthPoints[3 * i] = tangoDepth.m_points[i * 3];
+                m_depthPoints[3 * i + 1] = tangoDepth.m_points[i * 3 + 1];
+                m_depthPoints[3 * i + 2] = tangoDepth.m_points[i * 3 + 2];
             }
             m_currTangoDepth.m_timestamp = tangoDepth.m_timestamp;
             m_currTangoDepth.m_pointCount = tangoDepth.m_pointCount;

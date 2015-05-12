@@ -10,5 +10,10 @@
     <color name="text_exception_description">#333333</color>
     <color name="text_exception_action_required">#b4b4b4</color>
     <color name="grey_light_list">#efefef</color>
+    
+    <!-- Tango colors -->
+    <color name="tango_green">#1c9b5a</color>
+    <color name="tango_blue">#467ecb</color>
+    <color name="tango_yellow">#febd2c</color>
 
 </resources>

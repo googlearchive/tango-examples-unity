@@ -110,7 +110,7 @@ public class Pointcloud : MonoBehaviour, ITangoDepth
         }
 
         // Fill in the data to draw the point cloud.
-        if (tangoDepth != null && tangoDepth.m_vertices != null)
+        if (tangoDepth != null && tangoDepth.m_points != null)
         {
             int numberOfActiveVertices = tangoDepth.m_pointCount;
             m_pointsCount = numberOfActiveVertices;
@@ -146,13 +146,12 @@ public class Pointcloud : MonoBehaviour, ITangoDepth
 
                 Vector3[] pointCloudVertices  = new Vector3[VERT_COUNT];
 
-                // Copying the data from tangoDepth.m_vertices as the array is not being refreshed every 
-                // OnXYZijAvailable callback, meaning residue of previous callback's PointCloud data still exists.
-                // Ideally we should be doing mesh.vertices = tangoDepth.m_vertices 
-                // directly instead of making a copy. This will be fixed at SDK level in the future.
-                Array.Copy(tangoDepth.m_vertices, 0, pointCloudVertices, 0, numberOfActiveVertices);
+                // Converting points array to point vector array for Unity to create a mesh.
                 for(int i = 0; i < numberOfActiveVertices; ++i)
                 {
+                    pointCloudVertices[i] = new Vector3(tangoDepth.m_points[i * 3],
+                                                        tangoDepth.m_points[i * 3 + 1],
+                                                        tangoDepth.m_points[i * 3 + 2]);
                     m_overallZ += pointCloudVertices[i].z;
                     ++validPointCount;
                 }

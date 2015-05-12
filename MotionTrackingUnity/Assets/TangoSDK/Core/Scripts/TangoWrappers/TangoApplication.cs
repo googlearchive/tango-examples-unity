@@ -49,6 +49,7 @@ namespace Tango
         public bool m_motionTrackingAutoReset = true;
         public bool m_enableAreaLearning = false;
         public bool m_enableUXLibrary = true;
+		public bool m_drawDefaultUXExceptions = true;
         public bool m_useExperimentalVideoOverlay = true;
         public bool m_useExperimentalADF = false;
         private static string m_tangoServiceVersion = string.Empty;
@@ -139,16 +140,36 @@ namespace Tango
                     {
                         RegisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
                     }
-                } else
+                } 
+				else
                 {
                     ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
                     
                     if (videoOverlayHandler != null)
                     {
-                        UnregisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
+                        RegisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
                     }
                 }
             }
+
+			if(m_enableUXLibrary)
+			{
+				ITangoUX tangoUX = tangoObject as ITangoUX;
+
+				if(tangoUX != null)
+				{
+					UxExceptionListener.GetInstance.RegisterOnMovingTooFast(tangoUX.onMovingTooFastEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnMotionTrackingInvalid(tangoUX.onMotionTrackingInvalidEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnLyingOnSurface(tangoUX.onLyingOnSurfaceEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnCameraOverExposed(tangoUX.onCameraOverExposedEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnCamerUnderExposed(tangoUX.onCameraUnderExposedEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnTangoServiceNotResponding(tangoUX.onTangoServiceNotRespondingEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnTooFewFeatures(tangoUX.onTooFewFeaturesEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnTooFewPoints(tangoUX.onTooFewPointsEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnVersionUpdateNeeded(tangoUX.onVersionUpdateNeededEventHandler);
+					UxExceptionListener.GetInstance.RegisterOnIncompatibleVMFound(tangoUX.onIncompatibleVMFoundEventHandler);
+				}
+			}
         }
 
         /// <summary>
@@ -197,6 +218,25 @@ namespace Tango
                     }
                 }
             }
+
+			if(m_enableUXLibrary)
+			{
+				ITangoUX tangoUX = tangoObject as ITangoUX;
+				
+				if(tangoUX != null)
+				{
+					UxExceptionListener.GetInstance.UnregisterOnMovingTooFast(tangoUX.onMovingTooFastEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnMotionTrackingInvalid(tangoUX.onMotionTrackingInvalidEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnLyingOnSurface(tangoUX.onLyingOnSurfaceEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnCameraOverExposed(tangoUX.onCameraOverExposedEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnCamerUnderExposed(tangoUX.onCameraUnderExposedEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnTangoServiceNotResponding(tangoUX.onTangoServiceNotRespondingEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnTooFewFeatures(tangoUX.onTooFewFeaturesEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnTooFewPoints(tangoUX.onTooFewPointsEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnVersionUpdateNeeded(tangoUX.onVersionUpdateNeededEventHandler);
+					UxExceptionListener.GetInstance.UnregisterOnIncompatibleVMFound(tangoUX.onIncompatibleVMFoundEventHandler);
+				}
+			}
         }
         
         /// <summary>
@@ -370,6 +410,29 @@ namespace Tango
             Debug.Log("-----------------------------------Initializing Tango");
             _TangoInitialize();
             TangoConfig.InitConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
+
+            if(m_enableVideoOverlay && m_useExperimentalVideoOverlay)
+            {
+                int yTextureWidth = 0;
+                int yTextureHeight = 0;
+                int uvTextureWidth = 0;
+                int uvTextureHeight = 0;
+                
+                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_WIDTH, ref yTextureWidth);
+                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_HEIGHT, ref yTextureHeight);
+                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_WIDTH, ref uvTextureWidth);
+                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_HEIGHT, ref uvTextureHeight);
+                
+                if(yTextureWidth == 0 ||
+                   yTextureHeight == 0 ||
+                   uvTextureWidth == 0 ||
+                   uvTextureHeight == 0)
+                {
+                    Debug.Log("Video overlay texture sizes were not set properly");
+                }
+
+                m_yuvTexture.ResizeAll(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight);
+            }
         }
         
         /// <summary>
@@ -464,7 +527,7 @@ namespace Tango
         {
             if (m_videoOverlayListener != null)
             {
-                m_videoOverlayListener.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, true, m_yuvTexture);
+                m_videoOverlayListener.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, m_useExperimentalVideoOverlay, m_yuvTexture);
             }
         }
         
@@ -474,27 +537,6 @@ namespace Tango
         private void _InitializeMotionTracking(string UUID)
         {
             System.Collections.Generic.List<TangoCoordinateFramePair> framePairs = new System.Collections.Generic.List<TangoCoordinateFramePair>();
-            if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_enableAreaLearning) && m_enableAreaLearning)
-            {
-                Debug.Log("Area Learning is enabled.");
-                if (!string.IsNullOrEmpty(UUID))
-                {
-                    TangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, UUID);
-                    TangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
-                }
-                
-                TangoCoordinateFramePair areaDescription;
-                areaDescription.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
-                areaDescription.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-                
-                TangoCoordinateFramePair startToADF;
-                startToADF.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
-                startToADF.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
-                
-                framePairs.Add(areaDescription);
-                framePairs.Add(startToADF);
-            }
-
             
             if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_BOOL, m_enableMotionTracking) && m_enableMotionTracking)
             {
@@ -502,6 +544,27 @@ namespace Tango
                 motionTracking.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
                 motionTracking.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
                 framePairs.Add(motionTracking);
+                
+                if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_enableAreaLearning) && m_enableAreaLearning)
+                {
+                    Debug.Log("Area Learning is enabled.");
+                    if (!string.IsNullOrEmpty(UUID))
+                    {
+                        TangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
+                        TangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, UUID);
+                    }
+                    
+                    TangoCoordinateFramePair areaDescription;
+                    areaDescription.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                    areaDescription.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                    
+                    TangoCoordinateFramePair startToADF;
+                    startToADF.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                    startToADF.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+                    
+                    framePairs.Add(areaDescription);
+                    framePairs.Add(startToADF);
+                }
             }
 
             if (framePairs.Count > 0)
@@ -521,10 +584,6 @@ namespace Tango
             {
                 _SetDepthCallbacks();
             }
-            bool depthConfigValue = false;
-            TangoConfig.GetBool(TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL, ref depthConfigValue);
-            Debug.Log("TangoConfig bool for key: " + TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL
-                + " has value set of: " + depthConfigValue);
         }
 
         /// <summary>
@@ -573,6 +632,11 @@ namespace Tango
                 {
                     AndroidHelper.PerformanceLog("Unity _TangoConnect end");
                     Debug.Log(CLASS_NAME + ".Connect() Tango client connected to service!");
+                    
+                    if (m_enableUXLibrary)
+                    {
+                        AndroidHelper.StartTangoUX();
+                    }
                 }
             }
         }
@@ -593,6 +657,11 @@ namespace Tango
             {
                 Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
                 m_isDisconnecting = false;
+
+                if (m_enableUXLibrary)
+                {
+                    AndroidHelper.StopTangoUX();
+                }
             }
         }
 
@@ -705,14 +774,9 @@ namespace Tango
         /// <returns>The start exceptions listener.</returns>
         private IEnumerator _StartExceptionsListener()
         {
-            AndroidHelper.ShowStandardTangoExceptionsUI();
-            
-            while (!AndroidHelper.FindTangoExceptionsUILayout())
-            {
-                yield return 0;
-            }
-            
+            AndroidHelper.ShowStandardTangoExceptionsUI(m_drawDefaultUXExceptions);
             AndroidHelper.SetTangoExceptionsListener();
+            yield return 0;
         }
 
         /// <summary>
@@ -741,8 +805,12 @@ namespace Tango
 
             if (m_enableVideoOverlay)
             {
-                // TODO (fungja): This magic number solution should be fixed.
-                m_yuvTexture = new YUVTexture(320, 720, 320, 360, TextureFormat.RGBA32, false);
+                int yTextureWidth = 0;
+                int yTextureHeight = 0;
+                int uvTextureWidth = 0;
+                int uvTextureHeight = 0;
+
+                m_yuvTexture = new YUVTexture(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight, TextureFormat.RGBA32, false);
                 m_videoOverlayListener = new VideoOverlayListener();
             }
         }

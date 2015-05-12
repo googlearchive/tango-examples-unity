@@ -66,6 +66,21 @@ namespace Tango
             m_videoOverlayTextureCb = new Texture2D(uvPlaneWidth, uvPlaneHeight, format, mipmap);
             m_videoOverlayTextureCr = new Texture2D(uvPlaneWidth, uvPlaneHeight, format, mipmap);
         }
+
+        /// <summary>
+        /// Resizes all yuv texture planes.
+        /// </summary>
+        /// <param name="yPlaneWidth">Y plane width.</param>
+        /// <param name="yPlaneHeight">Y plane height.</param>
+        /// <param name="uvPlaneWidth">Uv plane width.</param>
+        /// <param name="uvPlaneHeight">Uv plane height.</param>
+        public void ResizeAll(int yPlaneWidth, int yPlaneHeight,
+                              int uvPlaneWidth, int uvPlaneHeight)
+        {
+            m_videoOverlayTextureY.Resize(yPlaneWidth, yPlaneHeight);
+            m_videoOverlayTextureCb.Resize(uvPlaneWidth, uvPlaneHeight);
+            m_videoOverlayTextureCr.Resize(uvPlaneWidth, uvPlaneHeight);
+        }
     }
 
     /// <summary>
@@ -116,15 +131,18 @@ namespace Tango
         /// <summary>
         /// Renders the latest frame.
         /// </summary>
+        /// <returns>The latest frame timestamp.</returns>
         /// <param name="cameraId">Camera identifier.</param>
-        public static void RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
+        public static double RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
         {
-            double timestamp = 0.0f;
+            double timestamp = 0.0;
             int returnValue = VideoOverlayAPI.TangoService_updateTexture(cameraId, ref timestamp);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("VideoOverlayProvider.UpdateTexture() Texture was not updated by camera!");
             }
+
+            return timestamp;
         }
         
         /// <summary>

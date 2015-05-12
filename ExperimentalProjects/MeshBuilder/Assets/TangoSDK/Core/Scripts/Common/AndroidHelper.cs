@@ -15,13 +15,11 @@
  */
 using System.Collections;
 using UnityEngine;
+using System;
 
 /// <summary>
 /// Helper functions for common android functionality.
 /// </summary>
-using System;
-
-
 public class AndroidHelper : MonoBehaviour
 {
 	private const string PERMISSION_REQUESTER = "com.projecttango.permissionrequester.RequestManagerActivity";
@@ -119,6 +117,10 @@ public class AndroidHelper : MonoBehaviour
 	#endif
 	}
 
+    /// <summary>
+    /// Gets the Java tango helper object.
+    /// </summary>
+    /// <returns>The tango helper object.</returns>
 	public static AndroidJavaObject GetTangoHelperObject()
     {
     #if UNITY_ANDROID && !UNITY_EDITOR
@@ -127,8 +129,9 @@ public class AndroidHelper : MonoBehaviour
 		    m_tangoHelper = new AndroidJavaObject("com.projecttango.unity.TangoUnityHelper", GetUnityActivity());
         }
 		return m_tangoHelper;
-    #endif
+    #else
         return null;
+    #endif
 	}
 
 	/// <summary>
@@ -200,6 +203,10 @@ public class AndroidHelper : MonoBehaviour
 		return null;
 	}
 
+    /// <summary>
+    /// Used for performance logging from the Android side.
+    /// </summary>
+    /// <param name="message">Message.</param>
 	public static void PerformanceLog(string message)
 	{
 		AndroidJavaObject unityActivity = GetUnityActivity();
@@ -306,23 +313,47 @@ public class AndroidHelper : MonoBehaviour
 		}
 	}
 
+    /// <summary>
+    /// Parses the tango event.
+    /// </summary>
+    /// <param name="timestamp">Timestamp.</param>
+    /// <param name="eventType">Event type.</param>
+    /// <param name="key">Key.</param>
+    /// <param name="value">Value.</param>
 	public static void ParseTangoEvent(double timestamp, int eventType, string key, string value)
 	{
 		AndroidJavaObject tangoObject = GetTangoHelperObject();
 		if(tangoObject != null)
 		{
-			tangoObject.Call("showTangoEvent", timestamp, eventType, key, value);
+            tangoObject.Call("processTangoEvent", timestamp, eventType, key, value);
 		}
 	}
 
+    /// <summary>
+    /// Parses the tango pose status.
+    /// </summary>
+    /// <param name="poseStatus">Pose status.</param>
 	public static void ParseTangoPoseStatus(int poseStatus)
 	{
 		AndroidJavaObject tangoObject = GetTangoHelperObject();
 		if(tangoObject != null)
 		{
-			tangoObject.Call("showTangoPoseStatus", poseStatus);
+            tangoObject.Call("processPoseDataStatus", poseStatus);
 		}
 	}
+
+    /// <summary>
+    /// Parses the tango depth point count.
+    /// </summary>
+    /// <param name="pointCount">Point count.</param>
+    public static void ParseTangoDepthPointCount(int pointCount)
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+        if(tangoObject != null)
+        {
+            tangoObject.Call("processXyzIjPointCount", pointCount);
+        }
+    }
 
 	/// <summary>
 	/// Determines if is tango core present.
@@ -386,29 +417,55 @@ public class AndroidHelper : MonoBehaviour
 	/// <summary>
 	/// Shows the standard tango exceptions UI.
 	/// </summary>
-	public static void ShowStandardTangoExceptionsUI()
+    public static void ShowStandardTangoExceptionsUI(bool shouldUseDefaultUi)
 	{
 		AndroidJavaObject tangoObject = GetTangoHelperObject();
 		if(tangoObject != null)
 		{
 			Debug.Log("Show UX exceptions");
-			tangoObject.Call("enableTangoExceptions");
+            tangoObject.Call("showDefaultExceptionsUi", shouldUseDefaultUi);
 		}
 	}
 
     /// <summary>
-    /// Finds the tango exceptions user interface layout.
+    /// Starts the tango UX library.
+    /// Should be called after connecting to Tango service.
     /// </summary>
-    public static bool FindTangoExceptionsUILayout()
+    public static void StartTangoUX()
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
         if(tangoObject != null)
         {
-            Debug.Log("Find UX exceptions layout");
-            return tangoObject.Call<bool>("findExceptionsLayout");
+            tangoObject.Call("start");
         }
-        return false;
     }
+
+    /// <summary>
+    /// Stops the tango UX library.
+    /// Should be called before disconnect.
+    /// </summary>
+    public static void StopTangoUX()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+        if(tangoObject != null)
+        {
+            tangoObject.Call("stop");
+        }
+    }
+
+    /// <summary>
+    /// Finds the tango exceptions user interface layout.
+    /// </summary>
+//    public static bool FindTangoExceptionsUILayout()
+//    {
+//        AndroidJavaObject tangoObject = GetTangoHelperObject();
+//        if(tangoObject != null)
+//        {
+//            Debug.Log("Find UX exceptions layout");
+//            return tangoObject.Call<bool>("findExceptionsLayout");
+//        }
+//        return false;
+//    }
 
 	/// <summary>
 	/// Sets the tango exceptions listener.

@@ -22,11 +22,8 @@ public delegate void onCameraUnderExposedEventHandler(string value);
 public delegate void onTooFewFeaturesEventHandler(string features);
 public delegate void onTooFewPointsEventHandler(string points);
 public delegate void onLyingOnSurfaceEventHandler(string value);
-public delegate void onApplicationNotRespondingEventHandler();
-public delegate void onUpdateNeededEventHandler();
 public delegate void onMotionTrackingInvalidEventHandler(string exceptionStatus);
 public delegate void onTangoServiceNotRespondingEventHandler();
-public delegate void onAppNotRespondingEventHandler();
 public delegate void onVersionUpdateNeededEventHandler();
 public delegate void onIncompatibleVMFoundEventHandler();
 
@@ -48,11 +45,8 @@ public class UxExceptionListener : AndroidJavaProxy
 	private event onTooFewFeaturesEventHandler m_onTooFewFeatures;
 	private event onTooFewPointsEventHandler m_onTooFewPoints;
 	private event onLyingOnSurfaceEventHandler m_onLyingOnSurface;
-	private event onApplicationNotRespondingEventHandler m_onApplicationNotResponding;
-	private event onUpdateNeededEventHandler m_onUpdateNeeded;
 	private event onMotionTrackingInvalidEventHandler m_onMotionTrackingInvalid;
 	private event onTangoServiceNotRespondingEventHandler m_onTangoServiceNotResponding;
-	private event onAppNotRespondingEventHandler m_onAppNotResponding;
 	private event onVersionUpdateNeededEventHandler m_onVersionUpdateNeeded;
 	private event onIncompatibleVMFoundEventHandler m_onIncompatibleVMFound;
 
@@ -146,30 +140,6 @@ public class UxExceptionListener : AndroidJavaProxy
 	}
 
     /// <summary>
-    /// Registers the on application not responding.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-	public void RegisterOnApplicationNotResponding(onApplicationNotRespondingEventHandler handler)
-	{
-		if(handler != null)
-		{
-			m_onApplicationNotResponding += handler;
-		}
-	}
-
-    /// <summary>
-    /// Registers the on update needed.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-	public void RegisterOnUpdateNeeded(onUpdateNeededEventHandler handler)
-	{
-		if(handler != null)
-		{
-			m_onUpdateNeeded += handler;
-		}
-	}
-
-    /// <summary>
     /// Registers the on motion tracking invalid.
     /// </summary>
     /// <param name="handler">Handler.</param>
@@ -190,18 +160,6 @@ public class UxExceptionListener : AndroidJavaProxy
 		if(handler != null)
 		{
 			m_onTangoServiceNotResponding += handler;
-		}
-	}
-
-    /// <summary>
-    /// Registers the on app not responding.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-	public void RegisterOnAppNotResponding(onAppNotRespondingEventHandler handler)
-	{
-		if(handler != null)
-		{
-			m_onAppNotResponding += handler;
 		}
 	}
 
@@ -302,30 +260,6 @@ public class UxExceptionListener : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Unregisters the on application not responding.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-    public void UnregisterOnApplicationNotResponding(onApplicationNotRespondingEventHandler handler)
-    {
-        if(handler != null)
-        {
-            m_onApplicationNotResponding -= handler;
-        }
-    }
-
-    /// <summary>
-    /// Unregisters the on update needed.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-    public void UnregisterOnUpdateNeeded(onUpdateNeededEventHandler handler)
-    {
-        if(handler != null)
-        {
-            m_onUpdateNeeded -= handler;
-        }
-    }
-
-    /// <summary>
     /// Unregisters the on motion tracking invalid.
     /// </summary>
     /// <param name="handler">Handler.</param>
@@ -346,18 +280,6 @@ public class UxExceptionListener : AndroidJavaProxy
         if(handler != null)
         {
             m_onTangoServiceNotResponding -= handler;
-        }
-    }
-
-    /// <summary>
-    /// Unregisters the on app not responding.
-    /// </summary>
-    /// <param name="handler">Handler.</param>
-    public void UnregisterOnAppNotResponding(onAppNotRespondingEventHandler handler)
-    {
-        if(handler != null)
-        {
-            m_onAppNotResponding -= handler;
         }
     }
 
@@ -401,20 +323,19 @@ public class UxExceptionListener : AndroidJavaProxy
 	}
     void onCameraUnderExposed(string value)
 	{
-		Debug.Log("onCameraUnderExposed");
 		if(m_onCameraUnderExposed != null)
 		{
 			m_onCameraUnderExposed(value);
 		}
 	}
-    void onSpaceNotRecognized(string features)
+    void onTooFewFeatures(string features)
 	{
 		if(m_onTooFewFeatures != null)
 		{
 			m_onTooFewFeatures(features);
 		}
 	}
-    void onUnableToDetectSurface(string points)
+    void onTooFewDepthPoints(string points)
 	{
 		if(m_onTooFewPoints != null)
 		{
@@ -428,20 +349,6 @@ public class UxExceptionListener : AndroidJavaProxy
 			m_onLyingOnSurface(value);
 		}
 	}
-    void onApplicationNotResponding()
-	{
-		if(m_onApplicationNotResponding != null)
-		{
-			m_onApplicationNotResponding();
-		}
-	}
-    void onUpdateNeeded()
-	{
-		if(m_onUpdateNeeded != null)
-		{
-			m_onUpdateNeeded();
-		}
-	}
     void onMotionTrackingInvalid(string exceptionStatus)
 	{
 		if(m_onMotionTrackingInvalid != null)
@@ -449,18 +356,11 @@ public class UxExceptionListener : AndroidJavaProxy
 			m_onMotionTrackingInvalid(exceptionStatus);
 		}
 	}
-    void onDeviceNotResponding()
+    void onTangoServiceNotResponding()
 	{
 		if(m_onTangoServiceNotResponding != null)
 		{
 			m_onTangoServiceNotResponding();
-		}
-	}
-    void onAppNotResponding()
-	{
-		if(m_onAppNotResponding != null)
-		{
-			m_onAppNotResponding();
 		}
 	}
     void onVersionUpdateNeeded()

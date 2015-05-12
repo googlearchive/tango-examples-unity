@@ -19,11 +19,17 @@
         <item name="android:textSize">20sp</item>
     </style>
 
-    <!-- Shake Component -->
-    <style name="Text40GrayDarkRegular">
+    <!-- Connection Layout -->
+    <style name="ConnectionLayoutText">
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textColor">@color/gray_dark</item>
-        <item name="android:textSize">40sp</item>
+        <item name="android:textSize">21sp</item>
+    </style>
+    
+    <style name="ConnectionLayoutSubtext">
+        <item name="android:fontFamily">sans-serif-light</item>
+        <item name="android:textColor">@color/gray_dark</item>
+        <item name="android:textSize">14sp</item>
     </style>
     
   <!-- Exceptions -->

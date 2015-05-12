@@ -543,16 +543,30 @@ namespace Tango
     {
         public int m_version;
         public int m_pointCount;
-        public Vector3[] m_vertices;
+        public float[] m_points;
         public double m_timestamp;
         public int m_ijRows;
         public int m_ijColumns;
-        public Vector2[] m_ij;
+        public int[] m_ij;
+
+        /// <summary>
+        /// Max point array size is currently defined by the largest single mesh
+        /// supported by Unity. This array is multiplied by 3 to account for the
+        /// x/y/z components.
+        /// </summary>
+        public static readonly int MAX_POINTS_ARRAY_SIZE = Common.UNITY_MAX_SUPPORTED_VERTS_PER_MESH * 3;
+
+        /// <summary>
+        /// Max IJ array size is currently defined by the largest single mesh
+        /// supported by Unity. This number is multiplied by 2 to account for the
+        /// i/j components.
+        /// </summary>
+        public static readonly int MAX_IJ_ARRAY_SIZE = Common.UNITY_MAX_SUPPORTED_VERTS_PER_MESH * 2;
 
         public TangoUnityDepth()
         {
-            m_vertices = new Vector3[61440];
-            m_ij = new Vector2[61440];
+            m_points = new float[MAX_POINTS_ARRAY_SIZE];
+            m_ij = new int[MAX_IJ_ARRAY_SIZE];
             m_version = -1;
             m_timestamp = 0.0;
             m_pointCount = m_ijRows = m_ijColumns = 0;

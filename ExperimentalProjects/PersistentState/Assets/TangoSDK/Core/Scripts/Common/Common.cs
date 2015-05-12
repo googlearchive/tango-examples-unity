@@ -68,6 +68,8 @@ namespace Tango
 		public const int TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE = 42;
 		public const int TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE = 43;
 
+        public const int UNITY_MAX_SUPPORTED_VERTS_PER_MESH = 65534;
+
         public const float UI_LABEL_START_X = 15.0f;
         public const float UI_LABEL_START_Y = 15.0f;
         public const float UI_LABEL_SIZE_X = 1920.0f;
