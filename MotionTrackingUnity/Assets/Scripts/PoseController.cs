@@ -32,7 +32,6 @@ public class PoseController : MonoBehaviour , ITangoPose
         RELOCALIZED
     }
     
-    private bool m_alreadyInitialized = false;
     private TangoApplication m_tangoApplication;
 
     // Tango pose data for debug logging and transform update.
@@ -44,13 +43,11 @@ public class PoseController : MonoBehaviour , ITangoPose
     public int m_frameCount;
     [HideInInspector]
     public TangoEnums.TangoPoseStatusType m_status;
-    private bool m_isProcessing = false;
     private float m_prevFrameTimestamp;
 
     // Tango pose data.
     private Quaternion m_tangoRotation;
     private Vector3 m_tangoPosition;
-    private bool m_isDirty = false;
 
     // We use couple of matrix transformation to convert the pose from Tango coordinate
     // frame to Unity coordinate frame.
@@ -90,7 +87,6 @@ public class PoseController : MonoBehaviour , ITangoPose
         m_dTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, -1.0f, 0.0f));
         m_dTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
 
-        m_isDirty = false;
         m_frameDeltaTime = -1.0f;
         m_prevFrameTimestamp = -1.0f;
         m_frameCount = -1;
@@ -144,28 +140,6 @@ public class PoseController : MonoBehaviour , ITangoPose
     private void Update()
     {
         #if UNITY_ANDROID && !UNITY_EDITOR
-        if (m_shouldInitTango)
-        {
-            m_tangoApplication.InitApplication();
-            m_tangoApplication.InitProviders(string.Empty);
-            m_tangoApplication.ConnectToService();
-            m_shouldInitTango = false;
-        }
-        if (m_isDirty)
-        {
-            // Construct the start of service with respect to device matrix from the pose.
-            Matrix4x4 ssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
-
-            // Converting from Tango coordinate frame to Unity coodinate frame.
-            Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
-            
-            // Extract new local position
-            transform.position = uwTuc.GetColumn(3);
-            
-            // Extract new local rotation
-            transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
-        }
-        
         if(Input.GetKeyDown(KeyCode.Escape))
         {
             if(m_tangoApplication != null)
@@ -178,7 +152,6 @@ public class PoseController : MonoBehaviour , ITangoPose
             // results in a hard crash.
             AndroidHelper.AndroidQuit();
         }
-        
         #else
         Vector3 tempPosition = transform.position;
         Quaternion tempRotation = transform.rotation;
@@ -193,7 +166,6 @@ public class PoseController : MonoBehaviour , ITangoPose
     /// </summary>
     private void OnApplicationPause(bool pauseStatus)
     {
-        m_isDirty = false;
         m_frameDeltaTime = -1.0f;
         m_prevFrameTimestamp = -1.0f;
         m_frameCount = -1;
@@ -211,7 +183,6 @@ public class PoseController : MonoBehaviour , ITangoPose
     /// <param name="pose">Pose.</param>
     public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
     {
-        m_isProcessing = true;
         // Get out of here if the pose is null
         if (pose == null)
         {
@@ -227,9 +198,7 @@ public class PoseController : MonoBehaviour , ITangoPose
             m_status = pose.status_code;
             if(pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
             {
-                // Cache the position and rotation to be set in the update function.
-                // This needs to be done because this callback does not
-                // happen in the main game thread.
+                // Create new Quaternion and Vec3 from the pose data received in the event.
                 m_tangoPosition = new Vector3((float)pose.translation [0],
                                               (float)pose.translation [1],
                                               (float)pose.translation [2]);
@@ -248,9 +217,18 @@ public class PoseController : MonoBehaviour , ITangoPose
                 // Compute delta frame timestamp.
                 m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
                 m_prevFrameTimestamp = (float)pose.timestamp;
+
+                // Construct the start of service with respect to device matrix from the pose.
+                Matrix4x4 ssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
                 
-                // Switch m_isDirty to true, so that the new pose get rendered in update.
-                m_isDirty = (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID);
+                // Converting from Tango coordinate frame to Unity coodinate frame.
+                Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
+                
+                // Extract new local position
+                transform.position = uwTuc.GetColumn(3);
+                
+                // Extract new local rotation
+                transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
             }
             else // if the current pose is not valid we set the pose to identity
             {
@@ -265,7 +243,9 @@ public class PoseController : MonoBehaviour , ITangoPose
     {
         if(permissionsGranted)
         {
-            m_shouldInitTango = true;
+            m_tangoApplication.InitApplication();
+            m_tangoApplication.InitProviders(string.Empty);
+            m_tangoApplication.ConnectToService();
         }
         else
         {

@@ -45,7 +45,7 @@ namespace Tango
     	/// Sets the callback for image updates.
     	/// </summary>
     	/// <param name="cameraId">Camera identifier.</param>
-    	public virtual void SetCallback(Tango.TangoEnums.TangoCameraId cameraId, bool useExperimentalOverlay, Texture2D videoOverlayTexture)
+    	public virtual void SetCallback(Tango.TangoEnums.TangoCameraId cameraId, bool useExperimentalOverlay, YUVTexture videoOverlayTexture)
     	{
             m_usingExperimentalOverlay = useExperimentalOverlay;
             if(!useExperimentalOverlay)
@@ -59,8 +59,8 @@ namespace Tango
                 if(videoOverlayTexture != null)
                 {
                     m_onUnityFrameAvailable = new Tango.VideoOverlayProvider.TangoService_onUnityFrameAvailable(_OnExperimentalUnityFrameAvailable);
-                    VideoOverlayProvider.ExperimentalConnectTexture(cameraId, 
-                                                                    videoOverlayTexture.GetNativeTextureID(), 
+                    VideoOverlayProvider.ExperimentalConnectTexture(cameraId,
+                                                                    videoOverlayTexture,
                                                                     m_onUnityFrameAvailable);
 
                     Debug.Log("VideoOverlayListener.SetCallback() : Experimental Overlay listener hooked up");

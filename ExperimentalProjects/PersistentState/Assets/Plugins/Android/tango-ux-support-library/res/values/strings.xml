@@ -37,9 +37,6 @@
     <string name="too_much_light_title">Too much light.</string>
     <string name="too_much_light_description">Avoid pointing at bright lights.</string>
     
-    <string name="app_not_responding_title">Tango Service Connecting Timeout.</string>
-    <string name="app_not_responding_description">Exit the application or reboot your device.</string>
-    
     <string name="device_not_responding_title">Tango Service Crash.</string>
     <string name="device_not_responding_description">Exit the application or reboot your device.</string>
     
@@ -47,7 +44,7 @@
     <string name="service_updated_description">Update your Tango Service to the latest version.</string>
 
     <string name="lying_on_surface_title">Lying on surface.</string>
-    <string name="lying_on_surface_description">Pick up your device.</string>
+    <string name="lying_on_surface_description">Pick up the device to continue.</string>
     
 	<string name="motion_track_title">Motion Tracking lost.</string>
     <string name="motion_track_description">Hold steady and wait for system to recover.</string>
@@ -57,9 +54,9 @@
 
     <string name="action_required">Action required</string>
     
-    <!-- Shake Component -->
-    <string name="hold_steady_message">Hold steady</string>
-    <string name="hold_steady_description">to connect to Tango</string>
+    <!-- Connection Layout -->
+    <string name="connection_layout_message">Connecting</string>
+    <string name="connection_layout_description">Please hold steady</string>
 
     <!-- Select ADF -->
     <string name="adf_select">Select an Area Description File</string>

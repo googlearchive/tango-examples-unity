@@ -60,31 +60,11 @@ public class PoseController : MonoBehaviour, ITangoPose
     public Vector3[] m_tangoPosition;
     [HideInInspector]
     public bool m_isRelocalized = false;
-
-    // This matrix is used to compute the extrinsics for the corrected pose transformation.
-    // The corrected pose will take in extrinsics between different sensors, and compute an
-    // estimated pose from it.
-    // These technics are useful when the percise pose is need, for example AR or
-    // mesh reconstruction.
-    // See the point cloud example to see how to use them, in this script, we just
-    // queried the value from API.
-    [HideInInspector]
-    public Matrix4x4 m_deviceToIMUMatrix = new Matrix4x4 ();
-    [HideInInspector]
-    public Matrix4x4 m_cameraToIMUMatrix = new Matrix4x4 ();
     
-    private bool m_alreadyInitialized = false;
     private TangoApplication m_tangoApplication;
     private Vector3 m_startingOffset;
     private Quaternion m_startingRotation;
 
-    
-   
-    private bool m_isDirty = false;
-   
-    
-    private bool m_shouldInitTango = false;
-    
     /// <summary>
     /// Determines whether motion tracking is localized.
     /// </summary>
@@ -99,7 +79,6 @@ public class PoseController : MonoBehaviour, ITangoPose
     /// </summary>
     private void Awake()
     {
-        m_isDirty = false;
         m_startingOffset = transform.position;
         m_startingRotation = transform.rotation;
         m_frameDeltaTime = new float[]{-1.0f,-1.0f,-1.0f};
@@ -157,75 +136,6 @@ public class PoseController : MonoBehaviour, ITangoPose
     private void Update()
     {
         #if UNITY_ANDROID && !UNITY_EDITOR
-        if(m_shouldInitTango)
-        {
-            m_tangoApplication.InitApplication();
-            
-            if(m_useADF)
-            {
-                // Query the full adf list.
-                PoseProvider.RefreshADFList();
-                // loading last recorded ADF
-                string uuid = PoseProvider.GetLatestADFUUID().GetStringDataUUID();
-                m_tangoApplication.InitProviders(uuid);
-            }
-            else
-            {
-                m_tangoApplication.InitProviders(string.Empty);
-            }
-            
-            // Query extrinsics constant tranformations.
-            TangoPoseData poseData = new TangoPoseData();
-            double timestamp = 0.0;
-            TangoCoordinateFramePair pair;
-            
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-            PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-            Vector3 position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-            Quaternion quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
-            m_deviceToIMUMatrix = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
-            
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
-            PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
-            position = new Vector3((float)poseData.translation[0], (float)poseData.translation[1], (float)poseData.translation[2]);
-            quat = new Quaternion((float)poseData.orientation[0], (float)poseData.orientation[1], (float)poseData.orientation[2], (float)poseData.orientation[3]);
-            m_cameraToIMUMatrix = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
-            
-            m_alreadyInitialized = true;
-            m_shouldInitTango = false;
-            
-            m_tangoApplication.ConnectToService();
-        }
-
-        if (m_isDirty)
-        {
-            // This rotation needs to be put into Unity coordinate space.
-            Quaternion rotationFix = Quaternion.Euler(90.0f, 0.0f, 0.0f);
-            
-            if (!m_isRelocalized) 
-            {
-                Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[0].eulerAngles.x,
-                                                      -m_tangoRotation[0].eulerAngles.z,
-                                                      m_tangoRotation[0].eulerAngles.y);
-                
-                transform.rotation = m_startingRotation * (rotationFix * axisFix);
-                transform.position = (m_startingRotation * (m_tangoPosition[0] * m_movementScale)) + m_startingOffset;
-                
-            }
-            else 
-            {
-                Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[1].eulerAngles.x,
-                                                      -m_tangoRotation[1].eulerAngles.z,
-                                                      m_tangoRotation[1].eulerAngles.y);
-                
-                transform.rotation = m_startingRotation * (rotationFix * axisFix);
-                transform.position = (m_startingRotation * (m_tangoPosition[1] * m_movementScale)) + m_startingOffset;
-            }
-            m_isDirty = false;
-        }
-        
         if(Input.GetKeyDown(KeyCode.Escape))
         {
             if(m_tangoApplication != null)
@@ -293,9 +203,7 @@ public class PoseController : MonoBehaviour, ITangoPose
         
         if(pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
-            // Cache the position and rotation to be set in the update function.
-            // This needs to be done because this callback does not
-            // happen in the main game thread.
+            // Create a new Vec3 and Quaternion from the Pose Data received.
             m_tangoPosition[currentIndex] = new Vector3((float)pose.translation [0],
                                                         (float)pose.translation [2],
                                                         (float)pose.translation [1]);
@@ -325,34 +233,66 @@ public class PoseController : MonoBehaviour, ITangoPose
         // Compute delta frame timestamp.
         m_frameDeltaTime[currentIndex] = (float)pose.timestamp - m_prevFrameTimestamp[currentIndex];
         m_prevFrameTimestamp [currentIndex] = (float)pose.timestamp;
-        
-        // Switch m_isDirty to true, so that the new pose get rendered in update.
-        m_isDirty = (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID);
+
+        // This rotation needs to be put into Unity coordinate space. In unity +ve x is right,
+        // +ve Y is up and +ve Z is forward while coordinate frame for Device wrt Start of service
+        // +ve X is right, +ve Y is forward, +ve Z is up. 
+        // More explanation: https://developers.google.com/project-tango/overview/coordinate-systems
+        Quaternion rotationFix = Quaternion.Euler(90.0f, 0.0f, 0.0f);
+
+        // If not relocalized MotionTracking pose(Device wrt Start of Service) is used.
+        if (!m_isRelocalized) 
+        {
+            Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[0].eulerAngles.x,
+                                                  -m_tangoRotation[0].eulerAngles.z,
+                                                  m_tangoRotation[0].eulerAngles.y);
+
+            transform.rotation = m_startingRotation * (rotationFix * axisFix);
+            transform.position = (m_startingRotation * (m_tangoPosition[0] * m_movementScale)) + m_startingOffset;
+
+        }
+        // If relocalized Device wrt ADF pose is used.
+        else 
+        {
+            Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[1].eulerAngles.x,
+                                                  -m_tangoRotation[1].eulerAngles.z,
+                                                  m_tangoRotation[1].eulerAngles.y);
+
+            transform.rotation = m_startingRotation * (rotationFix * axisFix);
+            transform.position = (m_startingRotation * (m_tangoPosition[1] * m_movementScale)) + m_startingOffset;
+        }
     }
     
     private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
     {
-        if(permissionsGranted && !m_alreadyInitialized)
+        if(permissionsGranted)
         {
-            Debug.Log("SampleController._OnApplicationPermissionsEvent()");
-            m_shouldInitTango = true;
+            m_tangoApplication.InitApplication();
+
+            if(m_useADF)
+            {
+                // Query the full adf list.
+                PoseProvider.RefreshADFList();
+                // loading last recorded ADF
+                string uuid = PoseProvider.GetLatestADFUUID().GetStringDataUUID();
+                m_tangoApplication.InitProviders(uuid);
+            }
+            else
+            {
+                m_tangoApplication.InitProviders(string.Empty);
+            }
+            m_tangoApplication.ConnectToService();
         }
         else if (!permissionsGranted)
         {
-            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-        }
-        
-        if(permissionsGranted && m_alreadyInitialized)
-        {
-            m_tangoApplication.ConnectToService();
+            AndroidHelper.ShowAndroidToastMessage("Motion Tracking and Area Learning Permissions Needed", true);
         }
     }
-    
+
     /// <summary>
     /// Unity callback when application is paused.
     /// </summary>
     void OnApplicationPause(bool pauseStatus) {
-        m_isDirty = false;
         m_frameDeltaTime = new float[3];
         m_prevFrameTimestamp = new float[3];
         m_frameCount = new int[3];
