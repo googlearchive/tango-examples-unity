@@ -76,13 +76,13 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleIdentifier: com.projecttango.experiments.augmentedreality
-  bundleVersion: 1.13
+  bundleVersion: 1.14
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   metroEnableLowLatencyPresentationAPI: 0
   xboxOneDisableKinectGpuReservation: 0
   productGUID: b34d832c717244d229bccdfd54c71e8a
-  AndroidBundleVersionCode: 13
+  AndroidBundleVersionCode: 14
   AndroidMinSdkVersion: 19
   AndroidPreferredInstallLocation: 1
   aotOptions: 
