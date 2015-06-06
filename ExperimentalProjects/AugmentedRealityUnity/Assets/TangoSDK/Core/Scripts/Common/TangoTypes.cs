@@ -263,6 +263,28 @@ namespace Tango
             framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             confidence = 0;
         }
+
+        /// <summary>
+        /// Performs a deep copy of pose data.
+        /// </summary>
+        /// <param name="poseToCopy">Pose to copy.</param>
+        public void DeepCopy(TangoPoseData poseToCopy)
+        {
+            this.version = poseToCopy.version;
+            this.timestamp = poseToCopy.timestamp;
+            this.status_code = poseToCopy.status_code;
+            this.framePair.baseFrame = poseToCopy.framePair.baseFrame;
+            this.framePair.targetFrame = poseToCopy.framePair.targetFrame;
+            this.confidence = poseToCopy.confidence;
+            for(int i = 0; i < 4; ++i)
+            {
+                this.orientation[i] = poseToCopy.orientation[i];
+            }
+            for(int i = 0; i < 3; ++i)
+            {
+                this.translation[i] = poseToCopy.translation[i];
+            }
+        }
     }
 
     /// <summary>
