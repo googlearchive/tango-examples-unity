@@ -4,7 +4,7 @@ Copyright (C) 2015 Google Inc.
 
 <h2>Contents</h2>
 
-These are the Tango UnitySDK Examples:
+These are the Project Tango UnitySDK Examples compilable in Unity 5 and above:
 * **Motion Tracking Example** - This example shows how to use our motion tracking APIs.
 
 * **Point Cloud Example** - This example shows how to use the depth APIs, and use the pose data to transform the point cloud into world coordinates.
