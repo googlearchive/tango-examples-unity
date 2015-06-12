@@ -14,10 +14,14 @@
  * limitations under the License.
  */
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Tango
 {
+    /// <summary>
+    /// On tango pose available event handler.
+    /// </summary>
     public delegate void OnTangoPoseAvailableEventHandler(TangoPoseData poseData);
 
     /// <summary>
@@ -29,16 +33,33 @@ namespace Tango
     {
         public Tango.PoseProvider.TangoService_onPoseAvailable m_poseAvailableCallback;
 
+        private const int SIZE_OF_POSE_DATA_POOL = 3;
         private TangoPoseData m_motionTrackingData;
         private TangoPoseData m_areaLearningData;
         private TangoPoseData m_relocalizationData;
         private OnTangoPoseAvailableEventHandler m_onTangoPoseAvailable;
         private TangoEnums.TangoPoseStatusType m_latestPoseStatus = TangoEnums.TangoPoseStatusType.NA;
-
-        private bool m_hasNewMotionTrackingData = false;
-        private bool m_hasNewAreaLearningData = false;
-        private bool m_hasNewRelocalizationData = false;
+        private Stack<TangoPoseData> m_poseDataPool;
         private bool m_isDirty = false;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Tango.PoseListener"/> class.
+        /// </summary>
+        public PoseListener()
+        {
+            m_motionTrackingData = null;
+            m_areaLearningData = null;
+            m_relocalizationData = null;
+            m_poseDataPool = new Stack<TangoPoseData>();
+
+            // Add pre-allocated TangoPoseData objects to the
+            // pool stack.
+            for(int i = 0; i < SIZE_OF_POSE_DATA_POOL; ++i)
+            {
+                TangoPoseData emptyPose = new TangoPoseData();
+                m_poseDataPool.Push(emptyPose);
+            }
+        }
 
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="PoseListener"/>
@@ -76,20 +97,23 @@ namespace Tango
 
                 if(m_onTangoPoseAvailable != null)
                 {
-                    if(m_hasNewMotionTrackingData)
+                    if(m_motionTrackingData != null)
                     {
                         m_onTangoPoseAvailable(m_motionTrackingData);
-                        m_hasNewMotionTrackingData = false;
+                        m_poseDataPool.Push(m_motionTrackingData);
+                        m_motionTrackingData = null;
                     }
-                    if(m_hasNewAreaLearningData)
+                    if(m_areaLearningData != null)
                     {
                         m_onTangoPoseAvailable(m_areaLearningData);
-                        m_hasNewAreaLearningData = false;
+                        m_poseDataPool.Push(m_areaLearningData);
+                        m_areaLearningData = null;
                     }
-                    if(m_hasNewRelocalizationData)
+                    if(m_relocalizationData != null)
                     {
                         m_onTangoPoseAvailable(m_relocalizationData);
-                        m_hasNewRelocalizationData = false;
+                        m_poseDataPool.Push(m_relocalizationData);
+                        m_relocalizationData = null;
                     }
                 }
 
@@ -105,10 +129,6 @@ namespace Tango
         {
             m_poseAvailableCallback = new Tango.PoseProvider.TangoService_onPoseAvailable(_OnPoseAvailable);
             Tango.PoseProvider.SetCallback(framePairs, m_poseAvailableCallback);
-
-            m_motionTrackingData = new TangoPoseData();
-            m_areaLearningData = new TangoPoseData();
-            m_relocalizationData = new TangoPoseData();
         }
 
         /// <summary>
@@ -149,40 +169,61 @@ namespace Tango
             if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
                 pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
             {
-                m_motionTrackingData.framePair = pose.framePair;
-                m_motionTrackingData.status_code = pose.status_code;
-                m_motionTrackingData.orientation = pose.orientation;
-                m_motionTrackingData.translation = pose.translation;
-                m_motionTrackingData.timestamp = pose.timestamp;
-                m_motionTrackingData.confidence = pose.confidence;
-                m_motionTrackingData.accuracy = pose.accuracy;
-                m_hasNewMotionTrackingData = true;
+                // Only set new pose once the previous pose has been returned.
+                if(m_motionTrackingData == null)
+                {
+                    TangoPoseData currentPose = m_poseDataPool.Pop();
+
+                    if(currentPose == null)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        currentPose.DeepCopy(pose);
+                        m_motionTrackingData = currentPose;
+                    }
+                }
             }
             // ADF Localized
             else if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION &&
                      pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
             {
-                m_areaLearningData.framePair = pose.framePair;
-                m_areaLearningData.status_code = pose.status_code;
-                m_areaLearningData.orientation = pose.orientation;
-                m_areaLearningData.translation = pose.translation;
-                m_areaLearningData.timestamp = pose.timestamp;
-                m_areaLearningData.confidence = pose.confidence;
-                m_areaLearningData.accuracy = pose.accuracy;
-                m_hasNewAreaLearningData = true;
+                // Only set new pose once the previous pose has been returned.
+                if(m_areaLearningData == null)
+                {
+                    TangoPoseData currentPose = m_poseDataPool.Pop();
+                    
+                    if(currentPose == null)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        currentPose.DeepCopy(pose);
+                        m_areaLearningData = currentPose;
+                    }
+                }
             } 
             // Relocalized against ADF
             else if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION &&
                      pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE)
             {
-                m_relocalizationData.framePair = pose.framePair;
-                m_relocalizationData.status_code = pose.status_code;
-                m_relocalizationData.orientation = pose.orientation;
-                m_relocalizationData.translation = pose.translation;
-                m_relocalizationData.timestamp = pose.timestamp;
-                m_relocalizationData.confidence = pose.confidence;
-                m_relocalizationData.accuracy = pose.accuracy;
-                m_hasNewRelocalizationData = true;
+                // Only set new pose once the previous pose has been returned.
+                if(m_relocalizationData == null)
+                {
+                    TangoPoseData currentPose = m_poseDataPool.Pop();
+                    
+                    if(currentPose == null)
+                    {
+                        return;
+                    }
+                    else
+                    {
+                        currentPose.DeepCopy(pose);
+                        m_relocalizationData = currentPose;
+                    }
+                }
             }
 
 			m_isDirty = true;

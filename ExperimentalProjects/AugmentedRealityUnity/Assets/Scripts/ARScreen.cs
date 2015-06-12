@@ -56,12 +56,12 @@ public class ARScreen : MonoBehaviour
             if (widthRatio >= heightRatio)
             {
                 float normalizedOffset = (widthRatio / heightRatio - 1.0f) / 2.0f;
-                _SetScreenVertices(normalizedOffset, 0.0f);
+                _SetScreenVertices(0, normalizedOffset);
             }
             else
             {
                 float normalizedOffset = (heightRatio / widthRatio - 1.0f) / 2.0f;
-                _SetScreenVertices(0.0f, normalizedOffset);
+                _SetScreenVertices(normalizedOffset, 0);
             }
         }
     }

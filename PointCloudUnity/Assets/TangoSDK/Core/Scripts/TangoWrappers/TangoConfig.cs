@@ -197,7 +197,7 @@ namespace Tango
             if (!wasSuccess)
             {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            Debug.Log(string.Format(m_ErrorLogFormat, "GetBool", key, false));
+            Debug.LogWarning(string.Format(m_ErrorLogFormat, "GetBool", key, false));
 #endif
             }
             return wasSuccess;
