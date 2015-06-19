@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2014 Google Inc. All Rights Reserved.
+  Distributed under the Project Tango Preview Development Kit (PDK) Agreement.
+  CONFIDENTIAL. AUTHORIZED USE ONLY. DO NOT REDISTRIBUTE.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <gradient
+        android:angle="0"
+        android:centerColor="#ffbf02"
+        android:endColor="#3b6db4"
+        android:startColor="#119a57" />
+
+</shape>

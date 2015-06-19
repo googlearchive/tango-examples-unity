@@ -60,6 +60,9 @@ public class TangoInspector : Editor
             EditorGUI.indentLevel++;
             tangoApplication.m_motionTrackingAutoReset = EditorGUILayout.Toggle("Auto Reset", 
                                                                                 tangoApplication.m_motionTrackingAutoReset);
+
+            tangoApplication.m_useLowLatencyIMUIntegration = EditorGUILayout.Toggle("Low Latency Pose", 
+                                                                                	tangoApplication.m_useLowLatencyIMUIntegration);
 			
             tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
                                                                            tangoApplication.m_enableAreaLearning);

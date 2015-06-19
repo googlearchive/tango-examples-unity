@@ -49,9 +49,10 @@ namespace Tango
         public bool m_motionTrackingAutoReset = true;
         public bool m_enableAreaLearning = false;
         public bool m_enableUXLibrary = true;
-		public bool m_drawDefaultUXExceptions = true;
+        public bool m_drawDefaultUXExceptions = true;
         public bool m_useExperimentalVideoOverlay = true;
         public bool m_useExperimentalADF = false;
+        public bool m_useLowLatencyIMUIntegration = true;
         private static string m_tangoServiceVersion = string.Empty;
         private const string CLASS_NAME = "TangoApplication";
         private const string ANDROID_PRO_LABEL_TEXT = "<size=30>Tango plugin requires Unity Android Pro!</size>";
@@ -572,6 +573,7 @@ namespace Tango
                 _SetMotionTrackingCallbacks(framePairs.ToArray());
             }
             
+            TangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, m_useLowLatencyIMUIntegration);
             TangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
         }
 

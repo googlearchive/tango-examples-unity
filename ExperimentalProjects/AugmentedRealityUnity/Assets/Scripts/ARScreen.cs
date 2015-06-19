@@ -33,45 +33,66 @@ public class ARScreen : MonoBehaviour
     
     private TangoApplication m_tangoApplication;
     private YUVTexture m_textures;
-    
-    /// <summary>
-    /// Set up the size of ARScreen based on camera intrinsics.
-    /// </summary>
-    public void SetCameraIntrinsics()
-    {
-        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
-        
-        float verticalFOV = 2.0f * Mathf.Rad2Deg * Mathf.Atan((intrinsics.height * 0.5f) / (float)intrinsics.fy);
-        if(!float.IsNaN(verticalFOV))
-        {
-            m_renderCamera.fieldOfView = verticalFOV;
 
-            // Here we are scaling the image plane to make sure the image plane's ratio is set as the
-            // color camera image ratio.
-            // If we don't do this, because we are drawing the texture fullscreen, the image plane will
-            // be set to the screen's ratio.
-            float widthRatio = (float)Screen.width / (float)intrinsics.width;
-            float heightRatio = (float)Screen.height / (float)intrinsics.height;
-            if (widthRatio >= heightRatio)
-            {
-                float normalizedOffset = (widthRatio / heightRatio - 1.0f) / 2.0f;
-                _SetScreenVertices(0, normalizedOffset);
-            }
-            else
-            {
-                float normalizedOffset = (heightRatio / widthRatio - 1.0f) / 2.0f;
-                _SetScreenVertices(normalizedOffset, 0);
-            }
-        }
-    }
-    
+    // Matrix for Tango coordinate frame to Unity coordinate frame conversion.
+    // Start of service frame with respect to Unity world frame.
+    private Matrix4x4 m_uwTss;
+    // Unity camera frame with respect to color camera frame.
+    private Matrix4x4 m_cTuc;
+    // Device frame with respect to IMU frame.
+    private Matrix4x4 m_imuTd;
+    // Color camera frame with respect to IMU frame.
+    private Matrix4x4 m_imuTc;
+    // Unity camera frame with respect to IMU frame, this is composed by
+    // Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
+    // We pre-compute this matrix to save some computation in update().
+    private Matrix4x4 m_dTuc;
+
+    // Values for debug display.
+    [HideInInspector]
+    public TangoEnums.TangoPoseStatusType m_status;
+    [HideInInspector]
+    public int m_frameCount;
+
     /// <summary>
     /// Initialize the AR Screen.
     /// </summary>
     private void Start()
     {
-        m_tangoApplication = FindObjectOfType<Tango.TangoApplication>();
+        // Constant matrix converting start of service frame to Unity world frame.
+        m_uwTss = new Matrix4x4();
+        m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
+        m_uwTss.SetColumn (1, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
+        m_uwTss.SetColumn (2, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
+        m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
+        
+        // Constant matrix converting Unity world frame frame to device frame.
+        m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
+        m_cTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
+
+        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        
+        if(m_tangoApplication != null)
+        {
+            if(AndroidHelper.IsTangoCorePresent())
+            {
+                // Request Tango permissions
+                m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
+                m_tangoApplication.RequestNecessaryPermissionsAndConnect();
+                m_tangoApplication.Register(this);
+            }
+            else
+            {
+                // If no Tango Core is present let's tell the user to install it.
+                Debug.Log("Tango Core is outdated.");
+            }
+        }
+        else
+        {
+            Debug.Log("No Tango Manager found in scene.");
+        }
         if(m_tangoApplication != null)
         {
             m_textures = m_tangoApplication.GetVideoOverlayTextureYUV();
@@ -88,10 +109,86 @@ public class ARScreen : MonoBehaviour
     /// Unity update function, we update our texture from here.
     /// </summary>
     private void Update() {
-        VideoOverlayProvider.RenderLatestFrame (TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+        if(Input.GetKeyDown(KeyCode.Escape))
+        {
+            if(m_tangoApplication != null)
+            {
+                m_tangoApplication.Shutdown();
+            }
+            
+            // This is a temporary fix for a lifecycle issue where calling
+            // Application.Quit() here, and restarting the application immediately,
+            // results in a hard crash.
+            AndroidHelper.AndroidQuit();
+        }
+        double timestamp = VideoOverlayProvider.RenderLatestFrame (TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+        _UpdateTransformation(timestamp);
         GL.InvalidateState ();
     }
 
+
+
+    /// <summary>
+    /// This callback function is called after user appoved or declined the permission to use Motion Tracking.
+    /// </summary>
+    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
+    {
+        if(permissionsGranted)
+        {
+            m_tangoApplication.InitApplication();
+            m_tangoApplication.InitProviders(string.Empty);
+            m_tangoApplication.ConnectToService();
+            
+            // Ask ARScreen to query the camera intrinsics from Tango Service.
+            _SetCameraIntrinsics();
+            _SetCameraExtrinsics();
+        }
+        else
+        {
+            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
+        }
+    }
+
+    /// <summary>
+    /// Update the camera gameobject's transformation to the pose that on current timestamp.
+    /// </summary>
+    private void _UpdateTransformation(double timestamp) {
+        TangoPoseData pose = new TangoPoseData();
+        TangoCoordinateFramePair pair;
+        pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+        pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        PoseProvider.GetPoseAtTime(pose, timestamp, pair);
+        
+        m_status = pose.status_code;
+        if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+        {
+            Vector3 m_tangoPosition = new Vector3((float)pose.translation [0],
+                                                  (float)pose.translation [1],
+                                                  (float)pose.translation [2]);
+            
+            Quaternion m_tangoRotation = new Quaternion((float)pose.orientation [0],
+                                                        (float)pose.orientation [1],
+                                                        (float)pose.orientation [2],
+                                                        (float)pose.orientation [3]);
+            
+            Matrix4x4 ssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
+            
+            // Here we are getting the pose of Unity camera frame with respect to Unity world.
+            // This is the transformation of our current pose within the Unity coordinate frame.
+            Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
+            
+            // Extract new local position
+            m_renderCamera.transform.position = uwTuc.GetColumn(3);
+            
+            // Extract new local rotation
+            m_renderCamera.transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
+            m_frameCount++;
+        }
+        else {
+            m_frameCount = 0;
+        }
+    }
+    
     /// <summary>
     /// Set the screen (video overlay image plane) size and vertices. The image plane is not
     /// applying any project matrix or view matrix. So it's drawing space is the normalized
@@ -133,5 +230,79 @@ public class ARScreen : MonoBehaviour
         mesh.uv = uvs;
         meshFilter.mesh = mesh;
         mesh.RecalculateNormals();
+    }
+
+    /// <summary>
+    /// The function is for querying the camera extrinsic, for example: the transformation between
+    /// IMU and device frame. These extrinsics is used to transform the pose from the color camera frame
+    /// to the device frame. Because the extrinsic is being queried using the GetPoseAtTime()
+    /// with a desired frame pair, it can only be queried after the ConnectToService() is called.
+    ///
+    /// The device with respect to IMU frame is not directly queryable from API, so we use the IMU
+    /// frame as a temporary value to get the device frame with respect to IMU frame.
+    /// </summary>
+    private void _SetCameraExtrinsics() {
+        double timestamp = 0.0;
+        TangoCoordinateFramePair pair;
+        TangoPoseData poseData = new TangoPoseData();
+        
+        // Getting the transformation of device frame with respect to IMU frame.
+        pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+        pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
+        Vector3 position = new Vector3((float)poseData.translation[0],
+                                       (float)poseData.translation[1],
+                                       (float)poseData.translation[2]);
+        Quaternion quat = new Quaternion((float)poseData.orientation[0],
+                                         (float)poseData.orientation[1],
+                                         (float)poseData.orientation[2],
+                                         (float)poseData.orientation[3]);
+        m_imuTd = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+        
+        // Getting the transformation of IMU frame with respect to color camera frame.
+        pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+        pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
+        PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
+        position = new Vector3((float)poseData.translation[0],
+                               (float)poseData.translation[1],
+                               (float)poseData.translation[2]);
+        quat = new Quaternion((float)poseData.orientation[0],
+                              (float)poseData.orientation[1],
+                              (float)poseData.orientation[2],
+                              (float)poseData.orientation[3]);
+        m_imuTc = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+        m_dTuc = Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
+    }
+    
+    /// <summary>
+    /// Set up the size of ARScreen based on camera intrinsics.
+    /// </summary>
+    private void _SetCameraIntrinsics()
+    {
+        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+        
+        float verticalFOV = 2.0f * Mathf.Rad2Deg * Mathf.Atan((intrinsics.height * 0.5f) / (float)intrinsics.fy);
+        if(!float.IsNaN(verticalFOV))
+        {
+            m_renderCamera.fieldOfView = verticalFOV;
+            
+            // Here we are scaling the image plane to make sure the image plane's ratio is set as the
+            // color camera image ratio.
+            // If we don't do this, because we are drawing the texture fullscreen, the image plane will
+            // be set to the screen's ratio.
+            float widthRatio = (float)Screen.width / (float)intrinsics.width;
+            float heightRatio = (float)Screen.height / (float)intrinsics.height;
+            if (widthRatio >= heightRatio)
+            {
+                float normalizedOffset = (widthRatio / heightRatio - 1.0f) / 2.0f;
+                _SetScreenVertices(0, normalizedOffset);
+            }
+            else
+            {
+                float normalizedOffset = (heightRatio / widthRatio - 1.0f) / 2.0f;
+                _SetScreenVertices(normalizedOffset, 0);
+            }
+        }
     }
 }

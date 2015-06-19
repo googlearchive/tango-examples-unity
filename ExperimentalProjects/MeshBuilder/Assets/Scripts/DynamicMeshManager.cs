@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2014 Google Inc. All Rights Reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,360 +18,308 @@ using UnityEngine;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
-//uses a spatial hash key and a binary tree to store sparse volumetric data
-public class VolumetricHashStorage {
-
-	private VolumetricHashStorage leftHashTree = null;
-	private VolumetricHashStorage rightHashTree = null;
-	private VolumetricHashStorage root = null;
-
-	private GameObject meshingCube = null;
-	private DynamicMeshVolume grid = null;
-	private int[] cellIndex = new int[3];
-
-	private int key = 0;
-	private int dimension = 1000;//supports +/- 500m from origin along each axis
-
-	public VolumetricHashStorage(VolumetricHashStorage parent, int hashkey) {
-		if (parent == null)
-			root = this;
-		else
-			root = parent;
-
-		key = hashkey;
-	}
-	
-	public DynamicMeshVolume Grid {
-		get {
-			return grid;
-		}
-	}
-	
-	private void Instantiate(int hashkey, GameObject prefab, Transform parent, int gridCellDivisions) {
-		int x, y, z;
-		GetReverseHashKey(hashkey, out x, out y, out z);
-		meshingCube = (GameObject)GameObject.Instantiate (prefab);
-		meshingCube.transform.position = new Vector3 (x, y, z);
-		meshingCube.transform.parent = parent;
-		grid = meshingCube.GetComponent<DynamicMeshVolume> ();
-		grid.SetProperties (gridCellDivisions);
-		grid.Key = hashkey;
-	}
-
-	//IEnumerator and IEnumerable require these methods.
-	public IEnumerable<VolumetricHashStorage> GetEnumerable()
-	{
-		if (leftHashTree != null)
-			foreach(VolumetricHashStorage n in leftHashTree.GetEnumerable())
-				yield return n;
-		yield return this;
-		if (rightHashTree != null)
-			foreach (VolumetricHashStorage n in rightHashTree.GetEnumerable())
-				yield return n;
-	}
-
-	//hash function is simply a floor function of the x,y,z coordinates
-	public int GetHashKey(Vector3 p) {
-		return (int)Mathf.Floor (p.x) + (int)(dimension * Mathf.Floor (p.y)) + (int)(dimension*dimension * Mathf.Floor (p.z));
-	}
-
-	private void GetReverseHashKey(int index, out int x, out int y, out int z) {
-		int flipLimit = dimension / 2;
-		int temp = index;
-	
-		x = temp % dimension;
-		if (x > flipLimit) //x is negative, but opposite sign of y
-			x = x - dimension;
-		if (x < -flipLimit) //x is positive, but opposite sign of y
-			x = dimension + x;
-		temp -= x;
-		temp /= dimension;
-
-		y = temp % dimension;
-		if (y > flipLimit)
-			y = y - dimension;//y is negative, but opposite sign of z
-		if (y < -flipLimit)
-			y = dimension + y;//y is positive, but opposite sign of z
-
-		temp -= y;
-		z = temp/dimension;
-	}
-
-	public float InsertPoint(Vector3 p, Vector3 n, float weight, GameObject prefab, Transform parent, int cellDivisions) {
-		int hashKey = GetHashKey(p);
-		return InsertPoint (hashKey, p, n, weight, prefab, parent, cellDivisions);
-	}
-
-	private float InsertPoint(int hashkey, Vector3 p, Vector3 n, float weight, GameObject prefab, Transform parent, int cellDivisions) {
-
-		if (key == hashkey) {
-
-			if(meshingCube == null) {
-				Instantiate(hashkey, prefab, parent, cellDivisions);
-			}
-
-			if(grid == null)
-				grid = meshingCube.GetComponent<DynamicMeshVolume> ();
-
-			//adjust weight of mutiple voxels along observation ray
-			float result = grid.InsertPoint(p, n, weight, ref cellIndex);
-			Vector3 closerPoint = p-n*grid.GridCellSize.x;
-			Vector3 furtherPoint = p+n*grid.GridCellSize.x;
-			//voxel was inside the surface, back out one, and insert in the next closest voxel
-			if(result > 0)
-				grid.InsertPoint(closerPoint, p, n, weight);
-			else
-				grid.InsertPoint(furtherPoint, p, n, weight);
-
-
-			if(cellIndex[0] == 0) {
-				int neighborHashKey = hashkey - 1;
-				result = root.InsertPoint(neighborHashKey, p,n,weight,prefab,parent,cellDivisions);
-			}
-			if(cellIndex[1] == 0) {
-				int neighborHashKey = hashkey - dimension;
-				result = root.InsertPoint(neighborHashKey, p,n,weight,prefab,parent,cellDivisions);
-			}
-			if(cellIndex[2] == 0) {
-				int neighborHashKey = hashkey - dimension*dimension;
-				result = root.InsertPoint(neighborHashKey, p,n,weight,prefab,parent,cellDivisions);
-			}
-
-			return result;
-		}
-
-		if(hashkey < key) {
-			if(leftHashTree == null)
-				leftHashTree = new VolumetricHashStorage(root, hashkey);
-			return leftHashTree.InsertPoint(hashkey, p, n, weight, prefab, parent, cellDivisions);
-		} else {
-			if(rightHashTree == null)
-				rightHashTree = new VolumetricHashStorage(root, hashkey);
-			return rightHashTree.InsertPoint(hashkey, p, n, weight, prefab, parent, cellDivisions);
-		}		
-	}
-
-	public VolumetricHashStorage Query(int hashKey) {
-		if (hashKey == key) {
-			return this;
-		}
-		if(hashKey < key) {
-			if(leftHashTree != null)
-				return leftHashTree.Query(hashKey);
-		} else {
-			if(rightHashTree != null)
-				return rightHashTree.Query(hashKey);
-		}
-		return null;
-	}
-	
-	public void Clear() {
-		if (leftHashTree != null) {
-			leftHashTree.Clear ();
-			leftHashTree = null;
-		}
-		if (rightHashTree != null) {
-			rightHashTree.Clear ();
-			rightHashTree = null;
-		}
-
-		if (grid != null) {
-			grid.Clear ();
-		}
-
-		if (meshingCube != null) {
-			GameObject.DestroyImmediate (meshingCube);
-			meshingCube = null;
-		}
-	}
-	
-	public void ComputeStats(ref int vertCount, ref int triangleCount, ref int nodeCount) {
-		if (leftHashTree != null)
-			leftHashTree.ComputeStats(ref vertCount, ref triangleCount, ref nodeCount);
-		if (grid != null) {
-			vertCount += grid.Vertices.Count;
-			triangleCount += grid.Triangles.Count;
-		}
-		nodeCount++;
-
-		if (rightHashTree != null)
-			rightHashTree.ComputeStats(ref vertCount, ref triangleCount, ref nodeCount);
-		}
-
-	public void UpdateMeshes() {
-		if (leftHashTree != null)
-			leftHashTree.UpdateMeshes();
-		if (grid != null)
-			if(grid.IsDirty)
-				grid.RegenerateMesh ();
-		if (rightHashTree != null)
-			rightHashTree.UpdateMeshes();
-		return;
-	}
-
-	public void Draw() {
-		if (leftHashTree != null)
-			leftHashTree.Draw();
-		if (grid != null) {
-			grid.Draw();
-		}
-		if (rightHashTree != null)
-			rightHashTree.Draw();
-	}
-}
-
+/**
+ * DynamicMeshManager
+ * This class handles all of the administrative work of inserting points, creating new meshes, 
+ * queueing meshes to be regenerated.  Meshing volumes are allocated dynamically in a unit cube grid.
+ * When points are inserted into the mesh manager, it creates and updates the appropriate mesh cube.
+ * Mesh cubes that are marked dirty, at processed in the queue each frame.  If the user spends a lot 
+ * of time in the same space, the number of meshing cubes that need to be updated should slowly approach zero.
+ * The mesh geometery is available to any other Unity tool such as hit testing of path planning.
+ */
 public class DynamicMeshManager : MonoBehaviour {
 
-	public GameObject meshingCubePrefab;
-	public int gridCellDivisions = 10;
-	public float meshingTimeBudgetMS = 10;
+    /**
+     * Prefab that gets instantiated when new cube volumes are needed.
+     * It has the DynamicMeshingCube script
+     */
+    public GameObject m_meshingCubePrefab;
 
-	private int totalVerts = 0;
-	private int totalTriangles = 0;
-	private int insertCount = 0;
-	private int nodeCount = 0;
-	private bool clearing = false;
+    /**
+     * Resolution of the cube meshes.  Specifies divisions per meter.
+     */
+    public int m_voxelResolution = 10;
 
-	private Queue regenerationQueue = new Queue ();
+    /**
+     * The amount of time per frame allowed to be spend on mesh regeneration.
+     */
+    public float m_meshingTimeBudgetMS = 10;
 
-	private VolumetricHashStorage dynamicMeshStorage = new VolumetricHashStorage(null, 0);
-	private float remeshingTime = 0;
-	private int remeshingCount = 5;
-	private float insertionTime = 0;
-	private float smoothing = 0.97f;
-	private float lastDequeTime = 0;
-	private float lastUpdateTime = 0;
+    /**
+     * Keeps track of total vertices in the mesh system.
+     */
+    private int m_totalVertices = 0;
 
-	private DynamicMeshVolume selectedVolume = null;
-	
-	public Camera mainCamera;
-	public GameObject hitCursor;
+    /**
+     * Keeps track of the total triangles in the system.
+     */
+    private int m_totalTriangles = 0;
 
-	[HideInInspector]
-	public int depthPointCount = 0;
-	
-	// Use this for initialization
-	void Start () {
-	}
-	
-	public void InsertPoint(Vector3 p, Vector3 n, float weight) {
-		if (clearing)
-			return;
-		dynamicMeshStorage.InsertPoint(p,n,weight, meshingCubePrefab, transform, gridCellDivisions);
-		insertCount++;
-	}
+    /**
+     * Keeps track of the total points that have been inserted.
+     */
+    private int m_insertCount = 0;
 
-	public float Smoothing {
-		get {
-			return smoothing;
-		}
-		set {
-			smoothing = value;
-		}
-	}
+    /**
+     * Keeps track of the total number of meshing cubes created.
+     */
+    private int m_totalMeshCubes = 0;
 
-	public float InsertionTime {
-		get {
-			return insertionTime;
-		}
-		set {
-			insertionTime = value;
-		}
-	}
+    /**
+     * Flag to let the update and insertion threads know it is being cleared.
+     */
+    private bool m_isClearing = false;
 
-	public void QueueDirtyMeshesForRegeneration() {
-		if (clearing)
-			return;
-		//enque dirty meshes
-		int count = 0;
-		foreach (VolumetricHashStorage o in dynamicMeshStorage.GetEnumerable()) {
-			count += 1;
-			if(o.Grid == null)
-				continue;
+    /**
+     * Queue for tracking which meshing cubes need to be regenerated.
+     */    
+    private Queue m_regenerationQueue = new Queue ();
 
-			if(o.Grid.IsDirty) {
-				if(!regenerationQueue.Contains(o.Grid))
-					regenerationQueue.Enqueue(o.Grid);
-			}
-		}
-	}
+    /**
+     * HashTree datastructure for storing the meshing cubes.
+     */
+    private VolumetricHashTree m_meshStorage = new VolumetricHashTree(null, 0);
+    
+    /**
+     * Keeps track of how long was spent remeshing each frame.
+     */
+    private float m_remeshingTime = 0;
 
-	public void UpdateStats() {
-		totalVerts = 0;
-		totalTriangles = 0;
-		nodeCount = 0;
-		dynamicMeshStorage.ComputeStats (ref totalVerts, ref totalTriangles, ref nodeCount);
-	}
+    /**
+     * Limit on the number of meshes that can be remeshed each frame.
+     */
+    private int m_maximumRemeshingCountPerFrame = 1;
 
-	public void Clear() {
-		//i think this causes a thread contention because we are updating the mesh in the Update call
-		clearing = true;
-		insertCount = 0;
-		regenerationQueue.Clear ();
-		dynamicMeshStorage.Clear ();	
-		clearing = false;
-	}
+    /**
+     * Keeps track of the time spend inserting points each depth frame update
+     */
+    private float m_pointInsertionTime = 0;
 
-	void OnGUI()
-	{
-		GUI.Label(new Rect(10,20,1000,30), "Persistent Path: " + Application.persistentDataPath);
-		GUI.Label(new Rect(10,40,1000,30), "Total Verts/Triangles: " + totalVerts + "/" + totalTriangles + " Nodes: " + nodeCount + " UpdateQueue:" + regenerationQueue.Count);
-		GUI.Label(new Rect(10,60,1000,30), "Insert Count: " + insertCount);
-		GUI.Label(new Rect(10,80,1000,30), "RemeshingTime: " + remeshingTime.ToString("F6") + " Remeshing Count: " + remeshingCount);
-		GUI.Label(new Rect(10,100,1000,30), "InsertionTime: " + insertionTime.ToString("F6"));
-		GUI.Label(new Rect(10,120,1000,30), "Last Deque Time: " + lastDequeTime.ToString("F6"));
-		GUI.Label(new Rect(10,140,1000,30), "Last Update Time2: " + lastUpdateTime.ToString("F6"));
-		GUI.Label(new Rect(10,160,1000,30), "Depth Points: " + depthPointCount);
+    /**
+     * Smoothing variable for FPS-like measurements
+     */
+    private float m_frameRateSmoothing = 0.97f;
 
-		if (GUI.Button (new Rect (Screen.width - 160, 20, 140, 80), "Clear")) {
-			Clear();
-		}
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		lastUpdateTime = Time.realtimeSinceStartup;
+    /**
+     * Keeps track of the last time the meshing system receive an Update
+     */
+    private float m_lastUpdateTime = 0;
 
-		//update 1 cell in the top of queue
-		if (remeshingCount < 1)
-			remeshingCount = 1;
-		
-		for(int i = 0; i < remeshingCount; i++) {
-			if(regenerationQueue.Count == 0)
-				break;
-			lastDequeTime = Time.realtimeSinceStartup;
-			float start = Time.realtimeSinceStartup;
-			((DynamicMeshVolume)regenerationQueue.Dequeue ()).RegenerateMesh();
-			float stop = Time.realtimeSinceStartup;
-			remeshingTime = smoothing*remeshingTime + (1.0f-smoothing)*(stop - start);
-		}
-		if(remeshingTime > float.Epsilon)
-			remeshingCount = (int)(meshingTimeBudgetMS*0.001f / remeshingTime);
-		
-		UpdateStats ();
+    /**
+     * Keeps track of the number of rendering frames updated.
+     */
+    private int m_frameCount = 0;
 
-//		if (Input.GetMouseButtonDown (0)) {
-//			RaycastHit hitInfo = new RaycastHit ();
-//			Ray ray = mainCamera.ScreenPointToRay (new Vector3 (Input.mousePosition.x, Input.mousePosition.y, 0));
-//			if (Physics.Raycast (ray, out hitInfo, 4,1)) {
-//				hitCursor.transform.position = hitInfo.point;
-//				selectedVolume = hitInfo.collider.gameObject.GetComponent<DynamicMeshVolume>();
-//				int index = selectedVolume.Triangles[hitInfo.triangleIndex*3];
-//
-//				Debug.Log(selectedVolume + " " + selectedVolume.Uvs[index] + " " + selectedVolume.Uvs[index+1] + " " + selectedVolume.Uvs[index+2] + " query:" + hitInfo.textureCoord);				 
-//			}
-//		}
+    /**
+     * Handle for the main camera, primarily to set position when in dataset playback.
+     */
+    public Camera m_mainCamera;
 
-		if (selectedVolume != null) {
-//			selectedGrid.Draw ();
-//			selectedGrid.SimplifyMesh();
-//			selectedGrid.SetMesh();
-		}
+    /**
+     * Storage of the voxels that are intersected with a raycast test.
+     */
+    List<Voxel> m_raycastHits =  null;
+    
+    /**
+     * Flag for raycast development testing.
+     */
+    public bool m_raycastTesting;
 
-		if (Input.GetKeyDown (KeyCode.C))
-			Clear ();
+    /**
+     * Testing for raycast development.
+     */
+    Vector3 m_raycastStart;
+
+    /**
+     * Testing for raycast development.
+     */
+    Vector3 m_raycastStop;
 
 
-	}
+    float m_meshingStart = 0;
+    float m_meshingStop = 0;
+
+    /**
+     * Used for initialization.
+     */
+    void Start () {
+
+    }
+
+    /**
+     * Gets the time smoothing parameter.
+     */
+    public float TimeSmoothing {
+        get {
+            return m_frameRateSmoothing;
+        }
+        set {
+            m_frameRateSmoothing = value;
+        }
+    }
+
+    /**
+     * Gets the point insertion time.
+     */
+    public float InsertionTime {
+        get {
+            return m_pointInsertionTime;
+        }
+        set {
+            m_pointInsertionTime = value;
+        }
+    }
+
+    /**
+     * Insert a point into the meshing volumes.
+     * @param p the 3D point to be inserted
+     * @param obs the direction of the observation vector from the camera toward the point
+     * @param w weight of the observation
+     */
+    public void InsertPoint(Vector3 p, Vector3 obs, float weight) {
+        if (m_isClearing)
+            return;
+        m_meshStorage.InsertPoint(p,obs,weight, m_meshingCubePrefab, transform, m_voxelResolution);
+        m_insertCount++;
+    }
+
+    /**
+     * Searches for meshing cubes that have been mark dirty and adds them to the queue for remeshing.
+     */
+    public void QueueDirtyMeshesForRegeneration() {
+        if (m_isClearing)
+            return;
+
+        //enque dirty meshes
+        int count = 0;
+        foreach (VolumetricHashTree o in m_meshStorage.GetEnumerable()) {
+            count += 1;
+            if(o.DynamicMeshCube == null)
+                continue;
+
+            if(o.DynamicMeshCube.IsDirty) {
+                if(!m_regenerationQueue.Contains(o.DynamicMeshCube))
+                    m_regenerationQueue.Enqueue(o.DynamicMeshCube);
+            }
+        }
+    }
+
+    /**
+     * Print out debug information for each of the meshing cubes.
+     */
+    public void PrintDebugInfo() {
+        foreach (VolumetricHashTree o in m_meshStorage.GetEnumerable()) {
+            if(o.DynamicMeshCube == null)
+                continue;
+            o.DynamicMeshCube.PrintDebugInfo();
+        }
+    }
+
+    /**
+     * Recompute statistics about the meshing cubes.
+     */
+    public void UpdateStats() {
+        m_totalVertices = 0;
+        m_totalTriangles = 0;
+        m_totalMeshCubes = 0;
+        m_meshStorage.ComputeStats (ref m_totalVertices, ref m_totalTriangles, ref m_totalMeshCubes);
+    }
+
+
+    /**
+     * Clears all meshing data.
+     */
+    public void Clear() {
+        //i think this causes a thread contention because we are updating the mesh in the Update call
+        m_isClearing = true;
+        m_insertCount = 0;
+        m_regenerationQueue.Clear ();
+        m_meshStorage.Clear ();    
+        m_isClearing = false;
+    }
+
+    /**
+     * Displays statistics and diagnostics information about the meshing cubes
+     */
+    void OnGUI()
+    {
+        GUI.Label(new Rect(10,20,1000,30), "Persistent Path: " + Application.persistentDataPath);
+        GUI.Label(new Rect(10,40,1000,30), "Total Verts/Triangles: " + m_totalVertices + "/" + m_totalTriangles + " Volumes: " + m_totalMeshCubes + " UpdateQueue:" + m_regenerationQueue.Count);
+        GUI.Label(new Rect(10,60,1000,30), "Insert Count: " + m_insertCount);
+        GUI.Label(new Rect(10,80,1000,30), "RemeshingTime: " + m_remeshingTime.ToString("F6") + " Remeshing Count: " + m_maximumRemeshingCountPerFrame);
+        GUI.Label(new Rect(10,100,1000,30), "InsertionTime: " + m_pointInsertionTime.ToString("F6"));
+        GUI.Label(new Rect(10,120,1000,30), "Last Update Time: " + m_lastUpdateTime.ToString("F6"));
+        GUI.Label(new Rect(10,140,1000,30), "Version: " + "15.06.05");
+
+        if (GUI.Button (new Rect (Screen.width - 160, 20, 140, 80), "Clear")) {
+            Clear();
+        }
+    }
+    
+    /**
+     * Update is called once per frame and progressively remeshes volumes that are in the queue.
+     */
+    void Update () {
+        m_frameCount++;
+
+
+        int meshUpdateCount = 0;
+
+        //update 1 cell in the top of queue
+        if (m_maximumRemeshingCountPerFrame < 1)
+            m_maximumRemeshingCountPerFrame = 1;
+        if (m_maximumRemeshingCountPerFrame > 10)
+            m_maximumRemeshingCountPerFrame = 10;
+
+        {
+            for(int i = 0; i < m_maximumRemeshingCountPerFrame; i++) {
+                if(m_regenerationQueue.Count == 0) {
+                    if((m_meshingStart != 0)&&(m_meshingStop == 0)) {
+                        m_meshingStop = UnityEngine.Time.realtimeSinceStartup;
+                        Debug.Log("Meshing time: " + (m_meshingStop - m_meshingStart)); 
+                    }
+                    break;
+                }
+
+                if(m_meshingStart == 0)
+                    m_meshingStart = UnityEngine.Time.realtimeSinceStartup;
+
+                float start = Time.realtimeSinceStartup;
+                ((DynamicMeshCube)m_regenerationQueue.Dequeue ()).RegenerateMesh();
+                float stop = Time.realtimeSinceStartup;
+                m_remeshingTime = m_frameRateSmoothing*m_remeshingTime + (1.0f-m_frameRateSmoothing)*(stop - start);
+                meshUpdateCount++;
+            }
+            if(m_remeshingTime > float.Epsilon)
+                m_maximumRemeshingCountPerFrame = (int)(m_meshingTimeBudgetMS*0.001f / m_remeshingTime);
+            UpdateStats ();
+        }
+
+        if (m_raycastTesting) {
+            m_raycastStart = m_mainCamera.transform.position;
+            m_raycastStop = m_mainCamera.transform.position + m_mainCamera.transform.forward*5;
+
+            m_raycastHits = m_meshStorage.RaycastVoxelHitlist(m_raycastStart, m_raycastStop);
+
+            if(m_raycastHits == null) {
+                Debug.Log("Error Dynamic Mesh - Raycast returned null");
+            }
+
+            if(m_raycastHits.Count == 0) {
+                Debug.DrawLine(m_raycastStart, m_raycastStop,Color.red);
+            }else {
+                foreach(Voxel v in m_raycastHits) {
+                    Vector3 voxelSize = new Vector3(v.size,v.size,v.size)/2;
+                    Vector3 min = v.anchor + v.parent.position - voxelSize;
+                    Vector3 max = v.anchor + v.parent.position + voxelSize;
+                    DebugDrawing.Box(min, max,Color.green);
+                }
+                Debug.DrawLine(m_raycastStart, m_raycastStop,Color.green);
+            } 
+        }
+
+        if (Input.GetKeyDown (KeyCode.C))
+            Clear ();
+
+    }
 }

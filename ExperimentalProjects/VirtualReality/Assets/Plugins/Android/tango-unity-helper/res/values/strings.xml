@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="ux_exception_listener">UX Exception Listener:</string>
+ <string name="ux_exception_1">. Camera Over Exposured</string>
+    <string name="ux_exception_2">. Camera Under Exposured</string>
+    <string name="ux_exception_3">. Device Not Responding</string>
+    <string name="ux_exception_4">. Moving Too Fast</string>
+    <string name="ux_exception_5">. Space Not Recognized</string>
+    <string name="ux_exception_6">. Update Needed</string>
+    <string name="ux_exception_7">. Invalid Motion Tracking</string>
+    <string name="ux_exception_8">. Unable to Detect Surface</string>
+    <string name="ux_exception_9">. Application Not Responding</string>
+    <string name="ux_exception_10">. Lying On Surface</string>
+    <string name="ux_exception_11">. Invalid Motion Tracking</string>
+</resources>

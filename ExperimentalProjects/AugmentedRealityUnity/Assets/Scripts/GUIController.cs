@@ -50,7 +50,7 @@ public class GUIController : MonoBehaviour {
     public const string UX_TARGET_TO_BASE_FRAME = "Target->{0}, Base->{1}:";
     public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
     public const float SECOND_TO_MILLISECOND = 1000.0f;
-    public PoseController m_tangoPoseController;
+    public ARScreen m_arScreen;
     
     private const float m_updateFrequency = 1.0f;
     private string m_FPSText;
@@ -61,6 +61,7 @@ public class GUIController : MonoBehaviour {
     
     private Rect m_label;
     private TangoApplication m_tangoApplication;
+    private string m_tangoServiceVersion;
     
     /// <summary>
     /// Unity Start() callback, we set up some initial values here.
@@ -73,6 +74,7 @@ public class GUIController : MonoBehaviour {
         m_FPSText = "FPS = Calculating";
         m_label = new Rect(Screen.width * 0.025f - 50, Screen.height * 0.96f - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_tangoServiceVersion = TangoApplication.GetTangoServiceVersion();
     }
     
     /// <summary>
@@ -202,7 +204,7 @@ public class GUIController : MonoBehaviour {
             GUI.Label(new Rect(UI_LABEL_START_X, 
                                UI_LABEL_START_Y, 
                                UI_LABEL_SIZE_X , 
-                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
+                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoServiceVersion) + "</size>");
             
             GUI.Label(new Rect(UI_LABEL_START_X, 
                                UI_FPS_LABEL_START_Y, 
@@ -216,8 +218,8 @@ public class GUIController : MonoBehaviour {
                                                            "Device",
                                                            "Start") + "</size>");
 
-            Vector3 pos = m_tangoPoseController.transform.position;
-            Quaternion quat = m_tangoPoseController.transform.rotation;
+            Vector3 pos = m_arScreen.transform.position;
+            Quaternion quat = m_arScreen.transform.rotation;
             string positionString = pos.x.ToString(UI_FLOAT_FORMAT) + ", " + 
                                     pos.y.ToString(UI_FLOAT_FORMAT) + ", " + 
                                     pos.z.ToString(UI_FLOAT_FORMAT);
@@ -229,8 +231,8 @@ public class GUIController : MonoBehaviour {
                                 UI_POSE_LABEL_START_Y,
                                 UI_LABEL_SIZE_X , 
                                 UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_STATUS,
-                                                           _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status),
-                                                           _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount),
+                                                           _GetLoggingStringFromPoseStatus(m_arScreen.m_status),
+                                                           _GetLoggingStringFromFrameCount(m_arScreen.m_frameCount),
                                                            positionString, rotationString) + "</size>");
             GUI.color = oldColor;
         }

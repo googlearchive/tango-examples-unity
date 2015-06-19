@@ -37,6 +37,7 @@ namespace Tango
             // Motion Tracking
             public static readonly string ENABLE_MOTION_TRACKING_BOOL = "config_enable_motion_tracking";
             public static readonly string ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL = "config_enable_auto_recovery";
+            public static readonly string ENABLE_LOW_LATENCY_IMU_INTEGRATION = "config_enable_low_latency_imu_integration";
             
             // Area Learning
             public static readonly string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
