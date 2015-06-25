@@ -98,7 +98,6 @@ GameObject:
   - 20: {fileID: 535930853}
   - 124: {fileID: 535930852}
   - 92: {fileID: 535930851}
-  - 114: {fileID: 535930849}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -106,22 +105,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &535930849
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 535930848}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 128ae9bf0245a419a98a670b35a56249, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_arScreen: {fileID: 1065599730}
-  m_tangoServiceVersionName: 
-  m_frameDeltaTime: 0
-  m_frameCount: 0
-  m_status: 0
 --- !u!92 &535930851
 Behaviour:
   m_ObjectHideFlags: 0
@@ -414,6 +397,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_renderCamera: {fileID: 535930853}
   m_screenMaterial: {fileID: 2100000, guid: aaf9e2fe0204a438aaff24a73507f2b8, type: 2}
+  m_status: 0
+  m_frameCount: 0
 --- !u!33 &1065599731
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -604,4 +589,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 78760276f84c94c678297fc65f4ec855, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_tangoPoseController: {fileID: 535930849}
+  m_arScreen: {fileID: 1065599730}

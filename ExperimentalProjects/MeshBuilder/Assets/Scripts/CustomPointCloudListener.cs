@@ -22,44 +22,157 @@ using UnityEngine;
 using Tango;
 using System.IO;
 
-/// <summary>
-/// Point cloud visualize using depth frame API.
-/// </summary>
+/**
+ * CustomPointCloudListener
+ * Manages points cloud data either from the API, playback file, synthetic room, or test generation
+ */    
+
 public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
 {
-    public bool m_recordData = false;
-    public bool m_playbackData = false;
-    public GameObject m_occupancyManagerObject;
+    /**
+     * Main Camera
+     */    
     public Camera m_mainCamera;
-    public int m_insertionCount = 10;
-    public string m_loadSessionID = "2014_10_26_031617";
 
-    private DynamicMeshManager m_occupancyManager;
-   
-    // Mesh data.
+    /**
+     * Dynamic Mesh Manager
+     */    
+    public DynamicMeshManager m_meshManager;
+
+    /**
+     * Synthetic Room for raycasting into
+     */    
+    public GameObject syntheticRoom;
+
+    /**
+     * Number of points to insert per depth frame update
+     */    
+    public int m_insertionCount = 1000;
+
+    /**
+     * file name of recorded session used for playback
+     */    
+    public string m_recordingID = "2014_10_26_031617";
+
+    /**
+     * Enable playback
+     */    
+    public bool m_playbackData = false;
+
+    /**
+     * Enable synthetic data generation using synthetic room
+     */    
+    public bool m_syntheticData = false;
+
+    /**
+     * Enable Generated Test Data
+     */    
+    public bool m_testData = false;
+
+    /**
+     * Enable Recording
+     */    
+    private bool m_recordData = false;
+
+    /**
+     * Flag for updated depth data
+     */        
     private bool m_isDirty;
-    private int m_maxPoints = 20000;
-    private float[] m_depthPoints;
+
+    /**
+     * Copy of the detph data
+     */    
     private TangoUnityDepth m_currTangoDepth = new TangoUnityDepth();
+
+    /**
+     * Pose of the device when depth data arrived
+     */    
     private TangoPoseData m_poseAtDepthTimestamp = new TangoPoseData();
 
+    /**
+     * Time stamp used to create unique file recording names
+     */        
     private string m_sessionTimestamp = "None";
+
+    /**
+     * File writer
+     */    
     private BinaryWriter m_fileWriter = null;
+
+    /**
+     * File reader
+     */    
     private BinaryReader m_fileReader = null;
         
-    private GameObject[] m_quads = null;
-    private int m_quadIndex = 0;
-    
+    /**
+     * Cubes for live depth preview
+     */    
+    private GameObject[] m_cubes = null;
+
+    /**
+     * Index for live preview cubes
+     */    
+    private int m_cubeIndex = 0;
+
+    /**
+     * Motion trail history for depth camera pose
+     */    
     private List<Vector3> m_positionHistory = new List<Vector3>();
 
+    /**
+     * Initial camera position offset
+     */    
     private Vector3 m_initCameraPosition = new Vector3();
-    
+
+    /**
+     * Scratch space for raycasting synthetic data
+     */    
+    private RaycastHit hitInfo = new RaycastHit ();
+
+    /**
+     * Raycast layer for synthetic room
+     */    
+    private int syntheticRoomLayer = 1 << 8;
+
+    /**
+     * Raycast distance for synthetic data
+     */    
+    private float syntheticRaycastMaxDistance = 4;
+
+    /**
+     * Debug text field
+     */    
     private string m_debugText;
 
+    /**
+     * pause playback or depth accumulation
+     */    
     private bool m_pause = false;
+
+    /**
+     * step playback
+     */    
     private bool m_step = false;
 
+    /**
+     * Track frame count
+     */    
+    private int m_frameCount;
+
+    /**
+     * Minimum square distance to insert depth data.  
+     * Sensor may produce values at 0, should be rejected
+     */    
+    private float m_sqrMinimumDepthDistance = 0.0625f;
+
+    /**
+     * frame of reference for depth data
+     */    
     private TangoCoordinateFramePair m_coordinatePair;
+
+    /**
+     * Reference to main Tango Application
+     */    
     private TangoApplication m_tangoApplication;
 
     /// <summary>
@@ -67,9 +180,6 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
     /// </summary>
     public void Start() 
     {
-        m_occupancyManager = m_occupancyManagerObject.GetComponent<DynamicMeshManager> ();
-
-        m_depthPoints = new float[m_maxPoints * 3];        
         m_isDirty = false;
 
         m_initCameraPosition = m_mainCamera.transform.position;
@@ -77,15 +187,17 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         m_coordinatePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
         m_coordinatePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;//FIX should be depth sensor
 
-        m_quads = new GameObject[m_insertionCount];
+        m_cubes = new GameObject[m_insertionCount];
         float size = 0.02f;
         for (int i =0; i < m_insertionCount; i++)
         {
-            m_quads[i] = (GameObject)GameObject.CreatePrimitive (PrimitiveType.Cube);
-            m_quads[i].transform.localScale = new Vector3(size, size, size);
-            m_quads[i].transform.parent = transform;
+            m_cubes[i] = (GameObject)GameObject.CreatePrimitive (PrimitiveType.Cube);
+            m_cubes[i].transform.localScale = new Vector3(size, size, size);
+            m_cubes[i].transform.parent = transform;
         }
 
+        syntheticRoom.SetActive (m_syntheticData);
+        ClearLivePreviewCubes();
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         if (m_recordData)
@@ -96,15 +208,41 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         if (m_playbackData)
         {
             m_recordData = false;
-            string filename = m_loadSessionID +".dat";
+            string filename = m_recordingID +".dat";
             m_fileReader = new BinaryReader(File.Open(Application.persistentDataPath + "/" + filename, FileMode.Open));
             m_debugText = "Loading from: " + filename + " " + m_fileReader.ToString();
         }
 
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_tangoApplication.Register(this);
+
+        if (m_testData) {
+            GenerateTestData ();
+        }
     }
 
+    /**
+     * Generate synthetic test point cloud data for performance and debugging
+     */    
+    public void GenerateTestData() {
+        Debug.Log ("Generating Test Data");
+
+        Vector3 obs = new Vector3 (0, -1, 0);
+        float range = 6.0f;
+        float step = 0.025f;
+        for(float x = -range; x < range; x += step) {
+            for(float z = -range; z < range; z += step) {
+                float y = 0.5f*Mathf.Sin(2*Mathf.Sqrt(x*x + z*z));
+                m_meshManager.InsertPoint(new Vector3(x,y,z+range),obs,1.0f);
+            }
+        }
+        
+        m_meshManager.QueueDirtyMeshesForRegeneration ();
+    }
+
+    /**
+     * Create file for recording
+     */    
     void PrepareRecording()
     {
         m_sessionTimestamp = DateTime.Now.ToString("yyyy_MM_dd_HHmmss");
@@ -118,9 +256,12 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         m_debugText = "Saving to: " + filename + " " + m_fileWriter.ToString();
     }
 
+    /**
+     * Draw debug frustum lines
+     */    
     void DrawDebugLines()
     {
-        float frustumSize = 3;
+        float frustumSize = 2;
         Color frustumColor = Color.red;
         Debug.DrawLine(transform.position, transform.position + frustumSize*transform.forward+transform.right+transform.up, frustumColor);
         Debug.DrawLine(transform.position, transform.position + frustumSize*transform.forward-transform.right+transform.up, frustumColor);
@@ -132,11 +273,16 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         Debug.DrawLine(transform.position + frustumSize*transform.forward-transform.right-transform.up, transform.position + frustumSize*transform.forward+transform.right-transform.up, frustumColor);
     }
 
-    /// <summary>
-    /// Update is called once per frame.
-    /// </summary>
-    private void LateUpdate() 
+    /**
+     * Update is called once per frame
+     * It processes input keyfor pausing, steping.  It will also playback/record data or generate synthetic data.
+     * If running on Tango device it will process depth data that was copied for the depth callback.
+     */    
+    private void Update() 
     {
+        m_frameCount++;
+
+
         if (Input.GetKeyDown(KeyCode.P))
         {
             m_pause = !m_pause;
@@ -149,7 +295,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
 
         //history
         for (int i =0; i < m_positionHistory.Count-1; i++) {
-            Debug.DrawLine(m_positionHistory[i], m_positionHistory[i+1], Color.gray);
+            Debug.DrawLine(m_positionHistory[i], m_positionHistory[i+1], Color.white);
         }
 
         if (m_pause && !m_step) {
@@ -159,82 +305,130 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
 
         m_step = false;
 
+        if(m_recordData && !m_playbackData) {
+            WritePoseToFile(m_fileWriter, m_poseAtDepthTimestamp);
+            WriteDepthToFile(m_fileWriter, m_currTangoDepth);
+            m_debugText = "Recording Session: " + m_sessionTimestamp + " Points: " + m_currTangoDepth.m_timestamp;
+        }
+
         if (m_playbackData) {
             ReadPoseFromFile(m_fileReader,ref m_poseAtDepthTimestamp);
-            ReadDepthFromFile(m_fileReader, ref m_currTangoDepth, ref m_depthPoints);
+            ReadDepthFromFile(m_fileReader, ref m_currTangoDepth);
+            m_mainCamera.transform.position = transform.position;
+            m_mainCamera.transform.rotation = transform.rotation;
             m_isDirty = true;
         }
 
-        if (m_isDirty)
-        {
-            if(m_recordData) {
-                WritePoseToFile(m_fileWriter, m_poseAtDepthTimestamp);
-                WriteDepthToFile(m_fileWriter, m_currTangoDepth, m_depthPoints);
-                m_debugText = "Recording Session: " + m_sessionTimestamp + " Points: " + m_currTangoDepth.m_timestamp;
-            }
-            ClearQuads();
-            SetTransformUsingPose(transform, m_poseAtDepthTimestamp);
+        if (m_syntheticData) {
 
-            if(m_playbackData) {
-                m_mainCamera.transform.position = transform.position;
-                m_mainCamera.transform.rotation = transform.rotation;
+            //FIX - proper simulation should populate m_poseAtDepthTimestamp and m_currTangoDepth
+            // and the let the inset loop at the bottom execute normally.
+            // This implementation overrides the insert loop.
+
+            transform.position = m_mainCamera.transform.position;
+            transform.rotation = m_mainCamera.transform.rotation;
+
+            m_currTangoDepth.m_pointCount = 0;
+//            m_currTangoDepth.m_timestamp = UnityEngine.Time.realtimeSinceStartup;
+//            m_poseAtDepthTimestamp.timestamp = UnityEngine.Time.realtimeSinceStartup;
+//            m_poseAtDepthTimestamp.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID;
+
+            if ((m_frameCount % 6) == 0) {
+                float start = Time.realtimeSinceStartup;
+                
+                for (int i = 0; i < m_insertionCount; i++) {
+                    int x = UnityEngine.Random.Range (0, Screen.width);
+                    int y = UnityEngine.Random.Range (0, Screen.height);
+                    Ray ray = m_mainCamera.ScreenPointToRay (new Vector3 (x, y, 0));
+                    if (Physics.Raycast (ray, out hitInfo, syntheticRaycastMaxDistance, syntheticRoomLayer)) {
+                        m_meshManager.InsertPoint (hitInfo.point, ray.direction, 1.0f/(hitInfo.distance+1));
+                    }
+                }
+                m_meshManager.QueueDirtyMeshesForRegeneration ();                
+                float stop = Time.realtimeSinceStartup;
+                m_meshManager.InsertionTime = m_meshManager.InsertionTime*m_meshManager.TimeSmoothing + (1.0f-m_meshManager.TimeSmoothing)*(stop - start);
+                
             }
+
+        }
+        else if (m_isDirty)
+        {
+
+            ClearLivePreviewCubes();
+
+            SetTransformUsingTangoPose(transform, m_poseAtDepthTimestamp);
 
             m_positionHistory.Add(transform.position);
+
             DrawDebugLines();
-            float start = Time.realtimeSinceStartup;
+
+            float insertionStartTime = Time.realtimeSinceStartup;
 
             for (int i = 0; i < m_insertionCount; i++)
             {
                 if(i > m_currTangoDepth.m_pointCount)
-                {
                     break;
-                }
+
                 //randomly sub sample
                 int index = i;
                 //need to be more graceful than this, does not behave continuously
-                if(m_insertionCount < m_currTangoDepth.m_pointCount);
+                if(m_insertionCount < m_currTangoDepth.m_pointCount)
                     index = UnityEngine.Random.Range(0,m_currTangoDepth.m_pointCount);
 
-                Vector3 p = new Vector3(m_depthPoints[3*index],-m_depthPoints[3*index+1],m_depthPoints[3*index+2]);
+                Vector3 p = new Vector3(m_currTangoDepth.m_points[3*index],-m_currTangoDepth.m_points[3*index+1],m_currTangoDepth.m_points[3*index+2]);
+                float sqrmag = p.sqrMagnitude;
+
+                if(sqrmag < m_sqrMinimumDepthDistance)
+                    continue;
 
                 Vector3 tp = transform.TransformPoint(p);
 
-                float mag = Vector3.Magnitude(p);
                 //less weight for things farther away, because of noise
                 if (m_recordData)
                 {
-                    CreateQuad(p);
+                    SetLivePreviewCube(tp);
                 }
                 else
                 {
-                    m_occupancyManager.InsertPoint (tp, transform.forward, 0.2f / (mag + 1.0f));
+                    m_meshManager.InsertPoint (tp, transform.forward, 1.0f / (sqrmag + 1.0f));
                 }
             }
 
-            float stop = Time.realtimeSinceStartup;
-            m_occupancyManager.InsertionTime = m_occupancyManager.InsertionTime * m_occupancyManager.Smoothing + (1.0f - m_occupancyManager.Smoothing) * (stop - start);
-            m_occupancyManager.QueueDirtyMeshesForRegeneration ();
+            float insertionStopTime = Time.realtimeSinceStartup;
+            m_meshManager.InsertionTime = m_meshManager.InsertionTime * m_meshManager.TimeSmoothing + (1.0f - m_meshManager.TimeSmoothing) * (insertionStopTime - insertionStartTime);
+            m_meshManager.QueueDirtyMeshesForRegeneration ();
             m_isDirty = false;
         }
     }
 
-    private void ClearQuads()
+    /**
+     * Clear live preview cubes
+     */    
+    private void ClearLivePreviewCubes()
     {
         for (int i = 0; i < m_insertionCount; i++) {
-            m_quads[i].SetActive(false);
+            m_cubes[i].SetActive(false);
         }
-        m_quadIndex = 0;
+        m_cubeIndex = 0;
     }
 
-    private void CreateQuad(Vector3 p)
+    /**
+     * Set Live preview cube position
+     * @param p position to set the preview cube
+     */    
+    private void SetLivePreviewCube(Vector3 p)
     {
-        m_quads[m_quadIndex].transform.localPosition = p;
-        m_quads[m_quadIndex].SetActive (true);
-        m_quadIndex++;
+        m_cubes[m_cubeIndex].transform.position = p;
+        m_cubes[m_cubeIndex].SetActive (true);
+        m_cubeIndex++;
     }
 
-    private void SetTransformUsingPose(Transform xform, TangoPoseData pose)
+    /**
+     * Tranform Tango pose data to Unity transform
+     * @param xform Unity Transform output
+     * @param pose Tango Pose Data
+     */    
+    private void SetTransformUsingTangoPose(Transform xform, TangoPoseData pose)
     {
         xform.position = new Vector3((float)pose.translation [0],
                                                     (float)pose.translation [2],
@@ -245,22 +439,24 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
                                                        (float)pose.orientation [1],
                                                        (float)pose.orientation [3]);
 
-        Quaternion axisFix = Quaternion.Euler(-quat.eulerAngles.x,
+        Quaternion axisFixedQuat = Quaternion.Euler(-quat.eulerAngles.x,
                                               -quat.eulerAngles.z,
                                               quat.eulerAngles.y);
 
-        //should query API for depth camera extrinsics
-        Quaternion extrinsics = Quaternion.Euler(-12.0f,0,0);
+        //FIX - should query API for depth camera extrinsics
+        Quaternion extrinsics = Quaternion.Euler(-12.0f, 0, 0);
 
-        xform.rotation = Quaternion.Euler(90.0f, 0.0f, 0.0f) * axisFix*extrinsics;
+        xform.rotation = Quaternion.Euler(90.0f, 0.0f, 0.0f) * axisFixedQuat * extrinsics;
     }
 
-
+    /**
+     * Reset Point Cloud preview, history, and mesh data.
+     */    
     public void Reset()
     {
-        ClearQuads ();
+        ClearLivePreviewCubes ();
         m_positionHistory.Clear ();
-        m_occupancyManager.Clear ();
+        m_meshManager.Clear ();
     }
 
     /// <summary>
@@ -272,24 +468,39 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         // Fill in the data to draw the point cloud.
         if (tangoDepth != null)
         {
-            m_occupancyManager.depthPointCount = tangoDepth.m_pointCount;
+            if(tangoDepth.m_points == null) {
+                Debug.Log("Depth points are null");
+                return;
+            }
+
+            if(tangoDepth.m_pointCount > m_currTangoDepth.m_points.Length) {
+                m_currTangoDepth.m_points = new float[3*((int)(1.5f*tangoDepth.m_pointCount))];
+            }
+
             for (int i = 0; i < tangoDepth.m_pointCount; i+=3)
             {
-                m_depthPoints[3 * i] = tangoDepth.m_points[i * 3];
-                m_depthPoints[3 * i + 1] = tangoDepth.m_points[i * 3 + 1];
-                m_depthPoints[3 * i + 2] = tangoDepth.m_points[i * 3 + 2];
+                m_currTangoDepth.m_points[3 * i]     = tangoDepth.m_points[i * 3];
+                m_currTangoDepth.m_points[3 * i + 1] = tangoDepth.m_points[i * 3 + 1];
+                m_currTangoDepth.m_points[3 * i + 2] = tangoDepth.m_points[i * 3 + 2];
             }
             m_currTangoDepth.m_timestamp = tangoDepth.m_timestamp;
             m_currTangoDepth.m_pointCount = tangoDepth.m_pointCount;
 
             PoseProvider.GetPoseAtTime(m_poseAtDepthTimestamp, m_currTangoDepth.m_timestamp,m_coordinatePair);
 
+            if(m_poseAtDepthTimestamp.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+                return;
+
             m_isDirty = true;
         }
         return;
     }    
     
-
+    /**
+     * Write pose data to file
+     * @param writer File writer
+     * @param pose Tango pose data
+     */    
     public void WritePoseToFile(BinaryWriter writer, TangoPoseData pose) {
         if(writer == null)
         {
@@ -312,6 +523,11 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
     }
     
     
+    /**
+     * Read pose from file
+     * @param reader File reader
+     * @param pose Tango pose data
+     */    
     public int ReadPoseFromFile(BinaryReader reader, ref TangoPoseData pose)
     {
         if(reader == null)
@@ -352,8 +568,13 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         pose.orientation[3] = reader.ReadDouble();
         return 0;
     }
-    
-    public void WriteDepthToFile(BinaryWriter writer, TangoUnityDepth depth, float[] pointData)
+
+    /**
+     * Write depth data to file
+     * @param writer File writer
+     * @param depthFrame Tango depth data
+     */    
+    public void WriteDepthToFile(BinaryWriter writer, TangoUnityDepth depthFrame)
     {
         if(writer == null)
         {
@@ -361,20 +582,24 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         }
 
         writer.Write("depthframe\n");
-        writer.Write(depth.m_timestamp+"\n");
-        writer.Write(depth.m_pointCount+"\n");
+        writer.Write(depthFrame.m_timestamp+"\n");
+        writer.Write(depthFrame.m_pointCount+"\n");
         
-        for(int i = 0; i < depth.m_pointCount; i++)
+        for(int i = 0; i < depthFrame.m_pointCount; i++)
         {
-            writer.Write(pointData[3*i]);
-            writer.Write(pointData[3*i+1]);
-            writer.Write(pointData[3*i+2]);
+            writer.Write(depthFrame.m_points[3*i]);
+            writer.Write(depthFrame.m_points[3*i+1]);
+            writer.Write(depthFrame.m_points[3*i+2]);
         }
         writer.Flush();
     }
     
-    
-    public int ReadDepthFromFile(BinaryReader reader, ref TangoUnityDepth depthFrame, ref float[] points)
+    /**
+     * Read depth data from file
+     * @param reader File reader
+     * @param depthFrame Tango depth data.
+     */        
+    public int ReadDepthFromFile(BinaryReader reader, ref TangoUnityDepth depthFrame)
     {
         string frameMarker;
         try {
@@ -383,7 +608,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             reader.BaseStream.Position = 0;
             Reset();
 
-            print ("Restating log file: " + x.ToString());
+            print ("Restarting log file: " + x.ToString());
             frameMarker = reader.ReadString();
         }
         
@@ -393,26 +618,32 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         }
         depthFrame.m_timestamp = double.Parse(reader.ReadString());
         depthFrame.m_pointCount = int.Parse(reader.ReadString());
+        if (depthFrame.m_pointCount > depthFrame.m_points.Length)
+            depthFrame.m_points = new float[3 * ((int)(1.5f * depthFrame.m_pointCount))];
 
         //load up the data
         for(int i = 0; i < depthFrame.m_pointCount; i++)
         {
-            points[3*i] = reader.ReadSingle();
-            points[3*i+1] = reader.ReadSingle();
-            points[3*i+2] = reader.ReadSingle();
+            depthFrame.m_points[3*i] = reader.ReadSingle();
+            depthFrame.m_points[3*i+1] = reader.ReadSingle();
+            depthFrame.m_points[3*i+2] = reader.ReadSingle();
         }
         
         return 0;
     }
-    
+
+    /**
+     * Display some on screen debug infromation and handles the record button.
+     */    
     void OnGUI()
     {
+        GUI.Label(new Rect(10,180,1000,30), "Depth Points: " + m_currTangoDepth.m_pointCount);
         GUI.Label(new Rect(10,200,1000,30), "Debug: " + m_debugText);
         if (!m_recordData)
         {
             if (GUI.Button (new Rect (Screen.width - 160, 120, 140, 80), "Start Record"))
             {
-                m_occupancyManager.Clear();
+                m_meshManager.Clear();
                 PrepareRecording ();
                 m_recordData = true;
             }
@@ -426,6 +657,13 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
                 m_fileWriter = null;
                 m_debugText = "Stopped Recording";
             }
+        }
+
+        string buttonName = "Pause";
+        if (m_pause)
+            buttonName = "Resume";
+        if (GUI.Button (new Rect (Screen.width - 160, 220, 140, 80), buttonName)) {
+            m_pause = !m_pause;
         }
     }
 }
