@@ -39,7 +39,6 @@ public class TangoInspector : Editor
         _DrawMotionTrackingOptions(m_tangoApplication);
         _DrawDepthOptions(m_tangoApplication);
         _DrawVideoOverlayOptions(m_tangoApplication);
-        _DrawUXLibraryOptions(m_tangoApplication);
 
         if (GUI.changed)
         {
@@ -105,19 +104,5 @@ public class TangoInspector : Editor
             EditorGUI.indentLevel--;
         }
         EditorGUILayout.Space();
-    }
-
-    /// <summary>
-    /// Draw UX library options.
-    /// </summary>
-    /// <param name="tangoApplication">Tango application.</param>
-    private void _DrawUXLibraryOptions(TangoApplication tangoApplication)
-    {
-        tangoApplication.m_enableUXLibrary = EditorGUILayout.Toggle("Enable UX Library", tangoApplication.m_enableUXLibrary);
-        if (tangoApplication.m_enableUXLibrary)
-        {
-            tangoApplication.m_drawDefaultUXExceptions = EditorGUILayout.Toggle("Show default UX popups",
-                                                                                tangoApplication.m_drawDefaultUXExceptions);
-        }
     }
 }

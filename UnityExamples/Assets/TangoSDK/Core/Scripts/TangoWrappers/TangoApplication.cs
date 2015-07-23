@@ -24,6 +24,8 @@ using System.Reflection;
 namespace Tango
 {
 	public delegate void PermissionsEvent(bool permissionsGranted);
+    public delegate void OnTangoConnectEventHandler();
+    public delegate void OnTangoDisconnectEventHandler();
 
     /// <summary>
     /// Entry point of Tango applications, maintain the application handler.
@@ -48,8 +50,6 @@ namespace Tango
         public bool m_enableVideoOverlay = false;
         public bool m_motionTrackingAutoReset = true;
         public bool m_enableAreaLearning = false;
-        public bool m_enableUXLibrary = true;
-        public bool m_drawDefaultUXExceptions = true;
         public bool m_useExperimentalVideoOverlay = true;
         public bool m_useExperimentalADF = false;
         public bool m_useLowLatencyIMUIntegration = true;
@@ -65,6 +65,8 @@ namespace Tango
         private const int MINIMUM_API_VERSION = 1978;
 
         private event PermissionsEvent m_permissionEvent;
+        private event OnTangoConnectEventHandler m_onTangoConnect;
+        private event OnTangoDisconnectEventHandler m_onTangoDisconnect;
 
         private PermissionsTypes m_requiredPermissions = 0;
         private static bool m_isValidTangoAPIVersion = false;
@@ -111,6 +113,13 @@ namespace Tango
         /// <param name="tangoObject">Tango object.</param>
         public void Register(System.Object tangoObject)
         {
+            ITangoEvent tangoEvent = tangoObject as ITangoEvent;
+            
+            if(tangoEvent != null)
+            {
+                RegisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+            }
+
             if (m_enableMotionTracking)
             {
                 ITangoPose poseHandler = tangoObject as ITangoPose;
@@ -152,25 +161,6 @@ namespace Tango
                     }
                 }
             }
-
-			if(m_enableUXLibrary)
-			{
-				ITangoUX tangoUX = tangoObject as ITangoUX;
-
-				if(tangoUX != null)
-				{
-					UxExceptionListener.GetInstance.RegisterOnMovingTooFast(tangoUX.onMovingTooFastEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnMotionTrackingInvalid(tangoUX.onMotionTrackingInvalidEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnLyingOnSurface(tangoUX.onLyingOnSurfaceEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnCameraOverExposed(tangoUX.onCameraOverExposedEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnCamerUnderExposed(tangoUX.onCameraUnderExposedEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnTangoServiceNotResponding(tangoUX.onTangoServiceNotRespondingEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnTooFewFeatures(tangoUX.onTooFewFeaturesEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnTooFewPoints(tangoUX.onTooFewPointsEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnVersionUpdateNeeded(tangoUX.onVersionUpdateNeededEventHandler);
-					UxExceptionListener.GetInstance.RegisterOnIncompatibleVMFound(tangoUX.onIncompatibleVMFoundEventHandler);
-				}
-			}
         }
 
         /// <summary>
@@ -179,6 +169,13 @@ namespace Tango
         /// <param name="tangoObject">Tango object.</param>
         public void Unregister(System.Object tangoObject)
         {
+            ITangoEvent tangoEvent = tangoObject as ITangoEvent;
+            
+            if(tangoEvent != null)
+            {
+                UnregisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+            }
+
             if (m_enableMotionTracking)
             {
                 ITangoPose poseHandler = tangoObject as ITangoPose;
@@ -219,25 +216,6 @@ namespace Tango
                     }
                 }
             }
-
-			if(m_enableUXLibrary)
-			{
-				ITangoUX tangoUX = tangoObject as ITangoUX;
-				
-				if(tangoUX != null)
-				{
-					UxExceptionListener.GetInstance.UnregisterOnMovingTooFast(tangoUX.onMovingTooFastEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnMotionTrackingInvalid(tangoUX.onMotionTrackingInvalidEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnLyingOnSurface(tangoUX.onLyingOnSurfaceEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnCameraOverExposed(tangoUX.onCameraOverExposedEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnCamerUnderExposed(tangoUX.onCameraUnderExposedEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnTangoServiceNotResponding(tangoUX.onTangoServiceNotRespondingEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnTooFewFeatures(tangoUX.onTooFewFeaturesEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnTooFewPoints(tangoUX.onTooFewPointsEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnVersionUpdateNeeded(tangoUX.onVersionUpdateNeededEventHandler);
-					UxExceptionListener.GetInstance.UnregisterOnIncompatibleVMFound(tangoUX.onIncompatibleVMFoundEventHandler);
-				}
-			}
         }
         
         /// <summary>
@@ -320,6 +298,42 @@ namespace Tango
                 m_permissionEvent += permissionsEventHandler;
             }
         }
+		
+		/// <summary>
+		/// Unregisters the permissions callback.
+		/// </summary>
+		/// <param name="permissionsEventHandler">Permissions event handler.</param>
+		public void UnregisterPermissionsCallback(PermissionsEvent permissionsEventHandler)
+		{
+			if (permissionsEventHandler != null)
+			{
+				m_permissionEvent -= permissionsEventHandler;
+			}
+		}
+        
+		/// <summary>
+		/// Registers the on tango connect.
+		/// </summary>
+		/// <param name="handler">Handler.</param>
+        public void RegisterOnTangoConnect(OnTangoConnectEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoConnect += handler;
+            }
+        }
+        
+		/// <summary>
+		/// Registers the on tango disconnect.
+		/// </summary>
+		/// <param name="handler">Handler.</param>
+        public void RegisterOnTangoDisconnect(OnTangoDisconnectEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoDisconnect += handler;
+            }
+        }
 
         /// <summary>
         /// Unregisters the on tango pose event.
@@ -354,6 +368,22 @@ namespace Tango
             if (m_tangoEventListener != null)
             {
                 m_tangoEventListener.UnregisterOnTangoEventAvailable(handler);
+            }
+        }
+
+        public void UnregisterOnTangoConnect(OnTangoConnectEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoConnect -= handler;
+            }
+        }
+        
+        public void UnregisterOnTangoDisconnect(OnTangoDisconnectEventHandler handler)
+        {
+            if(handler != null)
+            {
+                m_onTangoDisconnect -= handler;
             }
         }
 
@@ -635,9 +665,9 @@ namespace Tango
                     AndroidHelper.PerformanceLog("Unity _TangoConnect end");
                     Debug.Log(CLASS_NAME + ".Connect() Tango client connected to service!");
                     
-                    if (m_enableUXLibrary)
+                    if (m_onTangoConnect != null)
                     {
-                        AndroidHelper.StartTangoUX();
+                        m_onTangoConnect();
                     }
                 }
             }
@@ -660,9 +690,9 @@ namespace Tango
                 Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
                 m_isDisconnecting = false;
 
-                if (m_enableUXLibrary)
+                if (m_onTangoDisconnect != null)
                 {
-                    AndroidHelper.StopTangoUX();
+                    m_onTangoDisconnect();
                 }
             }
         }
@@ -771,17 +801,6 @@ namespace Tango
         }
 
         /// <summary>
-        /// Start exceptions listener.
-        /// </summary>
-        /// <returns>The start exceptions listener.</returns>
-        private IEnumerator _StartExceptionsListener()
-        {
-            AndroidHelper.ShowStandardTangoExceptionsUI(m_drawDefaultUXExceptions);
-            AndroidHelper.SetTangoExceptionsListener();
-            yield return 0;
-        }
-
-        /// <summary>
         /// Awake this instance.
         /// </summary>
         private void Awake()
@@ -789,6 +808,8 @@ namespace Tango
             AndroidHelper.RegisterPauseEvent(_androidOnPause);
             AndroidHelper.RegisterResumeEvent(_androidOnResume);
             AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
+
+            m_tangoEventListener = new TangoEventListener();
 
             if (m_enableMotionTracking)
             {
@@ -798,11 +819,6 @@ namespace Tango
             if (m_enableDepth)
             {
                 m_depthListener = new DepthListener();
-            }
-
-            if (m_enableUXLibrary)
-            {
-                m_tangoEventListener = new TangoEventListener();
             }
 
             if (m_enableVideoOverlay)
@@ -899,11 +915,6 @@ namespace Tango
         /// <param name="permissions">If set to <c>true</c> permissions.</param>
         private void _SendPermissionEvent(bool permissions)
         {
-            if (m_enableUXLibrary && permissions)
-            {
-                StartCoroutine(_StartExceptionsListener());
-            }
-
             m_sendPermissions = true;
             m_permissionsSuccessful = permissions;
         }
@@ -925,12 +936,12 @@ namespace Tango
 
             if (m_poseListener != null)
             {
-                m_poseListener.SendPoseIfAvailable(m_enableUXLibrary);
+                m_poseListener.SendPoseIfAvailable();
             }
 
             if (m_tangoEventListener != null)
             {
-                m_tangoEventListener.SendIfTangoEventAvailable(m_enableUXLibrary);
+                m_tangoEventListener.SendIfTangoEventAvailable();
             }
 
             if (m_depthListener != null)
