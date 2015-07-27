@@ -52,7 +52,7 @@ public class PointCloudGUIController : MonoBehaviour {
     public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
     public const float SECOND_TO_MILLISECOND = 1000.0f;
     public TangoPoseController m_tangoPoseController;
-    public Pointcloud m_pointcloud;
+    public TangoPointCloud m_pointcloud;
 
     private const float m_updateFrequency = 1.0f;
     private string m_FPSText;

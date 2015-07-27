@@ -30,13 +30,6 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
     public const int DEVICE_TO_ADF = 1;
     [HideInInspector]
     public const int START_TO_ADF = 2;
-    public enum TrackingTypes
-    {
-        NONE,
-        MOTION,
-        ADF,
-        RELOCALIZED
-    }
     
     public float m_movementScale = 1.0f;
     public bool m_useADF = false;
@@ -65,6 +58,22 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
     private Vector3 m_startingOffset;
     private Quaternion m_startingRotation;
 
+    // We use couple of matrix transformation to convert the pose from Tango coordinate
+    // frame to Unity coordinate frame.
+    // The full equation is:
+    //     Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
+    //
+    // matrixuwTuc: Unity camera with respect to Unity world, this is the desired matrix.
+    // m_matrixuwTss: Constant matrix converting start of service frame to Unity world frame.
+    // matrixssTd: Device frame with repect to start of service frame, this matrix denotes the 
+    //       pose transform we get from pose callback.
+    // m_matrixdTuc: Constant matrix converting Unity world frame frame to device frame.
+    //
+    // Please see the coordinate system section online for more information:
+    //     https://developers.google.com/project-tango/overview/coordinate-systems
+    private Matrix4x4 m_matrixuwTss;
+    private Matrix4x4 m_matrixdTuc;
+
     /// <summary>
     /// Determines whether motion tracking is localized.
     /// </summary>
@@ -89,6 +98,20 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
         m_tangoRotation = new Quaternion[]{Quaternion.identity,
             Quaternion.identity, Quaternion.identity};
         m_tangoPosition = new Vector3[]{Vector3.one,Vector3.one,Vector3.one};
+
+        // Constant matrix converting start of service frame to Unity world frame.
+        m_matrixuwTss = new Matrix4x4();
+        m_matrixuwTss.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        m_matrixuwTss.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+        m_matrixuwTss.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+        m_matrixuwTss.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+        
+        // Constant matrix converting Unity world frame frame to device frame.
+        m_matrixdTuc = new Matrix4x4();
+        m_matrixdTuc.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        m_matrixdTuc.SetColumn(1, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+        m_matrixdTuc.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
+        m_matrixdTuc.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
     }
 
     /// <summary>
@@ -165,7 +188,7 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
     /// </summary>
     /// <param name="callbackContext">Callback context.</param>
     /// <param name="pose">Pose.</param>
-	public void OnTangoPoseAvailable(TangoPoseData pose)
+    public void OnTangoPoseAvailable(TangoPoseData pose)
     {
         int currentIndex = 0;
         
@@ -205,12 +228,12 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
         {
             // Create a new Vec3 and Quaternion from the Pose Data received.
             m_tangoPosition[currentIndex] = new Vector3((float)pose.translation [0],
-                                                        (float)pose.translation [2],
-                                                        (float)pose.translation [1]);
+                                                        (float)pose.translation [1],
+                                                        (float)pose.translation [2]);
             
             m_tangoRotation[currentIndex] = new Quaternion((float)pose.orientation [0],
-                                                           (float)pose.orientation [2], // these rotation values are swapped on purpose
                                                            (float)pose.orientation [1],
+                                                           (float)pose.orientation [2],
                                                            (float)pose.orientation [3]);
         }
         else // if the current pose is not valid we set the pose to identity
@@ -234,33 +257,27 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
         m_frameDeltaTime[currentIndex] = (float)pose.timestamp - m_prevFrameTimestamp[currentIndex];
         m_prevFrameTimestamp [currentIndex] = (float)pose.timestamp;
 
-        // This rotation needs to be put into Unity coordinate space. In unity +ve x is right,
-        // +ve Y is up and +ve Z is forward while coordinate frame for Device wrt Start of service
-        // +ve X is right, +ve Y is forward, +ve Z is up. 
-        // More explanation: https://developers.google.com/project-tango/overview/coordinate-systems
-        Quaternion rotationFix = Quaternion.Euler(90.0f, 0.0f, 0.0f);
-
+        Matrix4x4 matrixssTd;
         // If not relocalized MotionTracking pose(Device wrt Start of Service) is used.
         if (!m_isRelocalized) 
         {
-            Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[0].eulerAngles.x,
-                                                  -m_tangoRotation[0].eulerAngles.z,
-                                                  m_tangoRotation[0].eulerAngles.y);
-
-            transform.rotation = m_startingRotation * (rotationFix * axisFix);
-            transform.position = (m_startingRotation * (m_tangoPosition[0] * m_movementScale)) + m_startingOffset;
-
+            // Construct the device with respect to start of service matrix from the pose.
+            matrixssTd = Matrix4x4.TRS(m_tangoPosition[0], m_tangoRotation[0], Vector3.one);
         }
         // If relocalized Device wrt ADF pose is used.
         else 
         {
-            Quaternion axisFix = Quaternion.Euler(-m_tangoRotation[1].eulerAngles.x,
-                                                  -m_tangoRotation[1].eulerAngles.z,
-                                                  m_tangoRotation[1].eulerAngles.y);
-
-            transform.rotation = m_startingRotation * (rotationFix * axisFix);
-            transform.position = (m_startingRotation * (m_tangoPosition[1] * m_movementScale)) + m_startingOffset;
+            // Construct the device with respect to ADF matrix from the pose.
+            matrixssTd = Matrix4x4.TRS(m_tangoPosition[1], m_tangoRotation[1], Vector3.one);
         }
+        // Converting from Tango coordinate frame to Unity coodinate frame.
+        Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
+        
+        // Extract new local position
+        transform.position = matrixuwTuc.GetColumn(3);
+        
+        // Extract new local rotation
+        transform.rotation = Quaternion.LookRotation(matrixuwTuc.GetColumn(2), matrixuwTuc.GetColumn(1));
     }
     
     private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)

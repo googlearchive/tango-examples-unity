@@ -47,18 +47,10 @@ namespace Tango
 		/// Sends if tango event available.
 		/// </summary>
 		/// <param name="usingUXLibrary">If set to <c>true</c> using UX library.</param>
-        public void SendIfTangoEventAvailable(bool usingUXLibrary)
+        public void SendIfTangoEventAvailable()
 		{
 			if(m_isDirty)
 			{
-				if(usingUXLibrary)
-				{
-					AndroidHelper.ParseTangoEvent(m_previousEvent.timestamp,
-					                              (int)m_previousEvent.type,
-					                              m_previousEvent.event_key,
-					                              m_previousEvent.event_value);
-				}
-
 	            if(m_onTangoEventAvailable != null)
 	            {
 	                m_onTangoEventAvailable(m_previousEvent);

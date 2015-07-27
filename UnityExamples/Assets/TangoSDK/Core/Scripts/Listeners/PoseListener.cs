@@ -86,15 +86,10 @@ namespace Tango
         /// Sends the pose if available.
         /// </summary>
         /// <returns>The pose status if available.</returns>
-        public void SendPoseIfAvailable(bool usingUXLibrary)
+        public void SendPoseIfAvailable()
         {
             if(m_isDirty)
 			{
-				if(usingUXLibrary)
-				{
-					AndroidHelper.ParseTangoPoseStatus((int)m_latestPoseStatus);
-                }
-
                 if(m_onTangoPoseAvailable != null)
                 {
                     if(m_motionTrackingData != null)

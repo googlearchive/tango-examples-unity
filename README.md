@@ -1,4 +1,4 @@
-Project Tango UnitySDK Example Projects
+Project Tango UnitySDK Example Project
 ===========================================
 Copyright (C) 2015 Google Inc.
 
@@ -16,6 +16,18 @@ These are the Project Tango UnitySDK Examples compilable in Unity 5 and above:
 * **Mesh Builder(Experimental)** - The mesh build demo shows how to build a mesh using both motion tracking and depth API.
  
 * **Augmented Reality Example(Experimental)** - The augmented reality example shows how to use the video camera overlay and motion tracking data to create a augmented reality experience.
+
+<h2>Project Layout</h2>
+
+The example project has the following folders:
+* **Editor/Tango/** - Tango-specific Unity3D editor integration
+* **Google-Unity/** - General Android lifecycle management
+* **Plugins/Android/** - General Android and Tango-specific libraries
+* **Scenes/** - All the Tango example scenes
+* **Standard Assets/** - Unity packages we are using
+* **TangoExamples/** - One subfolder here per example
+* **TangoPrefabs/** - Common Tango prefabs, like a simple camera
+* **TangoSDK/** - Unity3D interface to the Tango libraries
 
 <h2>Support</h2>
 
