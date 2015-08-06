@@ -86,13 +86,13 @@ public class BuildTools
     private static BuildUtil.PackageSettings sdkPackage = new BuildUtil.PackageSettings
     {
         PackageName = "TangoSDK",
-        Directories = new string[] { "Editor", "Google-Unity", "Plugins", "TangoSDK" }
+        Directories = new string[] { "Google-Unity", "Plugins", "TangoSDK" }
     };
 
     private static BuildUtil.PackageSettings sdkPlusPrefabsPackage = new BuildUtil.PackageSettings
     {
         PackageName = "TangoSDK+Prefabs",
-        Directories = new string[] { "Editor", "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK" }
+        Directories = new string[] { "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK" }
     };
     
     /// <summary>

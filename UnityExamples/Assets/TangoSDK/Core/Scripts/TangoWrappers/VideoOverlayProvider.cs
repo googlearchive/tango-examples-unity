@@ -96,7 +96,7 @@ namespace Tango
         public delegate void TangoService_onUnityFrameAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId);
         
         private static readonly string CLASS_NAME = "VideoOverlayProvider";
-        private static IntPtr callbackContext;
+        private static IntPtr callbackContext = IntPtr.Zero;
         
         /// <summary>
         /// Connects the texture.
