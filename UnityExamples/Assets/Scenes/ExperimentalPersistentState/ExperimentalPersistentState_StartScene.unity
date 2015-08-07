@@ -1183,11 +1183,8 @@ MonoBehaviour:
   m_enableVideoOverlay: 0
   m_motionTrackingAutoReset: 1
   m_enableAreaLearning: 1
-  m_enableUXLibrary: 0
-  m_drawDefaultUXExceptions: 1
   m_useExperimentalVideoOverlay: 1
   m_useExperimentalADF: 0
-  m_useLowLatencyIMUIntegration: 1
 --- !u!4 &229665608
 Transform:
   m_ObjectHideFlags: 0
@@ -5385,7 +5382,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_raycastCamera: {fileID: 0}
-  m_lastHitObject: {fileID: 0}
   content: {fileID: 475553437}
   normaledScaleFactor: .949999988
 --- !u!4 &1713694576 stripped

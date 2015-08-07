@@ -38,7 +38,6 @@ namespace Tango
         private TangoPoseData m_areaLearningData;
         private TangoPoseData m_relocalizationData;
         private OnTangoPoseAvailableEventHandler m_onTangoPoseAvailable;
-        private TangoEnums.TangoPoseStatusType m_latestPoseStatus = TangoEnums.TangoPoseStatusType.NA;
         private Stack<TangoPoseData> m_poseDataPool;
         private bool m_isDirty = false;
 
@@ -158,8 +157,6 @@ namespace Tango
         /// <param name="pose">Pose.</param>
         private void _OnPoseAvailable(IntPtr callbackContext, TangoPoseData pose)
         {
-            m_latestPoseStatus = pose.status_code;
-
             // MotionTracking
             if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
                 pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)

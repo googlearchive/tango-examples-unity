@@ -9,7 +9,7 @@ GameObject:
   m_Component:
   - 4: {fileID: 400000}
   - 114: {fileID: 11400006}
-  - 114: {fileID: 11467540}
+  - 114: {fileID: 11475042}
   m_Layer: 0
   m_Name: Tango Manager
   m_TagString: Untagged
@@ -47,8 +47,7 @@ MonoBehaviour:
   m_enableAreaLearning: 0
   m_useExperimentalVideoOverlay: 1
   m_useExperimentalADF: 0
-  m_useLowLatencyIMUIntegration: 1
---- !u!114 &11467540
+--- !u!114 &11475042
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_PrefabParentObject: {fileID: 0}

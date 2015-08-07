@@ -1,1 +1,0 @@
-find . -name '*.meta' -exec rm {} \;

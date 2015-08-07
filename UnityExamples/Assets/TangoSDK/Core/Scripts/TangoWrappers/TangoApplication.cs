@@ -52,7 +52,6 @@ namespace Tango
         public bool m_enableAreaLearning = false;
         public bool m_useExperimentalVideoOverlay = true;
         public bool m_useExperimentalADF = false;
-        public bool m_useLowLatencyIMUIntegration = true;
         private static string m_tangoServiceVersion = string.Empty;
         private const string CLASS_NAME = "TangoApplication";
         private const string ANDROID_PRO_LABEL_TEXT = "<size=30>Tango plugin requires Unity Android Pro!</size>";
@@ -75,7 +74,6 @@ namespace Tango
         private IntPtr m_callbackContext = IntPtr.Zero;
         private bool m_isServiceConnected = false;
         private bool m_shouldReconnectService = false;
-        private bool m_isDisconnecting = false;
         private bool m_sendPermissions = false;
         private bool m_permissionsSuccessful = false;
         private PoseListener m_poseListener;
@@ -474,7 +472,7 @@ namespace Tango
         {
             _InitializeMotionTracking(UUID);
             _InitializeDepth();
-            //_InitializeOverlay();
+            _InitializeOverlay();
             _SetEventCallbacks();
         }
         
@@ -602,8 +600,10 @@ namespace Tango
             {
                 _SetMotionTrackingCallbacks(framePairs.ToArray());
             }
-            
-            TangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, m_useLowLatencyIMUIntegration);
+
+            // The C API does not default this to on, but it is locked down.
+            TangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, true);
+
             TangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
         }
 
@@ -679,16 +679,13 @@ namespace Tango
         private void _TangoDisconnect()
         {
             Debug.Log(CLASS_NAME + ".Disconnect() Disconnecting from the Tango Service");
-            m_isDisconnecting = true;
             m_isServiceConnected = false;
             if (TangoServiceAPI.TangoService_disconnect() != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".Disconnect() Could not disconnect from the Tango Service!");
-                m_isDisconnecting = false;
             } else
             {
                 Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
-                m_isDisconnecting = false;
 
                 if (m_onTangoDisconnect != null)
                 {
@@ -926,7 +923,6 @@ namespace Tango
         {
             if (m_sendPermissions)
             {
-                _InitializeOverlay();
                 if (m_permissionEvent != null)
                 {
                     m_permissionEvent(m_permissionsSuccessful);

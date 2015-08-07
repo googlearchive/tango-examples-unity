@@ -72,7 +72,6 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
             pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
         {
             // Update the stats for the pose for the debug text
-            m_status = pose.status_code;
             if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
             {
                 // Create new Quaternion and Vec3 from the pose data received in the event.
@@ -114,6 +113,9 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
                 m_tangoPosition = Vector3.zero;
                 m_tangoRotation = Quaternion.identity;
             }
+
+            // Finally, apply the new pose status
+            m_status = pose.status_code;
         }
     }
     
