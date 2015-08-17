@@ -21,6 +21,16 @@ using System.Collections;
 /// </summary>
 public partial class AndroidHelper
 {
+    /// <summary>
+    /// Holds the current and default offset of the
+    /// current Tango device.
+    /// </summary>
+    public struct TangoDeviceOrientation
+    {
+        public DeviceOrientation defaultRotation;
+        public DeviceOrientation currentRotation;
+    }
+
     private const string PERMISSION_REQUESTER = "com.projecttango.permissionrequester.RequestManagerActivity";
 
     #pragma warning disable 414
@@ -94,7 +104,27 @@ public partial class AndroidHelper
         return false;
     }
 
+    /// <summary>
+    /// Gets the current and default device orientation.
+    /// </summary>
+    /// <returns>The current and default tango device orientation.</returns>
+    public static TangoDeviceOrientation GetTangoDeviceOrientation()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+        TangoDeviceOrientation deviceOrientation;
+        deviceOrientation.defaultRotation = DeviceOrientation.Unknown;
+        deviceOrientation.currentRotation = DeviceOrientation.Unknown;
 
+        if(tangoObject != null)
+        {
+            AndroidJavaObject rotationInfo = tangoObject.Call<AndroidJavaObject>("showTranslatedOrientation");
+
+            deviceOrientation.defaultRotation = (DeviceOrientation)rotationInfo.Get<int>("defaultRotation");
+            deviceOrientation.currentRotation = (DeviceOrientation)rotationInfo.Get<int>("currentRotation");
+        }
+        
+        return deviceOrientation;
+    }
     
     /// <summary>
     /// Determines if is tango core present.

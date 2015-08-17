@@ -1,7 +1,18 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="BuildTools.cs" company="Google">
-//   
+﻿// <copyright file="BuildTools.cs" company="Google">
+//
 // Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 // </copyright>
 //-----------------------------------------------------------------------
@@ -14,37 +25,26 @@ using UnityEditor;
 /// all projects.
 /// 
 /// To use this from the command line, run the following command:
-/// <FULLPATH_UNITY.APP>/Contents/MacOS/Unity -batchmode -projectPath <FULLPATH> -executeMethod <METHOD_TO_RUN> -quit
+/// [FULLPATH_UNITY.APP]/Contents/MacOS/Unity -batchmode -projectPath [FULLPATH] -executeMethod [METHOD_TO_RUN] -quit
 /// 
 /// For example:
 /// /Applications/Unity/Unity.app/Contents/MacOS/Unity -batchmode -projectPath ~/Unity/tango-examples-unity/UnityExamples/ -executeMethod BuildTools.BuildAll -quit
 /// 
-/// For more info, goto <http://docs.unity3d.com/Manual/CommandLineArguments.html>
+/// For more info, goto [http://docs.unity3d.com/Manual/CommandLineArguments.html].
 /// </summary>
 public class BuildTools
 {
-    private static BuildUtil.APKSettings areaLearningAPK = new BuildUtil.APKSettings
+    private static BuildUtil.APKSettings examplesAPK = new BuildUtil.APKSettings
     {
-        ProjectName = "Unity Area Learning",
-        Icon = "TangoExamples/AreaLearning/Textures/icon.png",
-        Scenes = new string[] { "Scenes/AreaLearning.unity" },
-        BundleIdentifier = "com.projecttango.experiments.unityarealearning"
-    };
-
-    private static BuildUtil.APKSettings motionTrackingAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Motion Tracking",
-        Icon = "TangoExamples/MotionTracking/Textures/icon.png",
-        Scenes = new string[] { "Scenes/MotionTracking.unity" },
-        BundleIdentifier = "com.projecttango.experiments.unitymotiontracking"
-    };
-
-    private static BuildUtil.APKSettings pointCloudAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Point Cloud",
-        Icon = "TangoExamples/PointCloud/Textures/icon.png",
-        Scenes = new string[] { "Scenes/PointCloud.unity" },
-        BundleIdentifier = "com.projecttango.experiments.unitypointcloud"
+        ProjectName = "Unity Examples",
+        Icon = "TangoExamples/Common/Textures/ProjectTango_Logo.png",
+        Scenes = new string[]
+        {
+            "Scenes/AreaLearning.unity",
+            "Scenes/MotionTracking.unity",
+            "Scenes/PointCloud.unity",
+        },
+        BundleIdentifier = "com.google.projecttango.examples"
     };
 
     private static BuildUtil.APKSettings augmentedRealityAPK = new BuildUtil.APKSettings 
@@ -66,7 +66,7 @@ public class BuildTools
     private static BuildUtil.APKSettings persistentStateAPK = new BuildUtil.APKSettings
     {
         ProjectName = "Unity Persistent State",
-        Icon = "TangoExamples/ExperimentalPersistentState/Textures/Moto-ProjectTango_Logo Only Square copy.png",
+        Icon = "TangoExamples/Common/Textures/ProjectTango_Logo.png",
         Scenes = new string[] 
         { 
             "Scenes/ExperimentalPersistentState/ExperimentalPersistentState_StartScene.unity",
@@ -101,9 +101,7 @@ public class BuildTools
     [MenuItem("Tango/Build/All", false, 1)]
     public static void BuildAll()
     {
-        BuildUtil.BuildAPK(areaLearningAPK);
-        BuildUtil.BuildAPK(motionTrackingAPK);
-        BuildUtil.BuildAPK(pointCloudAPK);
+        BuildUtil.BuildAPK(examplesAPK);
         BuildUtil.BuildAPK(augmentedRealityAPK);
         BuildUtil.BuildAPK(meshBuilderAPK);
         BuildUtil.BuildAPK(persistentStateAPK);
@@ -133,28 +131,10 @@ public class BuildTools
     /// <summary>
     /// Function for UI.
     /// </summary>
-    [MenuItem("Tango/Build/Area Learning")]
-    public static void BuildAreaLearning()
+    [MenuItem("Tango/Build/Examples")]
+    public static void BuildExamples()
     {
-        BuildUtil.BuildAPK(areaLearningAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Motion Tracking")]
-    public static void BuildMotionTracking()
-    {
-        BuildUtil.BuildAPK(motionTrackingAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Point Cloud")]
-    public static void BuildPointCloud()
-    {
-        BuildUtil.BuildAPK(pointCloudAPK);
+        BuildUtil.BuildAPK(examplesAPK);
     }
     
     /// <summary>

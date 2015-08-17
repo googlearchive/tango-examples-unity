@@ -1,0 +1,59 @@
+﻿//-----------------------------------------------------------------------
+// <copyright file="SceneSwitcher.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
+using System.Collections;
+using UnityEngine;
+using Tango;
+
+/// <summary>
+/// Script that displays a scene switching UI.
+/// </summary>
+public class SceneSwitcher : MonoBehaviour
+{
+    private const int SCENE_BUTTON_SIZE_X = 250;
+    private const int SCENE_BUTTON_SIZE_Y = 65;
+
+    /// <summary>
+    /// The names of all the scenes this can switch between.
+    /// </summary>
+    private readonly string[] m_sceneNames =
+    {
+        "AreaLearning",
+        "MotionTracking",
+        "PointCloud" 
+    };
+
+    /// <summary>
+    /// Scene switching GUI.
+    /// </summary>
+    private void OnGUI()
+    {
+        for (int it = 0; it < m_sceneNames.Length; ++it)
+        {
+            Rect buttonRect = new Rect(Screen.width - Common.UI_BUTTON_GAP_X - SCENE_BUTTON_SIZE_X,
+                                       Common.UI_LABEL_GAP_Y + ((Common.UI_LABEL_GAP_Y + SCENE_BUTTON_SIZE_Y) * it),
+                                       SCENE_BUTTON_SIZE_X,
+                                       SCENE_BUTTON_SIZE_Y);
+            if (GUI.Button(buttonRect, "<size=20>" + m_sceneNames[it] + "</size>"))
+            {
+                Application.LoadLevel(m_sceneNames[it]);
+            }
+        }
+    }
+}

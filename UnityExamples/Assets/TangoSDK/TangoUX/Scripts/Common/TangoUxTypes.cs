@@ -19,27 +19,38 @@ using UnityEngine;
 
 namespace Tango
 {
-	/// <summary>
-	/// Represents a Tango Ux Exception.
-	/// </summary>
-	[StructLayout(LayoutKind.Sequential)]
-	public class UxExceptionEvent
-	{
-		[MarshalAs(UnmanagedType.I4)]
-		public TangoUxEnums.UxExceptionEventType type;
-		
-		[MarshalAs(UnmanagedType.R4)]
-		public float value;
-		
-		[MarshalAs(UnmanagedType.I4)]
-		public TangoUxEnums.UxExceptionEventStatus status;
+    /// <summary>
+    /// Represents a Tango Ux Exception Event.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public class UxExceptionEvent
+    {
+        /// <summary>
+        /// The type for this Ux Exception Event.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoUxEnums.UxExceptionEventType type;
 
-		public UxExceptionEvent()
-		{
-			type = TangoUxEnums.UxExceptionEventType.NA;
-			value = float.NaN;
-			status = TangoUxEnums.UxExceptionEventStatus.NA;
-		}
+        /// <summary>
+        /// The event value for this Ux Exception Event.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R4)]
+        public float value;
 
-	}
+        /// <summary>
+        /// The status for this Ux Exception Event.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoUxEnums.UxExceptionEventStatus status;
+
+        /// <summary>
+        /// Initialize a new instance of Tango.UxExceptionEvent.
+        /// </summary>
+        public UxExceptionEvent()
+        {
+            type = TangoUxEnums.UxExceptionEventType.NA;
+            value = float.NaN;
+            status = TangoUxEnums.UxExceptionEventStatus.NA;
+        }
+    }
 }

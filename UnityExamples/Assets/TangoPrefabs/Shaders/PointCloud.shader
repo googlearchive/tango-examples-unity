@@ -4,7 +4,7 @@
         GLSLPROGRAM
 
         #ifdef VERTEX
-        uniform mat4 ucTuw;
+        uniform mat4 depthCameraTUnityWorld;
         varying vec4 v_color;
         void main()
         {   
@@ -12,7 +12,7 @@
            gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
            
            // Color should be based on pose relative info
-           v_color = ucTuw * gl_Vertex;
+           v_color = depthCameraTUnityWorld * gl_Vertex;
         }
         #endif
 

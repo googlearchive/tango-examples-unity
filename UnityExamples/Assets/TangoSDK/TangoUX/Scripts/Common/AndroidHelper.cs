@@ -67,21 +67,23 @@ public partial class AndroidHelper
         }
     }
     
-	/// <summary>
-	/// Initialize tango ux library.
-	/// </summary>
-	public static void InitTangoUx(bool isMotionTrackingEnabled)
-	{
-		AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
-		if(tangoUxObject != null)
-		{
-			tangoUxObject.Call("initTangoUx", isMotionTrackingEnabled);
-		}
-	}
+    /// <summary>
+    /// Initialize tango ux library.
+    /// </summary>
+    /// <param name="isMotionTrackingEnabled">A flag to indicate if motion tracking is enabled.</param>
+    public static void InitTangoUx(bool isMotionTrackingEnabled)
+    {
+        AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
+        if(tangoUxObject != null)
+        {
+            tangoUxObject.Call("initTangoUx", isMotionTrackingEnabled);
+        }
+    }
 
     /// <summary>
     /// Shows the standard tango exceptions UI.
     /// </summary>
+    /// <param name="shouldUseDefaultUi">A flag to indicate if default TangoUx UI is enabled.</param>
     public static void ShowStandardTangoExceptionsUI(bool shouldUseDefaultUi)
     {
         AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
@@ -125,7 +127,7 @@ public partial class AndroidHelper
         AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
         if(tangoUxObject != null)
         {
-			tangoUxObject.Call("setUxExceptionEventListener", UxExceptionEventListener.GetInstance);
+            tangoUxObject.Call("setUxExceptionEventListener", UxExceptionEventListener.GetInstance);
         }
     }
 }

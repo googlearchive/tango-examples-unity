@@ -1,11 +1,24 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="AugmentedRealityGUIController.cs" company="Google">
-//   
+//
 // Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Tango;
 
@@ -45,9 +58,14 @@ public class AugmentedRealityGUIController : MonoBehaviour
     public const float SECOND_TO_MILLISECOND = 1000.0f;
 
     /// <summary>
-    /// How big (in pixels) is a tap?
+    /// How big (in pixels) is a tap.
     /// </summary>
-    public const int TAP_PIXEL_TOLERANCE = 40;
+    public const float TAP_PIXEL_TOLERANCE = 40;
+
+    /// <summary>
+    /// Minimum inlier percentage to consider a plane a fit.
+    /// </summary>
+    public const float MIN_PLANE_FIT_PERCENTAGE = 0.8f;
 
     public ARScreen m_arScreen;
 
@@ -281,8 +299,13 @@ public class AugmentedRealityGUIController : MonoBehaviour
         }
 
         Camera cam = m_arScreen.m_renderCamera;
-        int closestIndex = m_pointCloud.FindClosestPoint(cam, t.position, TAP_PIXEL_TOLERANCE);
-        if (closestIndex < 0)
+
+        // Find the plane for the selected point.
+        Vector3 planeCenter;
+        Plane plane;
+        if (!m_pointCloud.FindPlane(cam, t.position,
+                                    TAP_PIXEL_TOLERANCE, MIN_PLANE_FIT_PERCENTAGE,
+                                    out planeCenter, out plane))
         {
             return;
         }
@@ -292,12 +315,6 @@ public class AugmentedRealityGUIController : MonoBehaviour
             m_placedLocation.SendMessage("Hide");
         }
 
-        float closestDepth = cam.WorldToScreenPoint(m_pointCloud.m_points[closestIndex]).z;
-        Ray touchRay = cam.ScreenPointToRay(new Vector3(t.position[0], t.position[1], 0));
-        Vector3 pos = touchRay.origin + (touchRay.direction * closestDepth);
-                
-        Vector3 rot = cam.transform.eulerAngles;
-        rot[0] = rot[2] = 0;
-        m_placedLocation = (GameObject)Instantiate(m_prefabLocation, pos, Quaternion.Euler(rot));
+        m_placedLocation = (GameObject)Instantiate(m_prefabLocation, planeCenter, Quaternion.FromToRotation(Vector3.up, plane.normal));
     }
 }
