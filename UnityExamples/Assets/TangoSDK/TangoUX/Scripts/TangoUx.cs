@@ -26,18 +26,18 @@ namespace Tango
 
         private TangoApplication m_tangoApplication;
 
-    	/// <summary>
+        /// <summary>
         /// Start this instance.
         /// </summary>
-    	void Start ()
+        void Start ()
         {
             m_tangoApplication = GetComponent<TangoApplication>();
             m_tangoApplication.RegisterPermissionsCallback(_OnTangoPermissionsEvent);
             m_tangoApplication.RegisterOnTangoConnect(_OnTangoServiceConnected);
             m_tangoApplication.RegisterOnTangoDisconnect(_OnTangoServiceDisconnected);
             m_tangoApplication.Register(this);
-			AndroidHelper.InitTangoUx(m_tangoApplication.m_enableMotionTracking);
-    	}
+            AndroidHelper.InitTangoUx(m_tangoApplication.m_enableMotionTracking);
+        }
 
         /// <summary>
         /// Raises the destroy event.
@@ -65,7 +65,7 @@ namespace Tango
                 
                 if(tangoUX != null)
                 {
-					UxExceptionEventListener.GetInstance.RegisterOnUxExceptionEventHandler(tangoUX.onUxExceptionEventHandler);
+                    UxExceptionEventListener.GetInstance.RegisterOnUxExceptionEventHandler(tangoUX.onUxExceptionEventHandler);
                 }
             }
         }
@@ -82,7 +82,7 @@ namespace Tango
                 
                 if(tangoUX != null)
                 {
-					UxExceptionEventListener.GetInstance.UnregisterOnUxExceptionEventHandler(tangoUX.onUxExceptionEventHandler);
+                    UxExceptionEventListener.GetInstance.UnregisterOnUxExceptionEventHandler(tangoUX.onUxExceptionEventHandler);
                 }
             }
         }
@@ -133,7 +133,7 @@ namespace Tango
         private IEnumerator _StartExceptionsListener()
         {
             AndroidHelper.ShowStandardTangoExceptionsUI(m_drawDefaultUXExceptions);
-			AndroidHelper.SetUxExceptionEventListener ();
+            AndroidHelper.SetUxExceptionEventListener ();
             yield return 0;
         }
         

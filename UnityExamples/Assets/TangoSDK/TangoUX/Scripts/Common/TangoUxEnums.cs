@@ -18,37 +18,37 @@ using UnityEngine;
 
 namespace Tango
 {
-	/// <summary>
-	/// Enumerations used by the Tango Ux.
-	/// </summary>
-	public class TangoUxEnums
-	{
-		/// <summary>
-		/// Possible types for a UX Exception Event.
-		/// </summary>
-		public enum UxExceptionEventType
-		{
-			TYPE_OVER_EXPOSED,  /**< Camera is over exposed */
-			TYPE_UNDER_EXPOSED, /**< Camera is under exposed */
-			TYPE_MOVING_TOO_FAST, /**< Device is being moved too fast */
-			TYPE_FEW_FEATURES,  /**< Too few features */
-			TYPE_FEW_DEPTH_POINTS,  /**< Unable to detect any surface */
-			TYPE_LYING_ON_SURFACE,  /**< Device is lying on a surface */
-			TYPE_MOTION_TRACK_INVALID,  /**< Motion tracking is invalid */
-			TYPE_TANGO_SERVICE_NOT_RESPONDING,  /**< Tango Service stopped responding */
-			TYPE_INCOMPATIBLE_VM,  /**< Incompatible vm is found */
-			TYPE_TANGO_UPDATE_NEEDED,  /**< Tango version update is needed */
-			NA  /***<Not Available, not a real Ux Exception event type*/
-		}
+    /// <summary>
+    /// Enumerations used by TangoUx.
+    /// </summary>
+    public class TangoUxEnums
+    {
+        /// <summary>
+        /// Possible types for a UX Exception Event.
+        /// </summary>
+        public enum UxExceptionEventType
+        {
+            TYPE_OVER_EXPOSED,  /**< Camera is over exposed */
+            TYPE_UNDER_EXPOSED, /**< Camera is under exposed */
+            TYPE_MOVING_TOO_FAST, /**< Device is being moved too fast */
+            TYPE_FEW_FEATURES,  /**< Too few features */
+            TYPE_FEW_DEPTH_POINTS,  /**< Unable to detect any surface */
+            TYPE_LYING_ON_SURFACE,  /**< Device is lying on a surface */
+            TYPE_MOTION_TRACK_INVALID,  /**< Motion tracking is invalid */
+            TYPE_TANGO_SERVICE_NOT_RESPONDING,  /**< Tango Service stopped responding */
+            TYPE_INCOMPATIBLE_VM,  /**< Incompatible vm is found */
+            TYPE_TANGO_UPDATE_NEEDED,  /**< Tango version update is needed */
+            NA  /***<Not Available, not a real Ux Exception event type*/
+        }
 
-		/// <summary>
-		/// Possible states for the exception status
-		/// </summary>
-		public enum UxExceptionEventStatus
-		{
-			STATUS_RESOLVED,  /**< The exception was resolved */
-			STATUS_DETECTED,  /**< The exception was detected */
-			NA  /***<Not Available, not a real ux exception event status*/
-		}
-	}
+        /// <summary>
+        /// Possible status for exceptions.
+        /// </summary>
+        public enum UxExceptionEventStatus
+        {
+            STATUS_RESOLVED,  /**< The exception was resolved */
+            STATUS_DETECTED,  /**< The exception was detected */
+            NA  /***<Not Available, not a real ux exception event status*/
+        }
+    }
 }

@@ -1,27 +1,30 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-using UnityEngine;
+﻿// <copyright file="MotionTrackingGUIController.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using UnityEngine;
 using Tango;
 
 /// <summary>
 /// FPS counter.
 /// </summary>
-public class MotionTrackingGUIController : MonoBehaviour {
-    
+public class MotionTrackingGUIController : MonoBehaviour
+{
     public const float UI_LABEL_START_X = 15.0f;
     public const float UI_LABEL_START_Y = 15.0f;
     public const float UI_LABEL_SIZE_X = 1920.0f;
@@ -52,8 +55,8 @@ public class MotionTrackingGUIController : MonoBehaviour {
     public const float SECOND_TO_MILLISECOND = 1000.0f;
     public TangoPoseController m_tangoPoseController;
 
-    private const float m_updateFrequency = 1.0f;
-    private string m_FPSText;
+    private const float UPDATE_FREQUENCY = 1.0f;
+    private string m_fpsText;
     private int m_currentFPS;
     private int m_framesSinceUpdate;
     private float m_accumulation;
@@ -62,39 +65,85 @@ public class MotionTrackingGUIController : MonoBehaviour {
     private Rect m_label;
     private TangoApplication m_tangoApplication;
     
-    // Use this for initialization
-    void Start () 
+    /// <summary>
+    /// Use this for initialization.
+    /// </summary>
+    public void Start() 
     {
         m_currentFPS = 0;
         m_framesSinceUpdate = 0;
         m_currentTime = 0.0f;
-        m_FPSText = "FPS = Calculating";
-        m_label = new Rect(Screen.width * 0.025f - 50, Screen.height * 0.96f - 25, 600.0f, 50.0f);
+        m_fpsText = "FPS = Calculating";
+        m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
     }
 
-    // Update is called once per frame
-    void Update () 
+    /// <summary>
+    /// Update is called once per frame.
+    /// </summary>
+    public void Update() 
     {
         m_currentTime += Time.deltaTime;
         ++m_framesSinceUpdate;
         m_accumulation += Time.timeScale / Time.deltaTime;
-        if(m_currentTime >= m_updateFrequency)
+        if (m_currentTime >= UPDATE_FREQUENCY)
         {
-            m_currentFPS = (int)(m_accumulation/m_framesSinceUpdate);
+            m_currentFPS = (int)(m_accumulation / m_framesSinceUpdate);
             m_currentTime = 0.0f;
             m_framesSinceUpdate = 0;
             m_accumulation = 0.0f;
-            m_FPSText = "FPS: " + m_currentFPS;
+            m_fpsText = "FPS: " + m_currentFPS;
+        }
+    }
+    
+    /// <summary>
+    /// Unity GUI callback.
+    /// </summary>
+    public void OnGUI()
+    {
+        if (m_tangoApplication.HasRequestedPermissions())
+        {
+            Color oldColor = GUI.color;
+            GUI.color = Color.white;
+            
+            if (GUI.Button(new Rect(UI_BUTTON_GAP_X, 
+                                    Screen.height - (UI_BUTTON_SIZE_Y + UI_LABEL_GAP_Y),
+                                    UI_BUTTON_SIZE_X + 100, 
+                                    UI_BUTTON_SIZE_Y), "<size=20>Reset motion tracking</size>"))
+            {
+                PoseProvider.ResetMotionTracking();
+            }
+            
+            GUI.color = Color.black;
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y), 
+                      UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
+            
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_FPS_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
+                      UI_FONT_SIZE + m_fpsText + "</size>");
+            
+            // MOTION TRACKING
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
+                      UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
+            
+            string logString = String.Format(UX_STATUS,
+                                             _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status),
+                                             _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount),
+                                             _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
+                                             _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation));
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
+                      UI_FONT_SIZE + logString + "</size>");
+            GUI.color = oldColor;
         }
     }
     
     /// <summary>
     /// Construct readable string from TangoPoseStatusType.
     /// </summary>
+    /// <returns>Printable string.</returns>
+    /// <param name="status">Tango pose status.</param>
     private string _GetLoggingStringFromPoseStatus(TangoEnums.TangoPoseStatusType status)
     {
-        string statusString = "";
+        string statusString = string.Empty;
         switch (status)
         {
         case TangoEnums.TangoPoseStatusType.TANGO_POSE_INITIALIZING:
@@ -119,9 +168,11 @@ public class MotionTrackingGUIController : MonoBehaviour {
     /// <summary>
     /// Reformat string from vector3 type for data logging.
     /// </summary>
+    /// <returns>Printable string.</returns>
+    /// <param name="vec">A vector.</param> 
     private string _GetLoggingStringFromVec3(Vector3 vec)
     {
-        if(vec == Vector3.zero)
+        if (vec == Vector3.zero)
         {
             return "N/A";
         }
@@ -137,9 +188,11 @@ public class MotionTrackingGUIController : MonoBehaviour {
     /// <summary>
     /// Reformat string from quaternion type for data logging.
     /// </summary>
+    /// <returns>Printable string.</returns>
+    /// <param name="quat">A quaternion.</param>
     private string _GetLoggingStringFromQuaternion(Quaternion quat)
     {
-        if(quat == Quaternion.identity)
+        if (quat == Quaternion.identity)
         {
             return "N/A";
         }
@@ -160,7 +213,7 @@ public class MotionTrackingGUIController : MonoBehaviour {
     /// <param name="frameCount">Frame count.</param>
     private string _GetLoggingStringFromFrameCount(int frameCount)
     {
-        if(frameCount == -1.0)
+        if (frameCount == -1.0)
         {
             return "N/A";
         }
@@ -171,64 +224,19 @@ public class MotionTrackingGUIController : MonoBehaviour {
     }
     
     /// <summary>
-    /// Return a string to get logging of FrameDeltaTime
+    /// Return a string to get logging of FrameDeltaTime.
     /// </summary>
     /// <returns>The get loggin string from frame delta time.</returns>
     /// <param name="frameDeltaTime">Frame delta time.</param>
     private string _GetLogginStringFromFrameDeltaTime(float frameDeltaTime)
     {
-        if(frameDeltaTime == -1.0)
+        if (frameDeltaTime == -1.0)
         {
             return "N/A";
         }
         else
         {
             return (frameDeltaTime * SECOND_TO_MILLISECOND).ToString(UI_FLOAT_FORMAT);
-        }
-    }
-
-    void OnGUI()
-    {
-        if(m_tangoApplication.HasRequestedPermissions())
-        {
-            Color oldColor = GUI.color;
-            GUI.color = Color.white;
-            
-            if (GUI.Button(new Rect(UI_BUTTON_GAP_X, 
-                                    Screen.height - (UI_BUTTON_SIZE_Y + UI_LABEL_GAP_Y),
-                                    UI_BUTTON_SIZE_X + 100, 
-                                    UI_BUTTON_SIZE_Y), "<size=20>Reset motion tracking</size>"))
-            {
-                PoseProvider.ResetMotionTracking();
-            }
-
-            GUI.color = Color.black;
-            GUI.Label(new Rect(UI_LABEL_START_X, 
-                               UI_LABEL_START_Y, 
-                               UI_LABEL_SIZE_X , 
-                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
-
-            GUI.Label(new Rect(UI_LABEL_START_X, 
-                               UI_FPS_LABEL_START_Y, 
-                               UI_LABEL_SIZE_X , 
-                               UI_LABEL_SIZE_Y), UI_FONT_SIZE + m_FPSText + "</size>");
-            // MOTION TRACKING
-            GUI.Label( new Rect(UI_LABEL_START_X, 
-                        UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET,
-                                UI_LABEL_SIZE_X , 
-                                UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME,
-                                                                         "Device",
-                                                                         "Start") + "</size>");
-            
-            GUI.Label( new Rect(UI_LABEL_START_X, 
-                                UI_POSE_LABEL_START_Y,
-                                UI_LABEL_SIZE_X , 
-                                UI_LABEL_SIZE_Y), UI_FONT_SIZE + String.Format(UX_STATUS,
-                                                                         _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status),
-                                                                         _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount),
-                                                                         _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
-                                                                         _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation)) + "</size>");            
-            GUI.color = oldColor;
         }
     }
 }

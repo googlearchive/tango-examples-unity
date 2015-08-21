@@ -145,7 +145,7 @@ namespace Tango
     }
 
     /// <summary>
-    /// /// The TangoCameraIntrinsics struct contains intrinsic parameters for a camera.
+    /// The TangoCameraIntrinsics struct contains intrinsic parameters for a camera.
     /// For image coordinates, the obervations, [u, v]^T in pixels.
     /// Normalized image plane coordinates refer to:
     ///

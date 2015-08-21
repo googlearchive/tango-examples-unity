@@ -1,18 +1,22 @@
-/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+//-----------------------------------------------------------------------
+// <copyright file="ARScreen.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections;
 using UnityEngine;
 using Tango;
@@ -30,6 +34,12 @@ public class ARScreen : MonoBehaviour
 {
     public Camera m_renderCamera;
     public Material m_screenMaterial;
+
+    // Values for debug display.
+    [HideInInspector]
+    public TangoEnums.TangoPoseStatusType m_status;
+    [HideInInspector]
+    public int m_frameCount;
     
     private TangoApplication m_tangoApplication;
     private YUVTexture m_textures;
@@ -37,22 +47,20 @@ public class ARScreen : MonoBehaviour
     // Matrix for Tango coordinate frame to Unity coordinate frame conversion.
     // Start of service frame with respect to Unity world frame.
     private Matrix4x4 m_uwTss;
+
     // Unity camera frame with respect to color camera frame.
     private Matrix4x4 m_cTuc;
+
     // Device frame with respect to IMU frame.
     private Matrix4x4 m_imuTd;
+
     // Color camera frame with respect to IMU frame.
     private Matrix4x4 m_imuTc;
+
     // Unity camera frame with respect to IMU frame, this is composed by
     // Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
     // We pre-compute this matrix to save some computation in update().
     private Matrix4x4 m_dTuc;
-
-    // Values for debug display.
-    [HideInInspector]
-    public TangoEnums.TangoPoseStatusType m_status;
-    [HideInInspector]
-    public int m_frameCount;
 
     /// <summary>
     /// Initialize the AR Screen.
@@ -61,22 +69,22 @@ public class ARScreen : MonoBehaviour
     {
         // Constant matrix converting start of service frame to Unity world frame.
         m_uwTss = new Matrix4x4();
-        m_uwTss.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn (1, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
-        m_uwTss.SetColumn (2, new Vector4 (0.0f, 1.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
+        m_uwTss.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        m_uwTss.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+        m_uwTss.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+        m_uwTss.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
         
         // Constant matrix converting Unity world frame frame to device frame.
-        m_cTuc.SetColumn (0, new Vector4 (1.0f, 0.0f, 0.0f, 0.0f));
-        m_cTuc.SetColumn (1, new Vector4 (0.0f, -1.0f, 0.0f, 0.0f));
-        m_cTuc.SetColumn (2, new Vector4 (0.0f, 0.0f, 1.0f, 0.0f));
-        m_cTuc.SetColumn (3, new Vector4 (0.0f, 0.0f, 0.0f, 1.0f));
+        m_cTuc.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn(1, new Vector4(0.0f, -1.0f, 0.0f, 0.0f));
+        m_cTuc.SetColumn(2, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+        m_cTuc.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         
-        if(m_tangoApplication != null)
+        if (m_tangoApplication != null)
         {
-            if(AndroidHelper.IsTangoCorePresent())
+            if (AndroidHelper.IsTangoCorePresent())
             {
                 // Request Tango permissions
                 m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
@@ -93,9 +101,10 @@ public class ARScreen : MonoBehaviour
         {
             Debug.Log("No Tango Manager found in scene.");
         }
-        if(m_tangoApplication != null)
+        if (m_tangoApplication != null)
         {
             m_textures = m_tangoApplication.GetVideoOverlayTextureYUV();
+
             // Pass YUV textures to shader for process.
             m_screenMaterial.SetTexture("_YTex", m_textures.m_videoOverlayTextureY);
             m_screenMaterial.SetTexture("_UTex", m_textures.m_videoOverlayTextureCb);
@@ -108,10 +117,11 @@ public class ARScreen : MonoBehaviour
     /// <summary>
     /// Unity update function, we update our texture from here.
     /// </summary>
-    private void Update() {
-        if(Input.GetKeyDown(KeyCode.Escape))
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            if(m_tangoApplication != null)
+            if (m_tangoApplication != null)
             {
                 m_tangoApplication.Shutdown();
             }
@@ -121,19 +131,18 @@ public class ARScreen : MonoBehaviour
             // results in a hard crash.
             AndroidHelper.AndroidQuit();
         }
-        double timestamp = VideoOverlayProvider.RenderLatestFrame (TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+        double timestamp = VideoOverlayProvider.RenderLatestFrame(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
         _UpdateTransformation(timestamp);
-        GL.InvalidateState ();
+        GL.InvalidateState();
     }
-
-
 
     /// <summary>
     /// This callback function is called after user appoved or declined the permission to use Motion Tracking.
     /// </summary>
+    /// <param name="permissionsGranted">If the permissions were granted.</param>
     private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
     {
-        if(permissionsGranted)
+        if (permissionsGranted)
         {
             m_tangoApplication.InitApplication();
             m_tangoApplication.InitProviders(string.Empty);
@@ -152,7 +161,9 @@ public class ARScreen : MonoBehaviour
     /// <summary>
     /// Update the camera gameobject's transformation to the pose that on current timestamp.
     /// </summary>
-    private void _UpdateTransformation(double timestamp) {
+    /// <param name="timestamp">Time to update the camera to.</param>
+    private void _UpdateTransformation(double timestamp)
+    {
         TangoPoseData pose = new TangoPoseData();
         TangoCoordinateFramePair pair;
         pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
@@ -162,14 +173,14 @@ public class ARScreen : MonoBehaviour
         m_status = pose.status_code;
         if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
-            Vector3 m_tangoPosition = new Vector3((float)pose.translation [0],
-                                                  (float)pose.translation [1],
-                                                  (float)pose.translation [2]);
+            Vector3 m_tangoPosition = new Vector3((float)pose.translation[0],
+                                                  (float)pose.translation[1],
+                                                  (float)pose.translation[2]);
             
-            Quaternion m_tangoRotation = new Quaternion((float)pose.orientation [0],
-                                                        (float)pose.orientation [1],
-                                                        (float)pose.orientation [2],
-                                                        (float)pose.orientation [3]);
+            Quaternion m_tangoRotation = new Quaternion((float)pose.orientation[0],
+                                                        (float)pose.orientation[1],
+                                                        (float)pose.orientation[2],
+                                                        (float)pose.orientation[3]);
             
             Matrix4x4 ssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
             
@@ -184,7 +195,8 @@ public class ARScreen : MonoBehaviour
             m_renderCamera.transform.rotation = Quaternion.LookRotation(uwTuc.GetColumn(2), uwTuc.GetColumn(1));
             m_frameCount++;
         }
-        else {
+        else
+        {
             m_frameCount = 0;
         }
     }
@@ -194,11 +206,13 @@ public class ARScreen : MonoBehaviour
     /// applying any project matrix or view matrix. So it's drawing space is the normalized
     /// screen space, that is [-1.0f, 1.0f] for both width and height.
     /// </summary>
+    /// <param name="normalizedOffsetX">Horizontal padding to add to the left and right edges.</param>
+    /// <param name="normalizedOffsetY">Vertical padding to add to top and bottom edges.</param> 
     private void _SetScreenVertices(float normalizedOffsetX, float normalizedOffsetY)
     {
         MeshFilter meshFilter = GetComponent<MeshFilter>();
         Mesh mesh = meshFilter.mesh;
-        mesh.Clear ();
+        mesh.Clear();
         
         // Set the vertices base on the offset, note that the offset is used to compensate
         // the ratio differences between the camera image and device screen.
@@ -241,7 +255,8 @@ public class ARScreen : MonoBehaviour
     /// The device with respect to IMU frame is not directly queryable from API, so we use the IMU
     /// frame as a temporary value to get the device frame with respect to IMU frame.
     /// </summary>
-    private void _SetCameraExtrinsics() {
+    private void _SetCameraExtrinsics()
+    {
         double timestamp = 0.0;
         TangoCoordinateFramePair pair;
         TangoPoseData poseData = new TangoPoseData();
@@ -257,7 +272,7 @@ public class ARScreen : MonoBehaviour
                                          (float)poseData.orientation[1],
                                          (float)poseData.orientation[2],
                                          (float)poseData.orientation[3]);
-        m_imuTd = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+        m_imuTd = Matrix4x4.TRS(position, quat, new Vector3(1.0f, 1.0f, 1.0f));
         
         // Getting the transformation of IMU frame with respect to color camera frame.
         pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
@@ -270,7 +285,7 @@ public class ARScreen : MonoBehaviour
                               (float)poseData.orientation[1],
                               (float)poseData.orientation[2],
                               (float)poseData.orientation[3]);
-        m_imuTc = Matrix4x4.TRS(position, quat, new Vector3 (1.0f, 1.0f, 1.0f));
+        m_imuTc = Matrix4x4.TRS(position, quat, new Vector3(1.0f, 1.0f, 1.0f));
         m_dTuc = Matrix4x4.Inverse(m_imuTd) * m_imuTc * m_cTuc;
     }
     
@@ -283,7 +298,7 @@ public class ARScreen : MonoBehaviour
         VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
         
         float verticalFOV = 2.0f * Mathf.Rad2Deg * Mathf.Atan((intrinsics.height * 0.5f) / (float)intrinsics.fy);
-        if(!float.IsNaN(verticalFOV))
+        if (!float.IsNaN(verticalFOV))
         {
             m_renderCamera.fieldOfView = verticalFOV;
             
@@ -295,12 +310,12 @@ public class ARScreen : MonoBehaviour
             float heightRatio = (float)Screen.height / (float)intrinsics.height;
             if (widthRatio >= heightRatio)
             {
-                float normalizedOffset = (widthRatio / heightRatio - 1.0f) / 2.0f;
+                float normalizedOffset = ((widthRatio / heightRatio) - 1.0f) / 2.0f;
                 _SetScreenVertices(0, normalizedOffset);
             }
             else
             {
-                float normalizedOffset = (heightRatio / widthRatio - 1.0f) / 2.0f;
+                float normalizedOffset = ((heightRatio / widthRatio) - 1.0f) / 2.0f;
                 _SetScreenVertices(normalizedOffset, 0);
             }
         }
