@@ -951,6 +951,14 @@ namespace Tango
             }
         }
 
+        /// <summary>
+        /// Unity callback when this object is destroyed.
+        /// </summary>
+        private void OnDestroy()
+        {
+            Shutdown();
+        }
+
         #region NATIVE_FUNCTIONS
         /// <summary>
         /// Interface for native function calls to Tango Service.

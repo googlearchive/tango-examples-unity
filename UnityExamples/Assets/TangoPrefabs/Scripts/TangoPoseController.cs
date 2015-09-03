@@ -224,14 +224,6 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
-    /// Unity callback when this object is destroyed.
-    /// </summary>
-    private void OnDestroy()
-    {
-        m_tangoApplication.Shutdown();
-    }
-
-    /// <summary>
     /// Unity callback when application is paused.
     /// </summary>
     /// <param name="pauseStatus">The pauseStatus as reported by Unity.</param>

@@ -82,7 +82,6 @@ GameObject:
   - 4: {fileID: 400008}
   - 114: {fileID: 11400004}
   - 114: {fileID: 11400002}
-  - 114: {fileID: 11400000}
   m_Layer: 0
   m_Name: Tango VR Player Object
   m_TagString: Untagged
@@ -399,27 +398,6 @@ Behaviour:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 100010}
   m_Enabled: 1
---- !u!114 &11400000
-MonoBehaviour:
-  m_ObjectHideFlags: 1
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 100100000}
-  m_GameObject: {fileID: 100008}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c926d85e23edb450e8cbbff377731977, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debugText: 
-  tangoInitialized: 0
-  showText: 1
-  textPosition: {x: 230, y: 30}
-  viewController: {fileID: 100008}
-  chartPosition: {x: -.5, y: 0, z: 1}
-  showPlots: 0
-  tangoServiceTroublePopup: {fileID: 100004}
-  tangoInitializePopup: {fileID: 100002}
-  isShowingDebugButton: 0
 --- !u!114 &11400002
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -450,12 +428,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 100008}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f7bb560354b5634cbb8d2fc7c3e71f4, type: 3}
+  m_Script: {fileID: 11500000, guid: e571d6a0fd1cf4896bb81f7cdb65e75a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_metersToWorldUnitsScaler: 1
-  enableInterpolation: 1
-  isShowingDebugButton: 1
+  m_poseDeltaTime: 0
+  m_poseCount: 0
+  m_poseStatus: 0
+  m_characterMotion: 0
+  m_enableClutchUI: 0
 --- !u!124 &12400000
 Behaviour:
   m_ObjectHideFlags: 1

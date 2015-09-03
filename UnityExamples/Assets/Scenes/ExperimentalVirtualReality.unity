@@ -87,7 +87,7 @@ NavMeshSettings:
     cellSize: .166666657
     manualCellSize: 0
   m_NavMeshData: {fileID: 0}
---- !u!1001 &117027223
+--- !u!1001 &132285009
 Prefab:
   m_ObjectHideFlags: 0
   serializedVersion: 2
@@ -124,19 +124,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 400008, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
       propertyPath: m_RootOrder
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 11400004, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
-      propertyPath: enableInterpolation
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 11400004, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
-      propertyPath: isShowingDebugButton
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 11400000, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
-      propertyPath: showText
-      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
@@ -168,7 +156,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 2
 --- !u!114 &134412256
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -183,6 +171,12 @@ MonoBehaviour:
   prefab: {fileID: 100000, guid: 1e965830ceac349f4ab6d1196c7ca930, type: 2}
   size: 1
   gridSize: 4
+--- !u!114 &638404484 stripped
+MonoBehaviour:
+  m_PrefabParentObject: {fileID: 11400004, guid: 25e0e54be09174828a89c99dadcfd40f,
+    type: 2}
+  m_PrefabInternal: {fileID: 132285009}
+  m_Script: {fileID: 11500000, guid: e571d6a0fd1cf4896bb81f7cdb65e75a, type: 3}
 --- !u!1001 &1078512770
 Prefab:
   m_ObjectHideFlags: 0
@@ -220,7 +214,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 400000, guid: ff519ec4bed0442dc9bf3a21a9777c4d, type: 2}
       propertyPath: m_RootOrder
-      value: 3
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: ff519ec4bed0442dc9bf3a21a9777c4d, type: 2}
@@ -284,4 +278,67 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 2
+  m_RootOrder: 3
+--- !u!1 &1967017754
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  serializedVersion: 4
+  m_Component:
+  - 4: {fileID: 1967017756}
+  - 114: {fileID: 1967017755}
+  - 114: {fileID: 1967017757}
+  m_Layer: 0
+  m_Name: GUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1967017755
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1967017754}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c926d85e23edb450e8cbbff377731977, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugText: 
+  tangoInitialized: 0
+  showText: 0
+  textPosition: {x: 230, y: 30}
+  viewController: {fileID: 100008, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
+  chartPosition: {x: -.5, y: 0, z: 1}
+  showPlots: 0
+  tangoServiceTroublePopup: {fileID: 100004, guid: 25e0e54be09174828a89c99dadcfd40f,
+    type: 2}
+  tangoInitializePopup: {fileID: 100002, guid: 25e0e54be09174828a89c99dadcfd40f, type: 2}
+  isShowingDebugButton: 0
+--- !u!4 &1967017756
+Transform:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1967017754}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 4
+--- !u!114 &1967017757
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1967017754}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f7bb560354b5634cbb8d2fc7c3e71f4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  poseController: {fileID: 638404484}

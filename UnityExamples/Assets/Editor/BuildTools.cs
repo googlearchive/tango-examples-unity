@@ -86,12 +86,6 @@ public class BuildTools
     private static BuildUtil.PackageSettings sdkPackage = new BuildUtil.PackageSettings
     {
         PackageName = "TangoSDK",
-        Directories = new string[] { "Google-Unity", "Plugins", "TangoSDK" }
-    };
-
-    private static BuildUtil.PackageSettings sdkPlusPrefabsPackage = new BuildUtil.PackageSettings
-    {
-        PackageName = "TangoSDK+Prefabs",
         Directories = new string[] { "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK" }
     };
     
@@ -107,7 +101,6 @@ public class BuildTools
         BuildUtil.BuildAPK(persistentStateAPK);
         BuildUtil.BuildAPK(virtualRealityAPK);
         BuildUtil.BuildPackage(sdkPackage);
-        BuildUtil.BuildPackage(sdkPlusPrefabsPackage);
     }
     
     /// <summary>
@@ -117,15 +110,6 @@ public class BuildTools
     public static void BuildSdkPackage()
     {
         BuildUtil.BuildPackage(sdkPackage);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/SDK+Prefabs Package", false, 21)]
-    public static void BuildSdkPlusPrefabsPackage()
-    {
-        BuildUtil.BuildPackage(sdkPlusPrefabsPackage);
     }
     
     /// <summary>

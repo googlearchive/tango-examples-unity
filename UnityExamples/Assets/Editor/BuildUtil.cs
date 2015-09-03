@@ -49,9 +49,14 @@ public class BuildUtil
     }
 
     /// <summary>
-    /// Where to put built APKs and UnityPackages.
+    /// Where to put built APKs.
     /// </summary>
-    public const string BUILD_DIRECTORY_W_SLASH = "Build/Android/";
+    public const string BUILD_APK_DIRECTORY_W_SLASH = "Build/Android/";
+    
+    /// <summary>
+    /// Where to put built UnityPackages.
+    /// </summary>
+    public const string BUILD_PACKAGE_DIRECTORY_W_SLASH = "Build/";
 
     /// <summary>
     /// The assets folder.  All assets are inside of this folder anyway, so this avoids having to specify it.
@@ -75,7 +80,7 @@ public class BuildUtil
         string oldAndroidSdkRoot = EditorPrefs.GetString("AndroidSdkRoot");
 
         // make sure the product folder exists
-        System.IO.Directory.CreateDirectory(BUILD_DIRECTORY_W_SLASH);
+        System.IO.Directory.CreateDirectory(BUILD_APK_DIRECTORY_W_SLASH);
 
         // set icons (Android currently supports 6 sizes)
         Texture2D icon = (Texture2D)AssetDatabase.LoadMainAssetAtPath(ASSET_DIRECTORY_W_SLASH + settings.Icon);
@@ -109,7 +114,7 @@ public class BuildUtil
         {
             scenesUnityPath[it] = ASSET_DIRECTORY_W_SLASH + settings.Scenes[it];
         }
-        BuildPipeline.BuildPlayer(scenesUnityPath, BUILD_DIRECTORY_W_SLASH + settings.ProjectName + ".apk", 
+        BuildPipeline.BuildPlayer(scenesUnityPath, BUILD_APK_DIRECTORY_W_SLASH + settings.ProjectName + ".apk", 
                                   BuildTarget.Android, BuildOptions.None);
 
         // Restore player settings
@@ -130,7 +135,7 @@ public class BuildUtil
     public static void BuildPackage(PackageSettings settings)
     {
         // make sure the product folder exists
-        System.IO.Directory.CreateDirectory(BUILD_DIRECTORY_W_SLASH);
+        System.IO.Directory.CreateDirectory(BUILD_PACKAGE_DIRECTORY_W_SLASH);
 
         // Ensure any recently changed / newly created assets are known by Unity.
         AssetDatabase.Refresh();
@@ -142,7 +147,7 @@ public class BuildUtil
             dirUnityPath[it] = ASSET_DIRECTORY_W_SLASH + settings.Directories[it];
         }
         AssetDatabase.ExportPackage(dirUnityPath, 
-                                    BUILD_DIRECTORY_W_SLASH + settings.PackageName + ".unitypackage", 
+                                    BUILD_PACKAGE_DIRECTORY_W_SLASH + settings.PackageName + ".unitypackage", 
                                     ExportPackageOptions.Recurse);
     }
 

@@ -53,7 +53,7 @@ public class PointCloudGUIController : MonoBehaviour
     public const string UX_TARGET_TO_BASE_FRAME = "Target->{0}, Base->{1}:";
     public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
     public const float SECOND_TO_MILLISECOND = 1000.0f;
-    public TangoPoseController m_tangoPoseController;
+    public TangoDeltaPoseController m_tangoPoseController;
     public TangoPointCloud m_pointcloud;
 
     private const float UPDATE_FREQUENCY = 1.0f;
@@ -63,7 +63,6 @@ public class PointCloudGUIController : MonoBehaviour
     private float m_accumulation;
     private float m_currentTime;
     
-    private Rect m_label;
     private TangoApplication m_tangoApplication;
     
     /// <summary>
@@ -75,7 +74,6 @@ public class PointCloudGUIController : MonoBehaviour
         m_framesSinceUpdate = 0;
         m_currentTime = 0.0f;
         m_fpsText = "FPS = Calculating";
-        m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
     }
     
@@ -108,7 +106,7 @@ public class PointCloudGUIController : MonoBehaviour
             GUI.color = Color.black;
             
             GUI.Label(new Rect(UI_LABEL_START_X, UI_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
-                      UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
+                      UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, TangoApplication.GetTangoServiceVersion()) + "</size>");
             
             GUI.Label(new Rect(UI_LABEL_START_X, UI_FPS_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + m_fpsText + "</size>");
@@ -118,8 +116,8 @@ public class PointCloudGUIController : MonoBehaviour
                       UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
             
             string logString = String.Format(UX_STATUS,
-                                             _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status),
-                                             _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount),
+                                             _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_poseStatus),
+                                             _GetLoggingStringFromFrameCount(m_tangoPoseController.m_poseCount),
                                              _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
                                              _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation));
             GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),

@@ -57,6 +57,10 @@ Material:
         second: .699999988
       data:
         first:
+          name: _TexWidth
+        second: 1280
+      data:
+        first:
           name: _EmissionLM
         second: 0
       data:

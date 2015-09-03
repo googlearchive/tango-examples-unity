@@ -56,14 +56,6 @@ public class AreaLearningGUIController : MonoBehaviour
     public const float SECOND_TO_MILLISECOND = 1000.0f;
     public AreaLearningPoseController m_tangoPoseController;
 
-    private const float UPDATE_FREQUENCY = 1.0f;
-    private string m_fpsText;
-    private int m_currentFPS;
-    private int m_framesSinceUpdate;
-    private float m_accumulation;
-    private float m_currentTime;
-
-    private Rect m_label;
     private TangoApplication m_tangoApplication;
     
     /// <summary>
@@ -71,11 +63,6 @@ public class AreaLearningGUIController : MonoBehaviour
     /// </summary>
     private void Start() 
     {
-        m_currentFPS = 0;
-        m_framesSinceUpdate = 0;
-        m_currentTime = 0.0f;
-        m_fpsText = "FPS = Calculating";
-        m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
     }
 
@@ -84,17 +71,6 @@ public class AreaLearningGUIController : MonoBehaviour
     /// </summary>
     private void Update() 
     {
-        m_currentTime += Time.deltaTime;
-        ++m_framesSinceUpdate;
-        m_accumulation += Time.timeScale / Time.deltaTime;
-        if (m_currentTime >= UPDATE_FREQUENCY)
-        {
-            m_currentFPS = (int)(m_accumulation / m_framesSinceUpdate);
-            m_currentTime = 0.0f;
-            m_framesSinceUpdate = 0;
-            m_accumulation = 0.0f;
-            m_fpsText = "FPS: " + m_currentFPS;
-        }
     }
     
     /// <summary>
@@ -216,51 +192,48 @@ public class AreaLearningGUIController : MonoBehaviour
             string logString;
 
             GUI.Label(new Rect(UI_LABEL_START_X,  UI_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
-                      UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoPoseController.m_tangoServiceVersionName) + "</size>");
+                      UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, TangoApplication.GetTangoServiceVersion()) + "</size>");
 
             // MOTION TRACKING
             GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
 
             logString = String.Format(UX_STATUS,
-                                      _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status[AreaLearningPoseController.DEVICE_TO_START]),
-                                      _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount[AreaLearningPoseController.DEVICE_TO_START]),
-                                      _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[AreaLearningPoseController.DEVICE_TO_START]),
-                                      _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[AreaLearningPoseController.DEVICE_TO_START]));
+                                      _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_poseStatus[(int)AreaLearningPoseController.PoseFrame.DeviceToStart]),
+                                      _GetLoggingStringFromFrameCount(m_tangoPoseController.m_poseCount[(int)AreaLearningPoseController.PoseFrame.DeviceToStart]),
+                                      _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[(int)AreaLearningPoseController.PoseFrame.DeviceToStart]),
+                                      _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[(int)AreaLearningPoseController.PoseFrame.DeviceToStart]));
             GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + logString + "</size>");
             ++guiIndex;
 
-            if (m_tangoPoseController.m_useADF || m_tangoApplication.m_enableAreaLearning)
-            {
-                // ADF
-                GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
-                          UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "ADF") + "</size>");
-                ++guiIndex;
+            // ADF
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
+                      UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "ADF") + "</size>");
+            ++guiIndex;
 
-                logString = String.Format(UX_STATUS,
-                                          _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status[AreaLearningPoseController.DEVICE_TO_ADF]),
-                                          _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount[AreaLearningPoseController.DEVICE_TO_ADF]),
-                                          _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[AreaLearningPoseController.DEVICE_TO_ADF]),
-                                          _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[AreaLearningPoseController.DEVICE_TO_ADF]));
-                GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
-                          UI_FONT_SIZE + logString + "</size>");
-                ++guiIndex;
+            logString = String.Format(UX_STATUS,
+                                      _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_poseStatus[(int)AreaLearningPoseController.PoseFrame.DeviceToADF]),
+                                      _GetLoggingStringFromFrameCount(m_tangoPoseController.m_poseCount[(int)AreaLearningPoseController.PoseFrame.DeviceToADF]),
+                                      _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[(int)AreaLearningPoseController.PoseFrame.DeviceToADF]),
+                                      _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[(int)AreaLearningPoseController.PoseFrame.DeviceToADF]));
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
+                      UI_FONT_SIZE + logString + "</size>");
+            ++guiIndex;
 
-                // RELOCALIZATION
-                GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y), 
-                          UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Start", "ADF") + "</size>");
-                guiIndex++;
+            // RELOCALIZATION
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y), 
+                      UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Start", "ADF") + "</size>");
+            guiIndex++;
 
-                logString = String.Format(UX_STATUS,
-                                          _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_status[AreaLearningPoseController.START_TO_ADF]),
-                                          _GetLoggingStringFromFrameCount(m_tangoPoseController.m_frameCount[AreaLearningPoseController.START_TO_ADF]),
-                                          _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[AreaLearningPoseController.START_TO_ADF]),
-                                          _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[AreaLearningPoseController.START_TO_ADF]));
-                GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y), 
-                          UI_FONT_SIZE + logString + "</size>");
-                ++guiIndex;
-            }
+            logString = String.Format(UX_STATUS,
+                                      _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_poseStatus[(int)AreaLearningPoseController.PoseFrame.StartToADF]),
+                                      _GetLoggingStringFromFrameCount(m_tangoPoseController.m_poseCount[(int)AreaLearningPoseController.PoseFrame.StartToADF]),
+                                      _GetLoggingStringFromVec3(m_tangoPoseController.m_tangoPosition[(int)AreaLearningPoseController.PoseFrame.StartToADF]),
+                                      _GetLoggingStringFromQuaternion(m_tangoPoseController.m_tangoRotation[(int)AreaLearningPoseController.PoseFrame.StartToADF]));
+            GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y + (UI_LABEL_OFFSET * guiIndex), UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y), 
+                      UI_FONT_SIZE + logString + "</size>");
+            ++guiIndex;
         }
         GUI.color = oldColor;
     }

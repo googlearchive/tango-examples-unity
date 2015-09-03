@@ -47,7 +47,7 @@ public class CreateHeadsetGeometery : MonoBehaviour
 ////    private Camera rightCameraComponent;
     private float eyeBallSizeInMM = 24;
 
-    private float worldScale;
+    private float worldScale = 1.0f;
     private Color color = Color.gray;
     private float headBallSizeInMM = 140;
 
@@ -56,8 +56,6 @@ public class CreateHeadsetGeometery : MonoBehaviour
     /// </summary>
     public void Start()
     {
-        worldScale = GetComponent<CustomTangoController>().m_metersToWorldUnitsScaler;
-
 ////        leftCameraComponent = leftCamera.GetComponent<Camera> ();
 ////        rightCameraComponent = rightCamera.GetComponent<Camera> ();
 
