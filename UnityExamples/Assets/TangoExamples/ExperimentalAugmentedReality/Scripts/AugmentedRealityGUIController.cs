@@ -33,8 +33,8 @@ public class AugmentedRealityGUIController : MonoBehaviour
     public const float UI_LABEL_SIZE_X = 1920.0f;
     public const float UI_LABEL_SIZE_Y = 35.0f;
     public const float UI_LABEL_GAP_Y = 3.0f;
-    public const float UI_BUTTON_SIZE_X = 125.0f;
-    public const float UI_BUTTON_SIZE_Y = 65.0f;
+    public const float UI_BUTTON_SIZE_X = 250.0f;
+    public const float UI_BUTTON_SIZE_Y = 130.0f;
     public const float UI_BUTTON_GAP_X = 5.0f;
     public const float UI_CAMERA_BUTTON_OFFSET = UI_BUTTON_SIZE_X + UI_BUTTON_GAP_X; 
     public const float UI_LABEL_OFFSET = UI_LABEL_GAP_Y + UI_LABEL_SIZE_Y;
@@ -78,7 +78,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
     /// The point cloud object in the scene.
     /// </summary>
     public TangoPointCloud m_pointCloud;
-    
+
     private const float FPS_UPDATE_FREQUENCY = 1.0f;
     private string m_fpsText;
     private int m_currentFPS;
@@ -90,7 +90,25 @@ public class AugmentedRealityGUIController : MonoBehaviour
     private TangoApplication m_tangoApplication;
     private string m_tangoServiceVersion;
 
-    private GameObject m_placedLocation = null;
+    /// <summary>
+    /// If set, this is the selected marker.
+    /// </summary>
+    private ARLocationMarker m_selectedMarker;
+
+    /// <summary>
+    /// If set, this is the rectangle bounding the selected marker.
+    /// </summary>
+    private Rect m_selectedRect;
+
+    /// <summary>
+    /// If set, this is the rectangle for the Hide All button.
+    /// </summary>
+    private Rect m_hideAllRect;
+
+    /// <summary>
+    /// If set, show debug text.
+    /// </summary>
+    private bool m_showDebug = false;
     
     /// <summary>
     /// Unity Start() callback, we set up some initial values here.
@@ -123,7 +141,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
             m_fpsText = "FPS: " + m_currentFPS;
         }
 
-        _UpdatePlacedLocation();
+        _UpdateLocationMarker();
     }
     
     /// <summary>
@@ -131,7 +149,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
     /// </summary>
     public void OnGUI()
     {
-        if (m_tangoApplication.HasRequestedPermissions())
+        if (m_showDebug && m_tangoApplication.HasRequestedPermissions())
         {
             Color oldColor = GUI.color;
             GUI.color = Color.white;
@@ -176,8 +194,77 @@ public class AugmentedRealityGUIController : MonoBehaviour
                       UI_FONT_SIZE + statusString + "</size>");
             GUI.color = oldColor;
         }
+
+        if (m_selectedMarker != null)
+        {
+            Renderer selectedRenderer = m_selectedMarker.GetComponent<Renderer>();
+
+            // GUI's Y is flipped from the mouse's Y
+            Rect screenRect = WorldBoundsToScreen(Camera.main, selectedRenderer.bounds);
+            float yMin = Screen.height - screenRect.yMin;
+            float yMax = Screen.height - screenRect.yMax;
+            screenRect.yMin = Mathf.Min(yMin, yMax);
+            screenRect.yMax = Mathf.Max(yMin, yMax);
+
+            if (GUI.Button(screenRect, "<size=30>Hide</size>"))
+            {
+                m_selectedMarker.SendMessage("Hide");
+                m_selectedMarker = null;
+                m_selectedRect = new Rect();
+            }
+            else
+            {
+                m_selectedRect = screenRect;
+            }
+        }
+        else
+        {
+            m_selectedRect = new Rect();
+        }
+
+        if (GameObject.FindObjectOfType<ARLocationMarker>() != null)
+        {
+            m_hideAllRect = new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X,
+                                     Screen.height - UI_BUTTON_SIZE_Y - UI_BUTTON_GAP_X,
+                                     UI_BUTTON_SIZE_X,
+                                     UI_BUTTON_SIZE_Y);
+            if (GUI.Button(m_hideAllRect, "<size=30>Hide All</size>"))
+            {
+                foreach (ARLocationMarker marker in GameObject.FindObjectsOfType<ARLocationMarker>())
+                {
+                    marker.SendMessage("Hide");
+                }
+            }
+        }
+        else
+        {
+            m_hideAllRect = new Rect(0, 0, 0, 0);
+        }
     }
-    
+
+    /// <summary>
+    /// Convert a 3D bounding box into a 2D Rect.
+    /// </summary>
+    /// <returns>The 2D Rect in Screen coordinates.</returns>
+    /// <param name="cam">Camera to use.</param>
+    /// <param name="bounds">3D bounding box.</param>
+    private Rect WorldBoundsToScreen(Camera cam, Bounds bounds)
+    {
+        Vector3 center = bounds.center;
+        Vector3 extents = bounds.extents;
+        Bounds screenBounds = new Bounds(cam.WorldToScreenPoint(center), Vector3.zero);
+        
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, +extents.y, +extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, +extents.y, -extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, -extents.y, +extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, -extents.y, -extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(-extents.x, +extents.y, +extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(-extents.x, +extents.y, -extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(-extents.x, -extents.y, +extents.z)));
+        screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(-extents.x, -extents.y, -extents.z)));
+        return Rect.MinMaxRect(screenBounds.min.x, screenBounds.min.y, screenBounds.max.x, screenBounds.max.y);
+    }
+
     /// <summary>
     /// Construct readable string from TangoPoseStatusType.
     /// </summary>
@@ -283,38 +370,69 @@ public class AugmentedRealityGUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// Updates the active placed location.
+    /// Update location marker state.
     /// </summary>
-    private void _UpdatePlacedLocation()
+    private void _UpdateLocationMarker()
     {
+        if (Input.touchCount == 1)
+        {
+            // Single tap -- place new location or select existing location.
+            Touch t = Input.GetTouch(0);
+            Vector2 guiPosition = new Vector2(t.position.x, Screen.height - t.position.y);
+            Camera cam = m_arScreen.m_renderCamera;
+            RaycastHit hitInfo;
+
+            if (t.phase != TouchPhase.Began)
+            {
+                return;
+            }
+
+            if (m_selectedRect.Contains(guiPosition) || m_hideAllRect.Contains(guiPosition))
+            {
+                // do nothing, the button will handle it
+            }
+            else if (Physics.Raycast(cam.ScreenPointToRay(t.position), out hitInfo))
+            {
+                // Found a marker, select it (so long as it isn't disappearing)!
+                GameObject tapped = hitInfo.collider.gameObject;
+                if (!tapped.GetComponent<Animation>().isPlaying)
+                {
+                    m_selectedMarker = tapped.GetComponent<ARLocationMarker>();
+                }
+            }
+            else
+            {
+                // Place a new point at that location, clear selection
+                Vector3 planeCenter;
+                Plane plane;
+                if (!m_pointCloud.FindPlane(cam, t.position,
+                                            TAP_PIXEL_TOLERANCE, MIN_PLANE_FIT_PERCENTAGE,
+                                            out planeCenter, out plane))
+                {
+                    return;
+                }
+                Instantiate(m_prefabLocation, planeCenter, Quaternion.FromToRotation(Vector3.up, plane.normal));
+                m_selectedMarker = null;
+            }
+        }
+        if (Input.touchCount == 2)
+        {
+            // Two taps -- toggle debug text
+            Touch t0 = Input.GetTouch(0);
+            Touch t1 = Input.GetTouch(1);
+
+            if (t0.phase != TouchPhase.Began && t1.phase != TouchPhase.Began)
+            {
+                return;
+            }
+
+            m_showDebug = !m_showDebug;
+            return;
+        }
+
         if (Input.touchCount != 1)
         {
             return;
         }
-        
-        Touch t = Input.GetTouch(0);
-        if (t.phase != TouchPhase.Began)
-        {
-            return;
-        }
-
-        Camera cam = m_arScreen.m_renderCamera;
-
-        // Find the plane for the selected point.
-        Vector3 planeCenter;
-        Plane plane;
-        if (!m_pointCloud.FindPlane(cam, t.position,
-                                    TAP_PIXEL_TOLERANCE, MIN_PLANE_FIT_PERCENTAGE,
-                                    out planeCenter, out plane))
-        {
-            return;
-        }
-
-        if (m_placedLocation)
-        {
-            m_placedLocation.SendMessage("Hide");
-        }
-
-        m_placedLocation = (GameObject)Instantiate(m_prefabLocation, planeCenter, Quaternion.FromToRotation(Vector3.up, plane.normal));
     }
 }

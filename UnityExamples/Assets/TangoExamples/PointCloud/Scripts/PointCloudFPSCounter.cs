@@ -32,7 +32,6 @@ public class PointCloudFPSCounter : MonoBehaviour
     private float m_accumulation;
     private float m_currentTime;
 
-    private Rect m_label;
     private TangoApplication m_tangoApplication;
     
     /// <summary>
@@ -44,7 +43,6 @@ public class PointCloudFPSCounter : MonoBehaviour
         m_framesSinceUpdate = 0;
         m_currentTime = 0.0f;
         m_FPSText = "FPS = Calculating";
-        m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
     }
 

@@ -56,13 +56,6 @@ public class StereoCameraManager : MonoBehaviour
     {
         Application.targetFrameRate = 60;
 
-        if (!isPoseIndependentCamera)
-        {
-             // TODO(jason): I think have world scale relatve the movement scale is wrong.
-             worldScale = 1.0f;
-////            worldScale = GetComponent<CustomTangoController> ().m_metersToWorldUnitsScaler;
-        }
-
         leftCameraComponent = leftCamera.GetComponent<Camera>();
         rightCameraComponent = rightCamera.GetComponent<Camera>();
 

@@ -1,14 +1,17 @@
-﻿Shader "Tango/YUV2RGB" {
+﻿    Shader "Tango/YUV2RGB" {
     Properties 
     {
           _YTex ("Y channel texture", 2D) = "white" {}
           _UTex ("U channel texture", 2D) = "white" {}
           _VTex ("V channel texture", 2D) = "white" {}
+          _TexWidth ("texture width", Float) = 1280.0
     }
     SubShader 
     {
         // Setting the z write off to make sure our video overlay is always rendered at back.
         ZWrite Off
+        
+        Tags { "Queue" = "Geometry" }
         Pass 
         {
             GLSLPROGRAM
@@ -17,6 +20,10 @@
             uniform sampler2D _YTex;
             uniform sampler2D _UTex;
             uniform sampler2D _VTex;
+            
+            // Width of the RGBA texture, this is for indexing the channel of color, not
+            // for scaling.
+            uniform float _TexWidth;
             
             varying vec4 textureCoordinates; 
              
@@ -33,8 +40,9 @@
 
             #ifdef FRAGMENT
             // Compute a modulo b.
-            int mod(int a, int b) {
-                return a - ((a / b) * b);
+            float mod(float x, float y)
+            {
+                return x - y * floor(x / y);
             }
             
             void main()
@@ -45,40 +53,41 @@
                 // texture_Cb and texture_Cr will contain copies of the 2x2 downsampled
                 // interleaved UV planes packed similarly.
                 float y_value, u_value, v_value;
-                // Computing index in the color texture space (expected result). The target
-                // texture size is 1280 x 720.
-                int x = int(textureCoordinates.s * 1280.0);
-                int y = int((1.0 - textureCoordinates.t) * 720.0);
-                
+
+                float texel_x = textureCoordinates.s * _TexWidth;
+
                 // Compute the Y value.
-                int x_y_image = int(x / 4);
-                int x_y_offset = mod(x, 4);
-                int y_y_image = y;
+                int packed_offset = int(mod(texel_x, 4.0));
                 
-                vec4 c_y = texture2D(_YTex, vec2(float(x_y_image) / float(320.0), float(y_y_image) / float(720.0)));
-                if (x_y_offset == 0) {
-                    y_value = c_y.r;
-                } else if (x_y_offset == 1) {
-                    y_value = c_y.g;
-                } else if (x_y_offset == 2) {
-                    y_value = c_y.b;
-                } else if (x_y_offset == 3) {
-                    y_value = c_y.a;
+                vec4 packed_y = texture2D(_YTex, vec2(textureCoordinates.s, (1.0 - textureCoordinates.t)));
+                if (packed_offset == 0)
+                {
+                    y_value = packed_y.r;
+                } 
+                else if (packed_offset == 1)
+                {
+                    y_value = packed_y.g;
                 }
-                
-                // Compute the U,V value.
-                int x_uv_image = int(x / 4);
-                int x_uv_offset = mod(x, 4);
-                int y_uv_image = int(y / 2);
+                else if (packed_offset == 2)
+                {
+                    y_value = packed_y.b;
+                }
+                else if (packed_offset == 3)
+                {
+                    y_value = packed_y.a;
+                }
 
-                vec4 c_uv = texture2D(_UTex, vec2(float(x_uv_image) / float(320.0), float(y_uv_image) / float(360.0)));
+                vec4 packed_uv = texture2D(_UTex, vec2(textureCoordinates.s, (1.0 - textureCoordinates.t)));
 
-                if (x_uv_offset == 0 || x_uv_offset == 1) {
-                    v_value = c_uv.r;
-                    u_value = c_uv.g;
-                } else  if (x_uv_offset == 2 || x_uv_offset == 3) {
-                    v_value = c_uv.b;
-                    u_value = c_uv.a;
+                if (packed_offset == 0 || packed_offset == 1)
+                {
+                    v_value = packed_uv.r;
+                    u_value = packed_uv.g;
+                }
+                else
+                {
+                    v_value = packed_uv.b;
+                    u_value = packed_uv.a;
                 }
                 
                 // The YUV to RBA conversion, please refer to: http://en.wikipedia.org/wiki/YUV
