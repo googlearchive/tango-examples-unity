@@ -53,7 +53,6 @@
     <string name="action_required">Action required</string>
     
     <!-- Connection Layout -->
-    <string name="connection_layout_message">Connecting</string>
-    <string name="connection_layout_description">Please hold steady</string>
+    <string name="connection_layout_message">Hold steady</string>
 
 </resources>

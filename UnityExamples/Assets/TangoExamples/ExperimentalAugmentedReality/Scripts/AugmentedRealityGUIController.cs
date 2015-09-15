@@ -411,7 +411,22 @@ public class AugmentedRealityGUIController : MonoBehaviour
                 {
                     return;
                 }
-                Instantiate(m_prefabLocation, planeCenter, Quaternion.FromToRotation(Vector3.up, plane.normal));
+
+                // Ensure the location is always facing the camera.  This is like a LookRotation, but for the Y axis.
+                Vector3 up = plane.normal;
+                Vector3 forward;
+                if (Vector3.Angle(plane.normal, cam.transform.forward) < 175)
+                {
+                    Vector3 right = Vector3.Cross(up, cam.transform.forward).normalized;
+                    forward = Vector3.Cross(right, up).normalized;
+                }
+                else
+                {
+                    // Normal is nearly parallel to camera look direction, the cross product would have too much
+                    // floating point error in it.
+                    forward = Vector3.Cross(up, cam.transform.right);
+                }
+                Instantiate(m_prefabLocation, planeCenter, Quaternion.LookRotation(forward, up));
                 m_selectedMarker = null;
             }
         }

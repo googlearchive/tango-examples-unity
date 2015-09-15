@@ -1,35 +1,34 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="TangoInspector.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections;
 using UnityEditor;
 using UnityEngine;
 using Tango;
 
+/// <summary>
+/// Custom editor for the TangoApplication.
+/// </summary>
 [CustomEditor(typeof(TangoApplication))]
 public class TangoInspector : Editor
 {
-    TangoApplication m_tangoApplication;
-
-    /// <summary>
-    /// Raises the enable event.
-    /// </summary>
-    private void OnEnable()
-    {
-        m_tangoApplication = (TangoApplication)target;
-    }
+    private TangoApplication m_tangoApplication;
 
     /// <summary>
     /// Raises the inspector GUI event.
@@ -47,6 +46,14 @@ public class TangoInspector : Editor
     }
 
     /// <summary>
+    /// Raises the enable event.
+    /// </summary>
+    private void OnEnable()
+    {
+        m_tangoApplication = (TangoApplication)target;
+    }
+
+    /// <summary>
     /// Draw motion tracking options.
     /// </summary>
     /// <param name="tangoApplication">Tango application.</param>
@@ -59,7 +66,7 @@ public class TangoInspector : Editor
             EditorGUI.indentLevel++;
             tangoApplication.m_motionTrackingAutoReset = EditorGUILayout.Toggle("Auto Reset", 
                                                                                 tangoApplication.m_motionTrackingAutoReset);
-			
+
             tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
                                                                            tangoApplication.m_enableAreaLearning);
             if (tangoApplication.m_enableAreaLearning)
