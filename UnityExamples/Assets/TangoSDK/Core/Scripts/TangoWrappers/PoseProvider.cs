@@ -1,65 +1,87 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="PoseProvider.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using System;
 
 namespace Tango
 {
     /// <summary>
-    /// Provide pose related functionality.
+    /// C API wrapper for the Tango pose interface.
     /// </summary>
     public class PoseProvider
-    {   
-
+    {
+        /// <summary>
+        /// Tango pose C callback function signature.
+        /// </summary>
+        /// <param name="callbackContext">Callback context.</param>
+        /// <param name="pose">Pose data.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void TangoService_onPoseAvailable(IntPtr callbackContext, [In,Out] TangoPoseData pose);
-
-        private static readonly string CLASS_NAME = "PoseProvider";
+        internal delegate void TangoService_onPoseAvailable(IntPtr callbackContext, [In, Out] TangoPoseData pose);
+        
         private const float MOUSE_LOOK_SENSITIVITY = 100.0f;
         private const float TRANSLATION_SPEED = 2.0f;
+        private static readonly string CLASS_NAME = "PoseProvider";
 
         // Keeps track of all the ADFs on the device.
         private static UUID_list m_adfList = new UUID_list();
 
+#if UNITY_EDITOR
         /// <summary>
-        /// Sets the callback to be used when a new Pose is
-        /// presented by the Tango Service.
+        /// The emulated pose position.  Used for Tango emulation on PC.
         /// </summary>
-        /// <param name="callback">Callback.</param>
-        public static void SetCallback(TangoCoordinateFramePair[] framePairs, TangoService_onPoseAvailable callback)
-        {
-            int returnValue =  PoseProviderAPI.TangoService_connectOnPoseAvailable(framePairs.Length, framePairs, callback);
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log(CLASS_NAME + ".SetCallback() Callback was not set!");
-            }
-            else
-            {
-                Debug.Log(CLASS_NAME + ".SetCallback() OnPose callback was set!");
-            }
-        }
+        private static Vector3 m_emulatedPosePosition;
+        
+        /// <summary>
+        /// The emulated pose euler angles from forward.  Used for Tango emulation on PC.
+        /// 
+        /// This is not the pure rotation for Tango, when it is Identity, you are facing forward, not down.
+        /// </summary>
+        private static Vector3 m_emulatedPoseAnglesFromForward;
+#endif
 
         /// <summary>
-        /// Gets the pose at a given time.
+        /// Get a pose at a given timestamp from the base to the target frame.
+        /// 
+        /// All poses returned are marked as TANGO_POSE_VALID (in the status_code field on TangoPoseData ) even if
+        /// they were marked as TANGO_POSE_INITIALIZING in the callback poses.
+        /// 
+        /// If no pose can be returned, the status_code of the returned pose will be TANGO_POSE_INVALID.
         /// </summary>
-        /// <param name="poseData">Pose data.</param>
-        /// <param name="timeStamp">Time stamp.</param>
-        public static void GetPoseAtTime([In,Out] TangoPoseData poseData, 
+        /// <param name="poseData">The pose to return.</param>
+        /// <param name="timeStamp">
+        /// Time specified in seconds.
+        /// 
+        /// If not set to 0.0, GetPoseAtTime retrieves the interpolated pose closest to this timestamp. If set to 0.0,
+        /// the most recent pose estimate for the target-base pair is returned. The time of the returned pose is
+        /// contained in the pose output structure and may differ from the queried timestamp.
+        /// </param>
+        /// <param name="framePair">
+        /// A pair of coordinate frames specifying the transformation to be queried for.
+        /// 
+        /// For example, typical device motion is given by a target frame of TANGO_COORDINATE_FRAME_DEVICE and a base
+        /// frame of TANGO_COORDINATE_FRAME_START_OF_SERVICE .
+        /// </param>
+        public static void GetPoseAtTime([In, Out] TangoPoseData poseData, 
                                          double timeStamp, 
                                          TangoCoordinateFramePair framePair)
         {
@@ -69,32 +91,41 @@ namespace Tango
                 Debug.Log(CLASS_NAME + ".GetPoseAtTime() Could not get pose at time : " + timeStamp);
             }
         }
-
+        
         /// <summary>
-        /// Sets the listener coordinate frame pairs.
+        /// DEPRECATED: Sets the listener coordinate frame pairs.
         /// </summary>
         /// <param name="count">Count.</param>
         /// <param name="frames">Frames.</param>
         public static void SetListenerCoordinateFramePairs(int count,
                                                            ref TangoCoordinateFramePair frames)
         {
-            int returnValue = PoseProviderAPI.TangoService_setPoseListenerFrames (count, ref frames);
+            int returnValue = PoseProviderAPI.TangoService_setPoseListenerFrames(count, ref frames);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".SetListenerCoordinateFramePairs() Could not set frame pairs");
             }
         }
-
+        
         /// <summary>
-        /// Resets the motion tracking.
+        /// Resets the motion tracking system.
+        /// 
+        /// This reinitializes the <code>TANGO_COORDINATE_FRAME_START_OF_SERVICE</code> coordinate frame to where the
+        /// device is when you call this function; afterwards, if you ask for the pose with relation to start of
+        /// service, it uses this as the new origin.  You can call this function at any time.
+        ///
+        /// If you are using Area Learning, the <code>TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</code> coordinate frame
+        /// is not affected by calling this function; however, the device needs to localize again before you can use
+        /// the area description.
         /// </summary>
         public static void ResetMotionTracking()
         {
             PoseProviderAPI.TangoService_resetMotionTracking();
         }
 
+#if UNITY_EDITOR
         /// <summary>
-        /// Gets the mouse emulation.
+        /// DEPRECATED: Legacy function that gets mouse / keyboard PoseEmulation data.
         /// </summary>
         /// <param name="controllerPostion">Controller postion.</param>
         /// <param name="controllerRotation">Controller rotation.</param>
@@ -129,10 +160,13 @@ namespace Tango
             controllerRotation = rotation;
             controllerPostion = position;
         }
+#endif
 
         #region ADF Functionality
         /// <summary>
-        /// Helper method to retrieve a list of saved area description files.
+        /// Gets the full list of unique area description IDs available on a device.
+        /// 
+        /// This is updated by calling <code>RefreshADFList</code>.
         /// </summary>
         /// <returns>The cached ADF list.</returns>
         public static UUID_list GetCachedADFList()
@@ -141,46 +175,51 @@ namespace Tango
         }
 
         /// <summary>
-        /// Returns the UUID of the most recent ADF file.
+        /// Gets the latest area description ID available on a device.
         /// </summary>
-        /// <returns>A string object encoded in UTF-8 format containing the UUID of the requested ADF.</returns>
+        /// <returns>The most recent area description ID.</returns>
         public static UUIDUnityHolder GetLatestADFUUID()
         {
-            if(m_adfList == null)
+            if (m_adfList == null)
             {
                 return null;
             }
-            return (m_adfList.GetLatestADFUUID());
+            return m_adfList.GetLatestADFUUID();
         }
 
+        /// <summary>
+        /// Check if an area description ID is valid.
+        /// </summary>
+        /// <returns><c>true</c> if the ID is valid; otherwise, <c>false</c>.</returns>
+        /// <param name="toCheck">Area description ID to check.</param>
         public static bool IsUUIDValid(UUIDUnityHolder toCheck)
         {
             return toCheck != null && toCheck.IsObjectValid();
         }
 
         /// <summary>
-        /// Gets the UUID of the ADF at the specified index. It will be encoded in UTF-8.
+        /// Gets the area description ID at the specified index as a string.
         /// </summary>
-        /// <returns>The ADF UUID as string.</returns>
-        /// <param name="index">The ADF format that we want to know the UUID of.</param>
+        /// <returns>The area description ID as a string.</returns>
+        /// <param name="index">The index of the area description ID.</param>
         public static string GetUUIDAsString(int index)
         {
-            if(m_adfList == null)
+            if (m_adfList == null)
             {
                 return string.Empty;
             }
             return m_adfList.GetUUIDAsString(index);
         }
-
+        
         /// <summary>
-        /// Gets the UUID of the ADF at the specified index. It will be encoded in UTF-8.
+        /// Gets the area description ID at the specified index as a char array.
         /// </summary>
-        /// <returns>The ADF UUID as a char array.</returns>
-        /// <param name="index">The ADF format that we want to know the UUID of.</param>
+        /// <returns>The area description ID as a char array.</returns>
+        /// <param name="index">The index of the area description ID.</param>
         public static char[] GetUUIDAsCharArray(int index)
         {
             string uuidString = GetUUIDAsString(index);
-            if(String.IsNullOrEmpty(uuidString))
+            if (String.IsNullOrEmpty(uuidString))
             {
                 return null;
             }
@@ -188,27 +227,23 @@ namespace Tango
         }
 
         /// <summary>
-        /// This method is used to make sure that we have the most up to date information about ADF
-        /// that are stored on device. It will make sure to cache it in a <c>UUID_list</c> object
-        /// for easier access without querying the device API again. This method will also 
-        /// retrieve the UUID of each ADF by performing a Marshal.Copy and store the information
-        /// in a <c>UUID</c> object list.
+        /// Update the list returned by <code>GetCachedADFList</code>.
         /// </summary>
-        /// <returns>The ADF list.</returns>
+        /// <returns>Returns TANGO_SUCCESS on success, or TANGO_ERROR on failure to retrieve the list.</returns>
         public static int RefreshADFList()
         {
             int returnValue = Common.ErrorType.TANGO_ERROR;
             IntPtr tempData = IntPtr.Zero;
             returnValue = PoseProviderAPI.TangoService_getAreaDescriptionUUIDList(ref tempData);
-
-            if(returnValue != Common.ErrorType.TANGO_SUCCESS)
+            
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".RefreshADFList() Could not get ADF list from device.");
             }
             else
             {
                 byte[] charBuffer = new byte[sizeof(char)];
-                System.Collections.Generic.List<byte> dataHolder = new System.Collections.Generic.List<byte>();
+                List<byte> dataHolder = new List<byte>();
                 Marshal.Copy(tempData, charBuffer, 0, 1);
                 while (charBuffer[0] != 0 && charBuffer[0] != '\n')
                 {
@@ -218,9 +253,8 @@ namespace Tango
                 }
                 string uuidList = System.Text.Encoding.UTF8.GetString(dataHolder.ToArray());
                 m_adfList.PopulateUUIDList(uuidList);
-                if(!m_adfList.HasEntries())
+                if (!m_adfList.HasEntries())
                 {
-
                     Debug.Log(CLASS_NAME + ".RefreshADFList() No area description files found on device.");
                 }
             }
@@ -228,16 +262,22 @@ namespace Tango
         }
 
         /// <summary>
-        /// Saves an area description to device based on the UUID object contained in the adfID object holder.
+        /// Saves the area description, returning the unique ID associated with the saved map.
+        /// 
+        /// You can only save an area description while connected to the Tango Service and if you have enabled Area
+        /// Learning mode. If you loaded an ADF before connecting, then calling this method appends any new learned
+        /// areas to that ADF and returns the same UUID. If you did not load an ADF, this method creates a new ADF and
+        /// a new UUID for that ADF.
         /// </summary>
-        /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if saving was successfull.</returns>
-        /// <param name="adfID">The UUIDUnityHolder object that contains the desired UUID object.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on success, and TANGO_ERROR if a failure occurred when saving, or if the service
+        /// needs to be initialized, or TANGO_INVALID if uuid is NULL, or of incorrect length, or if Area Learning Mode
+        /// was not set (see logcat for details).
+        /// </returns>
+        /// <param name="adfUnityHolder">Upon saving, the TangoUUID to refer to this ADF is returned here.</param>
         public static int SaveAreaDescription(UUIDUnityHolder adfUnityHolder)
         {
-            // is learning mode on
-            // are we localized?
-
-            if(adfUnityHolder == null)
+            if (adfUnityHolder == null)
             {
                 Debug.Log(CLASS_NAME + ".SaveAreaDescription() Could not save area description. UUID Holder object specified is not initialized");
                 return Common.ErrorType.TANGO_ERROR;
@@ -246,7 +286,7 @@ namespace Tango
             int returnValue = PoseProviderAPI.TangoService_saveAreaDescription(idData);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
-                Debug.Log(CLASS_NAME + ".SaveAreaDescripton() Could not save area description with ID: "+ adfUnityHolder.GetStringDataUUID());
+                Debug.Log(CLASS_NAME + ".SaveAreaDescripton() Could not save area description with ID: " + adfUnityHolder.GetStringDataUUID());
             }
             else
             {
@@ -258,30 +298,33 @@ namespace Tango
         }
 
         /// <summary>
-        /// Saves the area description meta data with whatever metadata is set inside the adfUnityHolder object
+        /// Saves the metadata associated with a single area description unique ID.
         /// </summary>
-        /// <returns>The area description meta data.</returns>
-        /// <param name="adfUnityHolder">Adf unity holder.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on successful save, or TANGO_ERROR on failure, or if the service needs to be
+        /// initialized.
+        /// </returns>
+        /// <param name="adfUnityHolder">The metadata and associated UUID to save.</param>
         public static int SaveAreaDescriptionMetaData(UUIDUnityHolder adfUnityHolder)
         {
-            if(adfUnityHolder == null)
+            if (adfUnityHolder == null)
             {
                 Debug.Log(CLASS_NAME + ".SaveAreaDescription() Could not save area description. UUID Holder object specified is not initialized");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            if(string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
+            if (string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
             {
                 Debug.Log(CLASS_NAME + ".MetaData cannot be retrived for the area description as UUIDUnityHolder object was empty or null.");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            if(adfUnityHolder.uuidMetaData.meta_data_pointer == IntPtr.Zero)
+            if (adfUnityHolder.uuidMetaData.meta_data_pointer == IntPtr.Zero)
             {
                 Debug.Log(CLASS_NAME + "metadata pointer is null, cannot save metadata to this ADF!");
                 return Common.ErrorType.TANGO_ERROR;
             }
             Debug.Log("UUID being saved is: " + adfUnityHolder.GetStringDataUUID());
             int returnValue = PoseProviderAPI.TangoService_saveAreaDescriptionMetadata(adfUnityHolder.GetStringDataUUID(), adfUnityHolder.uuidMetaData.meta_data_pointer);
-            if(returnValue!=Common.ErrorType.TANGO_SUCCESS)
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + "Could not save metadata to the ADF!");
             }
@@ -289,51 +332,51 @@ namespace Tango
         }
 
         /// <summary>
-        /// Takes care of saving a ADF file to the specified folder.
+        /// Export an area with the UUID from the default area storage location to the destination file directory with
+        /// the UUID as its name.
         /// </summary>
-        /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the ADF file was exported successfully.</returns>
-        /// <param name="UUID">The UUID of the ADF file we want to export.</param>
-        /// <param name="filePath">File path where we want to export the ADF.</param>
-        public static int ExportAreaDescriptionToFile(string UUID, string filePath)
+        /// <returns>Returns TANGO_SUCCESS if the file was exported, or TANGO_ERROR if the export failed.</returns>
+        /// <param name="uuid">The UUID of the area.</param>
+        /// <param name="filePath">The destination file directory.</param>
+        public static int ExportAreaDescriptionToFile(string uuid, string filePath)
         {
-            if(string.IsNullOrEmpty(UUID))
+            if (string.IsNullOrEmpty(uuid))
             {
                 Debug.Log("Can't export an empty UUID. Please define one.");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            if(string.IsNullOrEmpty(filePath))
+            if (string.IsNullOrEmpty(filePath))
             {
                 Debug.Log("Missing file path for exporting area description. Please define one.");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            int returnValue = PoseProviderAPI.TangoService_exportAreaDescription(UUID, filePath);
-            if(returnValue != Common.ErrorType.TANGO_SUCCESS)
+            int returnValue = PoseProviderAPI.TangoService_exportAreaDescription(uuid, filePath);
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
-                Debug.Log(CLASS_NAME + ".ExportAreaDescription() Could not export area description: " + UUID +
-                                                   " with path: " + filePath);
+                Debug.Log(CLASS_NAME + ".ExportAreaDescription() Could not export area description: " + uuid +
+                          " with path: " + filePath);
             }
             return returnValue;
-
         }
-    
+
         /// <summary>
-        /// Takes care of importing a adf file from the specified path. Important: make sure that the filepath
-        /// does not contain ADF files already present on device, otherwise it will return an error, as duplicates
-        /// can't be imported.
+        /// Import an area description from a file path to the default area storage location. 
+        /// 
+        /// The new area description will get a new ID, which will be stored in adfID.
         /// </summary>
         /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the UUID was imported successfully.</returns>
-        /// <param name="adfID">The <c>UUIDUnityHolder</c> object that will contain information about the retrieved ADF.</param>
-        /// <param name="filePath">File path containing the ADF we want to export.</param>
+        /// <param name="adfID">Upon successful return, this will have the new ID.</param>
+        /// <param name="filePath">File path of the area descrption to be imported.</param>
         public static int ImportAreaDescriptionFromFile(UUIDUnityHolder adfID, string filePath)
         {
-            if(adfID == null)
+            if (adfID == null)
             {
                 Debug.Log(CLASS_NAME + ".ImportAreaDescription() Could not  import area description. UUID Holder object specified is not initialized");
                 return Common.ErrorType.TANGO_ERROR;
             }
             IntPtr uuidHolder = Marshal.AllocHGlobal(Common.UUID_LENGTH);
             int returnValue = PoseProviderAPI.TangoService_importAreaDescription(filePath, uuidHolder);
-            if(returnValue != Common.ErrorType.TANGO_SUCCESS)
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".ImportAreaDescription() Could not import area description at path: " + filePath);
             }
@@ -347,20 +390,21 @@ namespace Tango
         }
 
         /// <summary>
-        /// Deletes the area description with the specified UUID from the default folder where ADF maps are stored.
-        /// This needs to be called before trying to import a ADF that is already present in the default ADF maps folder.
+        /// Deletes an area description with the specified unique ID.
         /// </summary>
-        /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the UUID was deleted successfully.</returns>
-        /// <param name="toDeleteUUID">The UUID of the ADF we want to delete.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS if area description file with specified unique ID is found and can be removed.
+        /// </returns>
+        /// <param name="toDeleteUUID">The area description to delete.</param>
         public static int DeleteAreaDescription(string toDeleteUUID)
         {
-            if(string.IsNullOrEmpty(toDeleteUUID))
+            if (string.IsNullOrEmpty(toDeleteUUID))
             {
                 Debug.Log(CLASS_NAME + ".DeleteAreaDescription() Could not delete area description, UUID was empty or null.");
                 return Common.ErrorType.TANGO_ERROR;
             }
             int returnValue = PoseProviderAPI.TangoService_deleteAreaDescription(toDeleteUUID);
-            if(returnValue != Common.ErrorType.TANGO_SUCCESS)
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".DeleteAreaDescription() Could not delete area description, API returned invalid.");
             }
@@ -369,89 +413,90 @@ namespace Tango
         #endregion // ADF Functionality
 
         #region ADF Metadata Functionality
-
-
         /// <summary>
-        /// This function sets the pointer to metadatapointer in UUIDUnityHolder Object.
-        /// UUIDObjectHolder needs to be initialized and UUID data needs to be filled in before passing in to this 
-        /// function.
+        /// Gets the metadata handle associated with a single area description unique ID.
         /// </summary>
-        /// <returns>The area description meta data.</returns>
-        /// <param name="adfUnityHolder">Adf unity holder with UUID data only should be passed into this function. If the data is valid,
-        /// this function sets the pointer to raw UUID metadata which can then be parsed using AreaDescriptionMetaData_get or set functions</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on successful load of metadata, or TANGO_ERROR if the service needs to be initialized
+        /// or if the metadata could not be loaded.
+        /// </returns>
+        /// <param name="adfUnityHolder">
+        /// The TangoUUID for which to load the metadata.  On success, this function sets the pointer to raw UUID
+        /// metadata which can then be extracted using AreaDescriptionMetaData_get, AreaDescriptionMetaData_get, or
+        /// PopulateAreaDescriptionMetaDataKeyValues.
+        /// </param>
         public static int GetAreaDescriptionMetaData(UUIDUnityHolder adfUnityHolder)
         {
-            if(string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
+            if (string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
             {
                 Debug.Log(CLASS_NAME + ".MetaData cannot be retrived for the area description as UUIDUnityHolder object was empty or null.");
                 return Common.ErrorType.TANGO_ERROR;
             }
             int returnValue = PoseProviderAPI.TangoService_getAreaDescriptionMetadata(adfUnityHolder.GetStringDataUUID(), ref adfUnityHolder.uuidMetaData.meta_data_pointer);
-            if(returnValue != Common.ErrorType.TANGO_SUCCESS)
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + "Meta Data could not be loaded");
             }
-            Debug.Log("GetAreaDescription return value is: "+ returnValue.ToString());
+            Debug.Log("GetAreaDescription return value is: " + returnValue.ToString());
             return returnValue;
         }
 
         /// <summary>
-        /// /Populates the Metadata values of a given metadataPointer into a Dictionary object which can
-        /// then be used by application for listing the ADF's information. metaDataPointer should be initialized to 
-        /// a valid MetaData by calling the getAreaDescriptionMetaData().
+        /// Populates the Metadata key/value pairs of a given metadataPointer.
+        /// 
+        /// metaDataPointer should be initialized to a valid Metadata by calling the getAreaDescriptionMetaData().
         /// </summary>
-        /// <returns>Tango Success if successful, else returns Invalid or Tango_Error type.</returns>
+        /// <returns>TANGO_SUCCESS if successful, else TANGO_INVALID or TANGO_ERROR.</returns>
         /// <param name="metadataPointer">Metadata pointer.</param>
-        /// <param name="m_KeyValuePairs">M_ key value pairs.</param>
-        public static int PopulateAreaDescriptionMetaDataKeyValues(IntPtr metadataPointer, ref System.Collections.Generic.Dictionary<string,string> m_KeyValuePairs)
+        /// <param name="keyValuePairs">Dictionary of key/value pairs stored in the metadata.</param>
+        public static int PopulateAreaDescriptionMetaDataKeyValues(IntPtr metadataPointer, ref Dictionary<string, string> keyValuePairs)
         {
             IntPtr keyList = IntPtr.Zero;
-            if(metadataPointer == IntPtr.Zero)
+            if (metadataPointer == IntPtr.Zero)
             {
                 Debug.Log(CLASS_NAME + "metadata pointer is null, cannot save metadata to this ADF!");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_listKeys(metadataPointer,ref keyList);
-            if(returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
+            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_listKeys(metadataPointer, ref keyList);
+            if (returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("Could not read metadata keys list");
             }
             string metadataKeys = Marshal.PtrToStringAuto(keyList);
-            string[] keys = metadataKeys.Split(new char[]{','});
+            string[] keys = metadataKeys.Split(new char[] { ',' });
             string[] values = new string[keys.Length];
-            for(int i =0; i< values.Length; i++)
+            for (int i = 0; i < values.Length; i++)
             {
                 uint valuesize = 0;
                 IntPtr valuePointer = IntPtr.Zero;
-                PoseProviderAPI.TangoAreaDescriptionMetadata_get(metadataPointer,keys[i], ref valuesize,ref valuePointer);
+                PoseProviderAPI.TangoAreaDescriptionMetadata_get(metadataPointer, keys[i], ref valuesize, ref valuePointer);
                 byte[] valueByteArray = new byte[valuesize];
-                Marshal.Copy(valuePointer,valueByteArray,0,(int)valuesize);
+                Marshal.Copy(valuePointer, valueByteArray, 0, (int)valuesize);
                 values[i] = System.Text.Encoding.UTF8.GetString(valueByteArray);
-                Debug.Log("Key Values are- " + keys[i]+": "+values[i]);
-                m_KeyValuePairs.Add(keys[i],values[i]);
+                Debug.Log("Key Values are- " + keys[i] + ": " + values[i]);
+                keyValuePairs.Add(keys[i], values[i]);
             }
             return returnValue;
         }
 
         /// <summary>
-        /// Gets the value of a key and populates into the "value" string object. adfUnitHolderObject 
-        /// should be initialized with valid UUID before calling this function.
+        /// Get the value of a key from a metadata.
         /// </summary>
-        /// <returns>The description meta data_get.</returns>
-        /// <param name="key">Key.</param>
-        /// <param name="value">Value.</param>
-        /// <param name="adfUnityHolder">Adf unity holder.</param>
+        /// <returns>TANGO_SUCCESS if successful, else TANGO_INVALID or TANGO_ERROR.</returns>
+        /// <param name="key">Key to lookup.</param>
+        /// <param name="value">On success, the value for that key.</param>
+        /// <param name="adfUnityHolder">Area description + metadata holder.</param>
         public static int AreaDescriptionMetaData_get(String key, ref String value, UUIDUnityHolder adfUnityHolder)
         {
-            if(string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
+            if (string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
             {
                 Debug.Log(CLASS_NAME + ".MetaData cannot be retrived for the area description as UUIDUnityHolder object was empty or null.");
                 return Common.ErrorType.TANGO_ERROR;
             }
             uint valuesize = 0;
             IntPtr valuePointer = IntPtr.Zero;
-            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_get(adfUnityHolder.uuidMetaData.meta_data_pointer, key, ref valuesize,ref valuePointer);
-            if(returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
+            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_get(adfUnityHolder.uuidMetaData.meta_data_pointer, key, ref valuesize, ref valuePointer);
+            if (returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("Could not read metadata key, Error return value is: " + returnValue);
                 return returnValue;
@@ -459,63 +504,152 @@ namespace Tango
             else
             {
                 byte[] valueByteArray = new byte[valuesize];
-                Marshal.Copy(valuePointer,valueByteArray,0,(int)valuesize);
+                Marshal.Copy(valuePointer, valueByteArray, 0, (int)valuesize);
                 value = System.Text.Encoding.UTF8.GetString(valueByteArray);
                 return returnValue;
             }
         }
 
         /// <summary>
-        /// Sets the AreaDescription MetaData to the UUID in the adfUnityHolder Object.Make sure adfUnityHolder already has
-        /// a pointer to the Metadata of the specified UUID by calling GetAreaDescriptionMetaData().
+        /// Set the value of a key in a metadata.
         /// </summary>
-        /// <returns>Returns Tango Success on successful set, else Returns Invalid or TangoError</returns>
-        /// <param name="key">Key.</param>
-        /// <param name="value">Value.</param>
-        /// <param name="adfUnityHolder">Adf unity holder in which the metadata is cointained.</param>
+        /// <returns>TANGO_SUCCESS if successful, else TANGO_INVALID or TANGO_ERROR.</returns>
+        /// <param name="key">Key to set the value of.</param>
+        /// <param name="value">Value to set.</param>
+        /// <param name="adfUnityHolder">Area description + metadata holder.</param>
         public static int AreaDescriptionMetaData_set(String key, String value, UUIDUnityHolder adfUnityHolder)
         {
-            if(string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
+            if (string.IsNullOrEmpty(adfUnityHolder.GetStringDataUUID()))
             {
                 Debug.Log(CLASS_NAME + ".MetaData cannot be retrived for the area description as UUIDUnityHolder object was empty or null.");
                 return Common.ErrorType.TANGO_ERROR;
             }
 
-            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_set(adfUnityHolder.uuidMetaData.meta_data_pointer, key, (uint) value.Length, value);
-            if(returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
+            int returnValue = PoseProviderAPI.TangoAreaDescriptionMetadata_set(adfUnityHolder.uuidMetaData.meta_data_pointer, key, (uint)value.Length, value);
+            if (returnValue != Tango.Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("Could not set Metadata Key, Error return value is: " + returnValue);
                 return returnValue;
             }
             else
-            {   
-                Debug.Log("Metadata Set succesful, Key set is: "+ key+" Value set is: " + value);
+            {
+                Debug.Log("Metadata Set succesful, Key set is: " + key + " Value set is: " + value);
                 return returnValue;
             }
         }
-
         #endregion // ADF Metadata Functionality
 
-    #region API_Functions
+        /// <summary>
+        /// Set the C callback for the Tango pose interface.
+        /// </summary>
+        /// <param name="framePairs">Passed in to the C API.</param>
+        /// <param name="callback">Callback.</param>
+        internal static void SetCallback(TangoCoordinateFramePair[] framePairs, TangoService_onPoseAvailable callback)
+        {
+            int returnValue = PoseProviderAPI.TangoService_connectOnPoseAvailable(framePairs.Length, framePairs, callback);
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".SetCallback() Callback was not set!");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".SetCallback() OnPose callback was set!");
+            }
+        }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// INTERNAL USE: Update the Tango emulation state for pose data.
+        /// 
+        /// Make this this is only called once per frame.
+        /// </summary>
+        internal static void UpdateTangoEmulation()
+        {
+            // Update the emulated rotation (do this first to make sure the position is rotated)
+            //
+            // Note: We need to use Input.GetAxis here because Unity3D does not provide a way to get the underlying
+            // mouse delta.
+            if (!Input.GetKey(KeyCode.LeftShift))
+            {
+                m_emulatedPoseAnglesFromForward.y -= Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+                m_emulatedPoseAnglesFromForward.x += Input.GetAxis("Mouse Y") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+            }
+            else
+            {
+                m_emulatedPoseAnglesFromForward.z -= Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+            }
+            
+            // Update the emulated position
+            Quaternion emulatedPoseRotation = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(m_emulatedPoseAnglesFromForward);
+            Vector3 directionRight = emulatedPoseRotation * new Vector3(1, 0, 0);
+            Vector3 directionForward = emulatedPoseRotation * new Vector3(0, 0, -1);
+            Vector3 directionUp = emulatedPoseRotation * new Vector3(0, 1, 0);
+            
+            if (Input.GetKey(KeyCode.W))
+            {
+                // Forward
+                m_emulatedPosePosition += directionForward * TRANSLATION_SPEED * Time.deltaTime;
+            }
+            if (Input.GetKey(KeyCode.S))
+            {
+                // Backward
+                m_emulatedPosePosition -= directionForward * TRANSLATION_SPEED * Time.deltaTime;
+            }
+            if (Input.GetKey(KeyCode.A))
+            {
+                // Left
+                m_emulatedPosePosition -= directionRight * TRANSLATION_SPEED * Time.deltaTime;
+            }
+            if (Input.GetKey(KeyCode.D))
+            {
+                // Right
+                m_emulatedPosePosition += directionRight * TRANSLATION_SPEED * Time.deltaTime;
+            }
+            if (Input.GetKey(KeyCode.R))
+            {
+                // Up
+                m_emulatedPosePosition += directionUp * TRANSLATION_SPEED * Time.deltaTime;
+            }
+            if (Input.GetKey(KeyCode.F))
+            {
+                // Down
+                m_emulatedPosePosition -= directionUp * TRANSLATION_SPEED * Time.deltaTime;
+            }
+        }
+
+        /// <summary>
+        /// INTERNAL USE: Get the most recent values for Tango emulation.
+        /// </summary>
+        /// <param name="posePosition">The new Tango emulation position.</param>
+        /// <param name="poseRotation">The new Tango emulation rotation.</param>
+        internal static void GetTangoEmulation(out Vector3 posePosition, out Quaternion poseRotation)
+        {
+            posePosition = m_emulatedPosePosition;
+            poseRotation = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(m_emulatedPoseAnglesFromForward);
+        }
+#endif
+
+        #region API_Functions
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
+                                                         "SA1600:ElementsMustBeDocumented",
+                                                         Justification = "C API Wrapper.")]
         private struct PoseProviderAPI
         { 
-    #if UNITY_ANDROID && !UNITY_EDITOR
-
+#if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(Common.TANGO_UNITY_DLL)]
             public static extern int TangoService_connectOnPoseAvailable(int count,
                                                                          TangoCoordinateFramePair[] framePairs,
                                                                          TangoService_onPoseAvailable onPoseAvailable);
-            
-            
+
             [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_getPoseAtTime (double timestamp,
-                                                                 TangoCoordinateFramePair framePair,
-                                                                 [In, Out] TangoPoseData pose);
+            public static extern int TangoService_getPoseAtTime(double timestamp,
+                                                                TangoCoordinateFramePair framePair,
+                                                                [In, Out] TangoPoseData pose);
 
             [DllImport(Common.TANGO_UNITY_DLL)]
             public static extern int TangoService_setPoseListenerFrames(int count,
                                                                         ref TangoCoordinateFramePair frames);
-            
+
             [DllImport(Common.TANGO_UNITY_DLL)]
             public static extern void TangoService_resetMotionTracking();
 
@@ -555,7 +689,7 @@ namespace Tango
 
             [DllImport(Common.TANGO_UNITY_DLL)]
             public static extern int TangoAreaDescriptionMetadata_listKeys(IntPtr metadata, ref IntPtr key_list);
-    #else
+#else
             public static int TangoService_connectOnPoseAvailable(int count,
                                                                   TangoCoordinateFramePair[] framePairs,
                                                                   TangoService_onPoseAvailable onPoseAvailable)
@@ -563,9 +697,9 @@ namespace Tango
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoService_getPoseAtTime (double timestamp,
-                                                          TangoCoordinateFramePair framePair,
-                                                          [In, Out] TangoPoseData pose)
+            public static int TangoService_getPoseAtTime(double timestamp,
+                                                         TangoCoordinateFramePair framePair,
+                                                         [In, Out] TangoPoseData pose)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
@@ -602,18 +736,18 @@ namespace Tango
                 return Common.ErrorType.TANGO_SUCCESS;
             }
             
-            public static int TangoService_importAreaDescription([MarshalAs(UnmanagedType.LPStr)] string source_file_path, IntPtr UUID)
+            public static int TangoService_importAreaDescription([MarshalAs(UnmanagedType.LPStr)] string source_file_path, IntPtr uuid)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
             
-            public static int TangoService_exportAreaDescription([MarshalAs(UnmanagedType.LPStr)] string UUID, 
+            public static int TangoService_exportAreaDescription([MarshalAs(UnmanagedType.LPStr)] string uuid, 
                                                                  [MarshalAs(UnmanagedType.LPStr)] string dst_file_path)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoService_deleteAreaDescription([MarshalAs(UnmanagedType.LPStr)] string UUID)
+            public static int TangoService_deleteAreaDescription([MarshalAs(UnmanagedType.LPStr)] string uuid)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
@@ -639,7 +773,7 @@ namespace Tango
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
-            #endif
+#endif
         }
         #endregion
     }

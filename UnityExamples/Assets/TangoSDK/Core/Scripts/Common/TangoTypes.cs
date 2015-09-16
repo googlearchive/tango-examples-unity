@@ -1,100 +1,205 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="TangoTypes.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using UnityEngine;
+
+[module: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
+                                                         "SA1649:FileHeaderFileNameDocumentationMustMatchTypeName",
+                                                         Justification = "Types file.")]
 
 namespace Tango
 {
     /// <summary>
-    /// Represents the ordered point cloud data.
+    /// The TangoXYZij struct contains information returned from the depth sensor.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class TangoXYZij
     {
+        /// <summary>
+        /// An integer denoting the version of the structure.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int version;
-        
+
+        /// <summary>
+        /// Time of capture of the depth data for this struct (in seconds).
+        /// </summary>
         [MarshalAs(UnmanagedType.R8)]
         public double timestamp;
-        
+
+        /// <summary>
+        /// The number of points in the xyz array.
+        ///
+        /// This is variable with result and is returned in (x,y,z) triplets populated (e.g. 2 points populated
+        /// returned means 6 floats, or 6*4 bytes used).
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int xyz_count;
-        
+
+        /// <summary>
+        /// An array of packed coordinate triplets, x,y,z as floating point values.
+        /// 
+        /// With the unit in landscape orientation, screen facing the user: +Z points in the direction of the
+        /// camera's optical axis, and is measured perpendicular to the plane of the camera. +X points toward the
+        /// user's right, and +Y points toward the bottom of the screen. The origin is the focal centre of the color
+        /// camera. The output is in units of metres.
+        /// </summary>
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3, ArraySubType = UnmanagedType.SysUInt)]
         public IntPtr[] xyz;
-        
+
+        /// <summary>
+        /// The dimensions of the ij index buffer.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int ij_rows;
-        
+
+        /// <summary>
+        /// The dimensions of the ij index buffer.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int ij_cols;
-        
+
+        /// <summary>
+        /// A 2D buffer, of size ij_rows x ij_cols in raster ordering that contains the index of a point in the xyz
+        /// array that was generated at this "ij" location.
+        /// 
+        /// A value of -1 denotes there was no corresponding point generated at that position. This buffer can be used
+        /// to find neighbouring points in the point cloud.
+        /// 
+        /// For more information, see our developer overview on depth perception .
+        /// </summary>
         public IntPtr ij;
 
-        // Reserved for future use.
+        /// <summary>
+        /// TangoImageBuffer is reserved for future use.
+        /// </summary>
         public IntPtr color_image;
         
         /// <summary>
         /// Returns a <see cref="System.String"/> that represents the current <see cref="Tango.TangoXYZij"/>.
         /// </summary>
-        /// <returns>A <see cref="System.String"/> that represents the current <see cref="Tango.TangoXYZij"/>.</returns>
+        /// <returns>
+        /// A <see cref="System.String"/> that represents the current <see cref="Tango.TangoXYZij"/>.
+        /// </returns>
         public override string ToString()
         {
-            return ("timestamp : " + timestamp + "\n" +
-                    "xyz_count : " + xyz_count + "\n" + 
-                    "ij_rows : " + ij_rows + "\n" + 
-                    "ij_cols : " + ij_cols);
+            return string.Format("timestamp : {0}\nxyz_count : {1}\nij_rows : {2}\nij_cols : {3}",
+                                 timestamp, xyz_count, ij_rows, ij_cols);
         }
     }
 
     /// <summary>
-    /// Tango event.
+    /// The TangoEvent structure signals important sensor and tracking events.
+    /// 
+    /// Each event comes with a timestamp, a type, and a key-value pair describing
+    /// the event.  The type is an enumeration which generally classifies the event
+    /// type. The key is a text string describing the event.  The description holds
+    /// parameters specific to the event.
+    ///
+    /// Possible descriptions (as "key:value") are:
+    /// - "TangoServiceException:X" - The service has encountered an exception, and
+    /// a text description is given in X.
+    /// - "FisheyeOverExposed:X" - the fisheye image is over exposed with average
+    /// pixel value X px.
+    /// - "FisheyeUnderExposed:X" - the fisheye image is under exposed with average
+    /// pixel value X px.
+    /// - "ColorOverExposed:X" - the color image is over exposed with average pixel
+    /// value X px.
+    /// - "ColorUnderExposed:X" - the color image is under exposed with average
+    /// pixel value X px.
+    /// - "TooFewFeaturesTracked:X" - too few features were tracked in the fisheye
+    /// image.  The number of features tracked is X.
+    /// - "Unknown".
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class TangoEvent
     {
+        /// <summary>
+        /// Timestamp, in seconds, of the event.
+        /// </summary>
         [MarshalAs(UnmanagedType.R8)]
         public double timestamp;
-        
+
+        /// <summary>
+        /// Type of event.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoEnums.TangoEventType type;
-        
+
+        /// <summary>
+        /// Description of the event key.
+        /// </summary>
         [MarshalAs(UnmanagedType.LPStr)]
         public string event_key;
 
+        /// <summary>
+        /// Description of the event value.
+        /// </summary>
         [MarshalAs(UnmanagedType.LPStr)]
         public string event_value;
     }
 
     /// <summary>
-    /// Tango coordinate frame pair.
+    /// The TangoCoordinateFramePair struct contains a pair of coordinate frames of reference.
+    ///
+    /// Tango pose data is calculated as a transformation between two frames
+    /// of reference (so, for example, you can be asking for the pose of the
+    /// device within a learned area).
+    ///
+    /// This struct is used to specify the desired base and target frames of
+    /// reference when requesting pose data.  You can also use it when you have
+    /// a TangoPoseData structure returned from the API and want to examine which
+    /// frames of reference were used to get that pose.
+    ///
+    /// For more information, including which coordinate frame pairs are valid,
+    /// see our page on
+    /// <a href ="/project-tango/overview/frames-of-reference">frames of reference</a>.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public struct TangoCoordinateFramePair
     {
+        /// <summary>
+        /// Base frame of reference to compare against when requesting pose data.
+        /// For example, if you have loaded an area and want to find out where the
+        /// device is within it, you would use the
+        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</code> frame of reference
+        /// as your base.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoEnums.TangoCoordinateFrameType baseFrame;
-        
+
+        /// <summary>
+        /// Target frame of reference when requesting pose data, compared to the
+        /// base. For example, if you want the device's pose data, use
+        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE</code>.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoEnums.TangoCoordinateFrameType targetFrame;
     }
 
     /// <summary>
-    /// Tango image buffer.
+    /// The TangoImageBuffer contains information about a byte buffer holding image data.
+    /// 
+    /// This data is populated by the service when it returns an image.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class TangoImageBuffer
@@ -136,34 +241,46 @@ namespace Tango
         public TangoEnums.TangoImageFormatType format;
 
         /// <summary>
-        /// Pixels in HAL_PIXEL_FORMAT_YV12 format. Y samples of width x height are
-        /// first, followed by V samples, with half the stride and half the lines of
-        /// the Y data, followed by a U samples with the same dimensions as the V
-        /// sample. This is stored in the API as a dynamic byte array (uint8_t*).
+        /// Pixels in the format of this image buffer.
         /// </summary>
         public IntPtr data;
     }
 
     /// <summary>
     /// The TangoCameraIntrinsics struct contains intrinsic parameters for a camera.
-    /// For image coordinates, the obervations, [u, v]^T in pixels.
-    /// Normalized image plane coordinates refer to:
     ///
-    /// x = (u - cx) / fx
+    /// Given a 3D point (X, Y, Z) in camera coordinates, the corresponding
+    /// pixel coordinates (x, y) are:
     ///
-    /// y = (v - cy) / fy
+    /// <code>
+    /// x = X / Z * fx * rd / ru + cx
+    /// y = X / Z * fy * rd / ru + cy
+    /// </code>
     ///
-    /// Distortion model type is as given by calibration_type.  For example, for the
-    /// color camera, TANGO_CALIBRATION_POLYNOMIAL_3_PARAMETERS means that the
-    /// distortion parameters are in distortion[] as {k1, k2 ,k3} where
+    /// The normalized radial distance ru is given by:
     ///
-    /// x_corr_px = x_px (1 + k1 * r2 + k2 * r4 + k3 * r6)
-    /// y_corr_px = y_px (1 + k1 * r2 + k2 * r4 + k3 * r6)
+    /// <code>
+    /// ru = sqrt((X^2 + Y^2) / (Z^2))
+    /// </code>
     ///
-    /// where r2, r4, r6 are the 2nd, 4th, and 6th powers of the r, where r is the
-    /// distance (normalized image plane coordinates) of (x,y) to (cx,cy), and
-    /// for a pixel at point (x_px, y_px) in pixel coordinates, the corrected output
-    /// position would be (x_corr, y_corr).
+    /// The distorted radial distance rd depends on the distortion model used.
+    ///
+    /// For <code>TangoCalibrationType.TANGO_CALIBRATION_POLYNOMIAL_3_PARAMETERS</code>, rd is a
+    /// polynomial that depends on the 3 distortion coefficients k1, k2 and k3:
+    ///
+    /// <code>
+    /// rd = ru + k1 * ru^3 + k2 * ru^5 + k3 * ru^7
+    /// </code>
+    ///
+    /// For <code>TangoCalibrationType.TANGO_CALIBRATION_EQUIDISTANT</code>, rd depends on the single
+    /// distortion coefficient w:
+    ///
+    /// <code>
+    /// rd = 1 / w * arctan(2 * ru * tan(w / 2))
+    /// </code>
+    ///
+    /// For more information, see our page on
+    /// <a href ="/project-tango/overview/intrinsics-extrinsics">Camera Intrinsics and Extrinsics</a>.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class TangoCameraIntrinsics
@@ -175,7 +292,8 @@ namespace Tango
         public TangoEnums.TangoCameraId camera_id;
 
         /// <summary>
-        /// Calibration model type that they distorion parameters reference.
+        /// The type of distortion model used. This determines the meaning of the
+        /// distortion coefficients.
         /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoEnums.TangoCalibrationType calibration_type;
@@ -218,34 +336,72 @@ namespace Tango
     }
     
     /// <summary>
-    /// Data representing a pose from the Tango Service.
+    /// The TangoPoseData struct contains 6DOF pose information.
+    /// 
+    /// The device pose is given using Android conventions.  See the Android
+    /// <a href ="http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords">Sensor
+    /// Overview</a> page for more information.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class TangoPoseData
     {
+        /// <summary>
+        /// An integer denoting the version of the structure.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int version;
-        
+
+        /// <summary>
+        /// Timestamp of the time that this pose estimate corresponds to.
+        /// </summary>
         [MarshalAs(UnmanagedType.R8)]
         public double timestamp;
-        
+
+        /// <summary>
+        /// Orientation, as a quaternion, of the pose of the target frame
+        /// with reference to the base frame.
+        /// Specified as (x,y,z,w) where RotationAngle is in radians:
+        /// <code>
+        ///   x = RotationAxis.x * sin(RotationAngle / 2)
+        ///   y = RotationAxis.y * sin(RotationAngle / 2)
+        ///   z = RotationAxis.z * sin(RotationAngle / 2)
+        ///   w = cos(RotationAngle / 2)
+        /// </code>
+        /// </summary>
         [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 4, ArraySubType = UnmanagedType.R8)]
         public double[] orientation;
-        
+
+        /// <summary>
+        /// Translation, ordered x, y, z, of the pose of the target frame
+        /// with reference to the base frame.
+        /// </summary>
         [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 3, ArraySubType = UnmanagedType.R8)]
         public double[] translation;
-        
+
+        /// <summary>
+        /// The status of the pose, according to the pose lifecycle.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoEnums.TangoPoseStatusType status_code;
-        
+
+        /// <summary>
+        /// The pair of coordinate frames for this pose.
+        /// 
+        /// We retrieve a pose for a target coordinate frame (such as the Tango device) against a base
+        /// coordinate frame (such as a learned area).
+        /// </summary>
         [MarshalAs(UnmanagedType.Struct)]
         public TangoCoordinateFramePair framePair;
-        
-        // Unused.  Integer levels are determined by service.
+
+        /// <summary>
+        /// Unused.  Integer levels are determined by service.
+        /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public int confidence;
 
-        // Unused.  Reserved for metric accuracy.
+        /// <summary>
+        /// Unused.  Reserved for metric accuracy.
+        /// </summary>
         [MarshalAs(UnmanagedType.R4)]
         public float accuracy;
         
@@ -265,7 +421,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Performs a deep copy of pose data.
+        /// Deep copy from poseToCopy into this.
         /// </summary>
         /// <param name="poseToCopy">Pose to copy.</param>
         public void DeepCopy(TangoPoseData poseToCopy)
@@ -276,11 +432,11 @@ namespace Tango
             this.framePair.baseFrame = poseToCopy.framePair.baseFrame;
             this.framePair.targetFrame = poseToCopy.framePair.targetFrame;
             this.confidence = poseToCopy.confidence;
-            for(int i = 0; i < 4; ++i)
+            for (int i = 0; i < 4; ++i)
             {
                 this.orientation[i] = poseToCopy.orientation[i];
             }
-            for(int i = 0; i < 3; ++i)
+            for (int i = 0; i < 3; ++i)
             {
                 this.translation[i] = poseToCopy.translation[i];
             }
@@ -288,14 +444,19 @@ namespace Tango
     }
 
     /// <summary>
-    /// Used in the Unity SDK to hold information about the UUID
-    /// to avoid too many conversions when needing to access the information.
+    /// Unity-side representation of a area description ID and its associated metadata.
+    /// 
+    /// Used to avoid too many conversions when needing to access the information.
     /// </summary>
     public class UUIDUnityHolder
     {
+        /// <summary>
+        /// The Metadata for this area description ID.
+        /// </summary>
+        public Metadata uuidMetaData;
+
         private UUID uuidObject;
         private string uuidName;
-        public Metadata uuidMetaData;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.UUIDUnityHolder"/> class.
@@ -314,7 +475,6 @@ namespace Tango
         /// </summary>
         public void PrepareUUIDMetaData()
         {
-           
             uuidMetaData.PopulateMetaDataKeyValues();
         }
 
@@ -334,7 +494,7 @@ namespace Tango
         /// <param name="uuidData">The data marshalled by the UUID list object for this UUID object.</param>
         public void SetDataUUID(byte[] uuidData)
         {
-            if(uuidObject.data == IntPtr.Zero)
+            if (uuidObject.data == IntPtr.Zero)
             {
                 AllocateDataBuffer();
             }
@@ -346,7 +506,7 @@ namespace Tango
         /// Copies the data contained by <c>uuidData</c> into our UUID object
         /// data IntPtr.
         /// </summary>
-        /// <param name="uuidData">The UTF-8 encoded string for this UUID object.</param>
+        /// <param name="uuidString">The UTF-8 encoded string for this UUID object.</param>
         public void SetDataUUID(string uuidString)
         {
             uuidName = uuidString;
@@ -381,7 +541,9 @@ namespace Tango
     }
 
     /// <summary>
-    /// Unique Identifier for an Area Description File.
+    /// The unique id associated with a single area description.
+    /// 
+    /// Should be 36 characters including dashes and a null terminating character.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class UUID
@@ -395,15 +557,16 @@ namespace Tango
     /// </summary>
     public class UUID_list
     {
-        private UUIDUnityHolder[] UUIDs;
+        private UUIDUnityHolder[] uuids;
         private int count;
 
         /// <summary>
         /// Count of all Area Description Files (Read only).
         /// </summary>
+        /// <value>The count.</value>
         public int Count
         {
-            get {return count;}
+            get { return count; }
         }
         
         /// <summary>
@@ -411,7 +574,7 @@ namespace Tango
         /// </summary>
         public UUID_list()
         {
-            UUIDs = null;
+            uuids = null;
         }
         
         /// <summary>
@@ -422,32 +585,33 @@ namespace Tango
         {
             System.Text.UTF8Encoding encoder = new System.Text.UTF8Encoding();
             string[] splitNames = uuidNames.Split(',');
-            UUIDs = new UUIDUnityHolder[splitNames.Length];
+            uuids = new UUIDUnityHolder[splitNames.Length];
             count = splitNames.Length;
-            for(int i = 0; i < count; ++i)
+            for (int i = 0; i < count; ++i)
             {
-                if(UUIDs[i] == null)
+                if (uuids[i] == null)
                 {
-                    UUIDs[i] = new Tango.UUIDUnityHolder();
+                    uuids[i] = new Tango.UUIDUnityHolder();
                 }
-                //Following three calls should be done in the same order always.
-                UUIDs[i].SetDataUUID(System.Text.Encoding.UTF8.GetString(encoder.GetBytes(splitNames[i])));
-                PoseProvider.GetAreaDescriptionMetaData(UUIDs[i]);
-                UUIDs[i].PrepareUUIDMetaData();
+
+                // Following three calls should be done in the same order always.
+                uuids[i].SetDataUUID(System.Text.Encoding.UTF8.GetString(encoder.GetBytes(splitNames[i])));
+                PoseProvider.GetAreaDescriptionMetaData(uuids[i]);
+                uuids[i].PrepareUUIDMetaData();
             }
         }
         
         /// <summary>
-        /// Returns the latest ADF UUID found in the list
+        /// Returns the latest ADF UUID found in the list.
         /// </summary>
         /// <returns>UUIDUnityHolder object that contains the last ADF saved.</returns>
         public UUIDUnityHolder GetLatestADFUUID()
         {
-            if(UUIDs == null || (UUIDs != null && count <= 0))
+            if (uuids == null || (uuids != null && count <= 0))
             {
                 return null;
             }
-            return UUIDs[count - 1];
+            return uuids[count - 1];
         }
 
         /// <summary>
@@ -457,11 +621,11 @@ namespace Tango
         /// <param name="index">Index.</param>
         public UUIDUnityHolder GetADFAtIndex(int index)
         {
-            if(UUIDs == null || (index < 0 || index >= count))
+            if (uuids == null || (index < 0 || index >= count))
             {
                 return null;
             }
-            return UUIDs[index];
+            return uuids[index];
         }
 
         /// <summary>
@@ -471,11 +635,11 @@ namespace Tango
         /// <param name="index">Index.</param>
         public string GetUUIDAsString(int index)
         {
-            if(UUIDs == null || (index < 0 || index >= count))
+            if (uuids == null || (index < 0 || index >= count))
             {
                 return null;
             }
-            return UUIDs[index].GetStringDataUUID();
+            return uuids[index].GetStringDataUUID();
         }
 
         /// <summary>
@@ -489,20 +653,19 @@ namespace Tango
     }
     
     /// <summary>
-    /// Metadata_entry.
+    /// UUID Metadata list.
     /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
     public class Metadata
     {
-        private System.Collections.Generic.Dictionary<string,string> m_KeyValuePairs = new System.Collections.Generic.Dictionary<string, string>();
         public IntPtr meta_data_pointer;
+        private Dictionary<string, string> m_keyValuePairs = new Dictionary<string, string>();
        
         /// <summary>
         /// Populates the meta data key values pairs.
         /// </summary>
         public void PopulateMetaDataKeyValues()
         {
-            PoseProvider.PopulateAreaDescriptionMetaDataKeyValues(meta_data_pointer,ref m_KeyValuePairs);
+            PoseProvider.PopulateAreaDescriptionMetaDataKeyValues(meta_data_pointer, ref m_keyValuePairs);
         }
 
         /// <summary>
@@ -510,13 +673,15 @@ namespace Tango
         /// PopulateMetaDataKeyValues() should be called before calling this.
         /// </summary>
         /// <returns>The meta data key values.</returns>
-        public System.Collections.Generic.Dictionary<string,string> GetMetaDataKeyValues()
+        public Dictionary<string, string> GetMetaDataKeyValues()
         {
-            return m_KeyValuePairs;
+            return m_keyValuePairs;
         }
-
     }
 
+    /// <summary>
+    /// The TangoUnityImageData contains information about a byte buffer holding image data.
+    /// </summary>
     public class TangoUnityImageData
     {
         /// <summary>
@@ -545,39 +710,28 @@ namespace Tango
         public Int64 frame_number;
         
         /// <summary>
-        /// The pixel format of the data.
+        /// Pixel format of the data.
         /// </summary>
         public TangoEnums.TangoImageFormatType format;
         
         /// <summary>
-        /// Pixels in HAL_PIXEL_FORMAT_YV12 format. Y samples of width x height are
-        /// first, followed by V samples, with half the stride and half the lines of
-        /// the Y data, followed by a U samples with the same dimensions as the V
-        /// sample. This is stored in the API as a dynamic byte array (uint8_t*).
+        /// Pixels in the format of this image buffer.
         /// </summary>
         public byte[] data;
     }
-  
+
     /// <summary>
-    /// Tango depth that is more Unity friendly.
+    /// Like TangoXYZij, but more Unity friendly.
     /// </summary>
     public class TangoUnityDepth
     {
-        public int m_version;
-        public int m_pointCount;
-        public float[] m_points;
-        public double m_timestamp;
-        public int m_ijRows;
-        public int m_ijColumns;
-        public int[] m_ij;
-
         /// <summary>
         /// Max point array size is currently defined by the largest single mesh
         /// supported by Unity. This array is multiplied by 3 to account for the
         /// x/y/z components.
         /// </summary>
         public static readonly int MAX_POINTS_ARRAY_SIZE = Common.UNITY_MAX_SUPPORTED_VERTS_PER_MESH * 3;
-
+        
         /// <summary>
         /// Max IJ array size is currently defined by the largest single mesh
         /// supported by Unity. This number is multiplied by 2 to account for the
@@ -585,6 +739,56 @@ namespace Tango
         /// </summary>
         public static readonly int MAX_IJ_ARRAY_SIZE = Common.UNITY_MAX_SUPPORTED_VERTS_PER_MESH * 2;
 
+        /// <summary>
+        /// 
+        /// An integer denoting the version of the structure.
+        /// </summary>
+        public int m_version;
+
+        /// <summary>
+        /// The number of points in the m_points array.
+        /// 
+        /// Because the points array always contains 3D points, this is m_points.Count / 3.
+        /// </summary>
+        public int m_pointCount;
+
+        /// <summary>
+        /// An array of packed coordinate triplets, x,y,z as floating point values.
+        /// </summary>
+        public float[] m_points;
+
+        /// <summary>
+        /// Time of capture of the depth data for this struct (in seconds).
+        /// </summary>
+        public double m_timestamp;
+
+        /// <summary>
+        /// The dimensions of the ij index buffer.
+        /// </summary>
+        public int m_ijRows;
+
+        /// <summary>
+        /// The dimensions of the ij index buffer.
+        /// </summary>
+        public int m_ijColumns;
+
+        /// <summary>
+        /// A 2D buffer, of size ij_rows x ij_cols in raster ordering that contains
+        /// the index of a point in the xyz array that was generated at this "ij"
+        /// location.
+        /// 
+        /// A value of -1 denotes there was no corresponding point generated at that position. This buffer can be used
+        /// to find neighbouring points in the point cloud.
+        /// 
+        /// For more information, see our
+        /// <a href ="/project-tango/overview/depth-perception#xyzij">developer
+        /// overview on depth perception</a>.
+        /// </summary>
+        public int[] m_ij;
+
+        /// <summary>
+        /// Initializes an empty instance of the <see cref="Tango.TangoUnityDepth"/> class, with no points.
+        /// </summary>
         public TangoUnityDepth()
         {
             m_points = new float[MAX_POINTS_ARRAY_SIZE];

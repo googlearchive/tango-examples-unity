@@ -1,18 +1,22 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+﻿//-----------------------------------------------------------------------
+// <copyright file="DepthListener.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -20,24 +24,23 @@ using UnityEngine;
 namespace Tango
 {
     /// <summary>
-    /// On tango depth available event handler.
+    /// Delegate for Tango depth events.
     /// </summary>
     /// <param name="tangoDepth">TangoUnityDepth object for the available depth frame.</param>
-    public delegate void OnTangoDepthAvailableEventHandler(TangoUnityDepth tangoDepth);
+    internal delegate void OnTangoDepthAvailableEventHandler(TangoUnityDepth tangoDepth);
 
     /// <summary>
-    /// Abstract base class that can be used to
-    /// automatically register for onDepthAvailable
-    /// callbacks from the Tango Service.
+    /// Marshals Tango depth data between the C callbacks in one thread and
+    /// the main Unity thread.
     /// </summary>
-    public class DepthListener
+    internal class DepthListener
     {
         private Tango.DepthProvider.TangoService_onDepthAvailable m_onDepthAvailableCallback;
 
         /// <summary>
         /// Occurs when m_on tango depth available.
         /// </summary>
-        private event OnTangoDepthAvailableEventHandler m_OnTangoDepthAvailable;
+        private event OnTangoDepthAvailableEventHandler OnTangoDepthAvailable;
 
         private bool m_isDirty = false;
         private TangoUnityDepth m_tangoDepth;
@@ -45,56 +48,59 @@ namespace Tango
         private float[] m_depthPoints;
 
         /// <summary>
-        /// Register this class to receive the OnDepthAvailable callback.
+        /// Register to get Tango depth callbacks.
+        /// 
+        /// NOTE: Tango depth callbacks happen on a different thread than the main
+        /// Unity thread.
         /// </summary>
-        public virtual void SetCallback()
+        internal virtual void SetCallback()
         {
             m_tangoDepth = new TangoUnityDepth();
             m_onDepthAvailableCallback = new Tango.DepthProvider.TangoService_onDepthAvailable(_OnDepthAvailable);
-    		Tango.DepthProvider.SetCallback(m_onDepthAvailableCallback);
+            Tango.DepthProvider.SetCallback(m_onDepthAvailableCallback);
         }
 
         /// <summary>
-        /// Sends the depth if available.
+        /// Raise a Tango depth event if there is new data.
         /// </summary>
-        public void SendDepthIfAvailable()
+        internal void SendDepthIfAvailable()
         {
-            if (m_isDirty && m_OnTangoDepthAvailable != null)
+            if (m_isDirty && OnTangoDepthAvailable != null)
             {
                 lock (m_lockObject)
                 {
-                    m_OnTangoDepthAvailable(m_tangoDepth);
+                    OnTangoDepthAvailable(m_tangoDepth);
                 }
                 m_isDirty = false;
             }
         }
 
         /// <summary>
-        /// Registers the on tango depth available.
+        /// Register a Unity main thread handler for the Tango depth event.
         /// </summary>
-        /// <param name="handler">Handler.</param>
-        public void RegisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
+        /// <param name="handler">Event handler to register.</param>
+        internal void RegisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
         {
             if (handler != null)
             {
-                m_OnTangoDepthAvailable += handler;
+                OnTangoDepthAvailable += handler;
             }
         }
 
         /// <summary>
-        /// Unregisters the on tango depth available.
+        /// Unregisters a Unity main thread handler for the Tango depth event.
         /// </summary>
-        /// <param name="handler">Handler.</param>
-        public void UnregisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
+        /// <param name="handler">Event handler to unregister.</param>
+        internal void UnregisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
         {
             if (handler != null)
             {
-                m_OnTangoDepthAvailable -= handler;
+                OnTangoDepthAvailable -= handler;
             }
         }
 
         /// <summary>
-        /// Callback that gets called when depth is available
+        /// DEPRECATED: Callback that gets called when depth is available
         /// from the Tango Service.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>

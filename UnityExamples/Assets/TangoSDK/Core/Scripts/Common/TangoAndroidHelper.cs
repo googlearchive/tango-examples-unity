@@ -1,86 +1,96 @@
-﻿/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-using UnityEngine;
+﻿//-----------------------------------------------------------------------
+// <copyright file="TangoAndroidHelper.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
 using System.Collections;
+using UnityEngine;
 
 /// <summary>
-/// Helper functions for common android functionality.
+/// Misc Android related utilities provided by the Tango CoreSDK.
 /// </summary>
 public partial class AndroidHelper
 {
     /// <summary>
-    /// Holds the current and default offset of the
-    /// current Tango device.
+    /// Holds the current and default orientation of the device.
     /// </summary>
     public struct TangoDeviceOrientation
     {
+        /// <summary>
+        /// The default orientation of the device.  This is the "natural" way to hold this device.
+        /// </summary>
         public DeviceOrientation defaultRotation;
+
+        /// <summary>
+        /// The current orientation of the device.
+        /// </summary>
         public DeviceOrientation currentRotation;
     }
 
     private const string PERMISSION_REQUESTER = "com.projecttango.permissionrequester.RequestManagerActivity";
 
-    #pragma warning disable 414
+#if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject m_tangoHelper = null;
-    #pragma warning restore 414
-    
+#endif
+
     /// <summary>
     /// Gets the Java tango helper object.
     /// </summary>
     /// <returns>The tango helper object.</returns>
     public static AndroidJavaObject GetTangoHelperObject()
     {
-        #if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
         if(m_tangoHelper == null)
         {
             m_tangoHelper = new AndroidJavaObject("com.projecttango.unity.TangoUnityHelper", GetUnityActivity());
         }
         return m_tangoHelper;
-        #else
+#else
         return null;
-        #endif
+#endif
     }
     
     /// <summary>
-    /// Starts the tango permissions activity of the provided type.
+    /// Start the Tango permissions activity, requesting that permission.
     /// </summary>
-    /// <param name="permissionsType">Permissions type.</param>
+    /// <param name="permissionsType">String for the permission to request.</param>
     public static void StartTangoPermissionsActivity(string permissionsType)
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
         
-        if(unityActivity != null)
+        if (unityActivity != null)
         {
             int requestCode = 0;
             string[] args = new string[1];
-            
-            if(permissionsType == Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS)
+
+            if (permissionsType == Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS)
             {
                 requestCode = Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE;
                 args[0] = "PERMISSIONTYPE:" + Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS;
             }
-            else if(permissionsType == Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS)
+            else if (permissionsType == Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS)
             {
                 requestCode = Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE;
                 args[0] = "PERMISSIONTYPE:" + Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS;
             }
             
-            if(requestCode != 0)
+            if (requestCode != 0)
             {
-                unityActivity.Call("LaunchIntent", "com.projecttango.tango", "com.google.atap.tango.RequestPermissionActivity", args, requestCode);
+                unityActivity.Call("launchIntent", "com.projecttango.tango", "com.google.atap.tango.RequestPermissionActivity", args, requestCode);
             }
             else
             {
@@ -88,15 +98,16 @@ public partial class AndroidHelper
             }
         }
     }
-    
+
     /// <summary>
-    /// Determines if the application has Tango permissions.
+    /// Check if the application has a Tango permission.
     /// </summary>
-    /// <returns><c>true</c> if application has tango permissions; otherwise, <c>false</c>.</returns>
+    /// <param name="permissionType">String for the permission.</param>
+    /// <returns><c>true</c> if application has the permission; otherwise, <c>false</c>.</returns>
     public static bool ApplicationHasTangoPermissions(string permissionType)
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
-        if(tangoObject != null)
+        if (tangoObject != null)
         {
             return tangoObject.Call<bool>("hasPermission", permissionType);
         }
@@ -105,9 +116,9 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Gets the current and default device orientation.
+    /// Get the devices current and default orientations.
     /// </summary>
-    /// <returns>The current and default tango device orientation.</returns>
+    /// <returns>The current and default orientations.</returns>
     public static TangoDeviceOrientation GetTangoDeviceOrientation()
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
@@ -115,7 +126,7 @@ public partial class AndroidHelper
         deviceOrientation.defaultRotation = DeviceOrientation.Unknown;
         deviceOrientation.currentRotation = DeviceOrientation.Unknown;
 
-        if(tangoObject != null)
+        if (tangoObject != null)
         {
             AndroidJavaObject rotationInfo = tangoObject.Call<AndroidJavaObject>("showTranslatedOrientation");
 
@@ -127,16 +138,16 @@ public partial class AndroidHelper
     }
     
     /// <summary>
-    /// Determines if is tango core present.
+    /// Check if the Tango Core package is installed.
     /// </summary>
-    /// <returns><c>true</c> if is tango core present; otherwise, <c>false</c>.</returns>
+    /// <returns><c>true</c> if the package is installed; otherwise, <c>false</c>.</returns>
     public static bool IsTangoCorePresent()
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
         
-        if(unityActivity != null)
+        if (unityActivity != null)
         {
-            if(GetPackageInfo("com.projecttango.tango") != null)
+            if (GetPackageInfo("com.projecttango.tango") != null)
             {
                 return true;
             }
