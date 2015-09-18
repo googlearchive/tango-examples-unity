@@ -1,6 +1,11 @@
-Project Tango UnitySDK Example Project
+Project Tango UnitySDK Examples
 ===========================================
 Copyright (C) 2015 Google Inc.
+
+<h2>Useful Websites</h2>
+SDK Download - https://developers.google.com/project-tango/downloads
+
+Developer Website - https://developers.google.com/project-tango/apis/unity
 
 <h2>Contents</h2>
 
