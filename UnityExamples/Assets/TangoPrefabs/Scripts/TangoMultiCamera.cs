@@ -51,7 +51,13 @@ public class TangoMultiCamera : MonoBehaviour
     /// The default camera type.
     /// </summary>
     public CameraType m_defaultCameraType = CameraType.FirstPerson;
-    
+
+    // UI fields.
+    public const float UI_BUTTON_SIZE_X = 125.0f;
+    public const float UI_BUTTON_SIZE_Y = 65.0f;
+    public const float UI_BUTTON_GAP_X = 5.0f;
+    public const float UI_BUTTON_GAP_Y = 3.0f;
+
     /// <summary>
     /// Scaling factor when doing a pinch to zoom gesture.
     /// </summary>
@@ -292,26 +298,26 @@ public class TangoMultiCamera : MonoBehaviour
             return;
         }
 
-        if (GUI.Button(new Rect(Screen.width - Common.UI_BUTTON_SIZE_X - Common.UI_BUTTON_GAP_X, 
-                                Screen.height - ((Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y) * 3),
-                                Common.UI_BUTTON_SIZE_X, 
-                                Common.UI_BUTTON_SIZE_Y),
+        if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
+                                Screen.height - ((UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y) * 3),
+                                UI_BUTTON_SIZE_X, 
+                                UI_BUTTON_SIZE_Y),
                        "<size=20>First</size>"))
         {
             EnableCamera(CameraType.FirstPerson);
         }
-        if (GUI.Button(new Rect(Screen.width - Common.UI_BUTTON_SIZE_X - Common.UI_BUTTON_GAP_X, 
-                                Screen.height - ((Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y) * 2),
-                                Common.UI_BUTTON_SIZE_X, 
-                                Common.UI_BUTTON_SIZE_Y),
+        if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
+                                Screen.height - ((UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y) * 2),
+                                UI_BUTTON_SIZE_X, 
+                                UI_BUTTON_SIZE_Y),
                        "<size=20>Third</size>"))
         {
             EnableCamera(CameraType.ThirdPerson);
         }
-        if (GUI.Button(new Rect(Screen.width - Common.UI_BUTTON_SIZE_X - Common.UI_BUTTON_GAP_X, 
-                                Screen.height - (Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y),
-                                Common.UI_BUTTON_SIZE_X, 
-                                Common.UI_BUTTON_SIZE_Y),
+        if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
+                                Screen.height - (UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y),
+                                UI_BUTTON_SIZE_X, 
+                                UI_BUTTON_SIZE_Y),
                        "<size=20>Top</size>"))
         {
             EnableCamera(CameraType.TopDown);

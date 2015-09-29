@@ -75,10 +75,10 @@ public class AreaLearningFPSCounter : MonoBehaviour
             Color oldColor = GUI.color;
             GUI.color = Color.black;
             
-            GUI.Label(new Rect(Common.UI_LABEL_START_X, 
-                               Common.UI_FPS_LABEL_START_Y, 
-                               Common.UI_LABEL_SIZE_X, 
-                               Common.UI_LABEL_SIZE_Y), Common.UI_FONT_SIZE + m_FPSText + "</size>");
+            GUI.Label(new Rect(AreaLearningGUIController.UI_LABEL_START_X, 
+                               AreaLearningGUIController.UI_FPS_LABEL_START_Y, 
+                               AreaLearningGUIController.UI_LABEL_SIZE_X, 
+                               AreaLearningGUIController.UI_LABEL_SIZE_Y), AreaLearningGUIController.UI_FONT_SIZE + m_FPSText + "</size>");
             
             GUI.color = oldColor;
         }

@@ -10,8 +10,8 @@
     {
         // Setting the z write off to make sure our video overlay is always rendered at back.
         ZWrite Off
-        
-        Tags { "Queue" = "Geometry" }
+        ZTest Off
+        Tags { "Queue" = "Background" }
         Pass 
         {
             GLSLPROGRAM

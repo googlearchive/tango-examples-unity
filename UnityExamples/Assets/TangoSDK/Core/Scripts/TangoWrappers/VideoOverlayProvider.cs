@@ -77,6 +77,47 @@ namespace Tango
         }
 
         /// <summary>
+        /// Update the texture that has been connected to camera referenced by TangoCameraId with the latest image
+        /// from the camera.
+        /// </summary>
+        /// <returns>The timestamp of the image that has been pushed to the connected texture.</returns>
+        /// <param name="cameraId">
+        /// The ID of the camera to connect this texture to.  Only <code>TANGO_CAMERA_COLOR</code> and
+        /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
+        /// </param>
+        public static double RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
+        {
+            double timestamp = 0.0;
+            int returnValue = VideoOverlayAPI.TangoService_updateTexture(cameraId, ref timestamp);
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log("VideoOverlayProvider.UpdateTexture() Texture was not updated by camera!");
+            }
+            
+            return timestamp;
+        }
+
+        /// <summary>
+        /// Get the intrinsic calibration parameters for a given camera.
+        /// 
+        /// The intrinsics are as specified by the TangoCameraIntrinsics struct.  Intrinsics are read from the
+        /// on-device intrinsics file (typically <code>/sdcard/config/calibration.xml</code>, but to ensure 
+        /// compatibility applications should only access these parameters via the API), or default internal model 
+        /// parameters corresponding to the device are used if the calibration.xml file is not found.
+        /// </summary>
+        /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
+        /// <param name="intrinsics">A TangoCameraIntrinsics filled with calibration intrinsics for the camera.</param>
+        public static void GetIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
+        {
+            int returnValue = VideoOverlayAPI.TangoService_getCameraIntrinsics(cameraId, intrinsics);
+            
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log("IntrinsicsProviderAPI.TangoService_getCameraIntrinsics() failed!");
+            }
+        }
+
+        /// <summary>
         /// Experimental API only, subject to change.  Connect a Texture IDs to a camera.
         /// 
         /// The camera is selected via TangoCameraId.  Currently only TANGO_CAMERA_COLOR is supported.  The texture
@@ -109,47 +150,6 @@ namespace Tango
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("VideoOverlayProvider.ConnectTexture() Texture was not connected to camera!");
-            }
-        }
-
-        /// <summary>
-        /// Update the texture that has been connected to camera referenced by TangoCameraId with the latest image
-        /// from the camera.
-        /// </summary>
-        /// <returns>The timestamp of the image that has been pushed to the connected texture.</returns>
-        /// <param name="cameraId">
-        /// The ID of the camera to connect this texture to.  Only <code>TANGO_CAMERA_COLOR</code> and
-        /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
-        /// </param>
-        public static double RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
-        {
-            double timestamp = 0.0;
-            int returnValue = VideoOverlayAPI.TangoService_updateTexture(cameraId, ref timestamp);
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log("VideoOverlayProvider.UpdateTexture() Texture was not updated by camera!");
-            }
-
-            return timestamp;
-        }
-        
-        /// <summary>
-        /// Get the intrinsic calibration parameters for a given camera.
-        /// 
-        /// The intrinsics are as specified by the TangoCameraIntrinsics struct.  Intrinsics are read from the
-        /// on-device intrinsics file (typically <code>/sdcard/config/calibration.xml</code>, but to ensure 
-        /// compatibility applications should only access these parameters via the API), or default internal model 
-        /// parameters corresponding to the device are used if the calibration.xml file is not found.
-        /// </summary>
-        /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
-        /// <param name="intrinsics">A TangoCameraIntrinsics filled with calibration intrinsics for the camera.</param>
-        public static void GetIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
-        {
-            int returnValue = VideoOverlayAPI.TangoService_getCameraIntrinsics(cameraId, intrinsics);
-            
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log("IntrinsicsProviderAPI.TangoService_getCameraIntrinsics() failed!");
             }
         }
 

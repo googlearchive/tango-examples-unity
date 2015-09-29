@@ -35,7 +35,9 @@ namespace Tango
     {
         private TangoEvents.TangoService_onEventAvailable m_onEventAvaialableCallback;
         private OnTangoEventAvailableEventHandler m_onTangoEventAvailable;
-        private TangoEvent m_previousEvent;
+        private OnTangoEventAvailableEventHandler m_onTangoEventMultithreadedAvailable;
+        private TangoEvent m_tangoEvent;
+        private System.Object m_lockObject = new System.Object();
         private bool m_isDirty;
 
         /// <summary>
@@ -48,7 +50,7 @@ namespace Tango
         {
             m_onEventAvaialableCallback = new TangoEvents.TangoService_onEventAvailable(_onEventAvailable);
             TangoEvents.SetCallback(m_onEventAvaialableCallback);
-            m_previousEvent = new TangoEvent();
+            m_tangoEvent = new TangoEvent();
             m_isDirty = false;
         }
 
@@ -57,14 +59,13 @@ namespace Tango
         /// </summary>
         internal void SendIfTangoEventAvailable()
         {
-            if (m_isDirty)
+            if (m_isDirty && m_onTangoEventAvailable != null)
             {
-                if (m_onTangoEventAvailable != null)
+                lock (m_lockObject)
                 {
-                    m_onTangoEventAvailable(m_previousEvent);
+                    m_onTangoEventAvailable(m_tangoEvent);
                 }
-
-                m_isDirty = true;
+                m_isDirty = false;
             }
         }
 
@@ -93,20 +94,51 @@ namespace Tango
         }
 
         /// <summary>
-        /// DEPRECATED: Handle the callback sent by the Tango Service
-        /// when a new event is issued.
+        /// Register a multithread handler for Tango events.
+        /// </summary>
+        /// <param name="handler">Event handler to register.</param>
+        internal void RegisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
+        {
+            if (handler != null)
+            {
+                m_onTangoEventMultithreadedAvailable += handler;
+            }
+        }
+
+        /// <summary>
+        /// Unregister a multithread handler for the Tango depth event.
+        /// </summary>
+        /// <param name="handler">Event handler to unregister.</param>
+        internal void UnregisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
+        {
+            if (handler != null)
+            {
+                m_onTangoEventMultithreadedAvailable -= handler;
+            }
+        }
+
+        /// <summary>
+        /// Handle the callback sent by the Tango Service when a new event is issued.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="tangoEvent">Tango event.</param>
-        protected void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+        private void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
         {
             if (tangoEvent != null)
             {
-                m_previousEvent.timestamp = tangoEvent.timestamp;
-                m_previousEvent.type = tangoEvent.type;
-                m_previousEvent.event_key = tangoEvent.event_key;
-                m_previousEvent.event_value = tangoEvent.event_value;
-                m_isDirty = true;
+                if (m_onTangoEventMultithreadedAvailable != null)
+                {
+                    m_onTangoEventMultithreadedAvailable(tangoEvent);
+                }
+
+                lock (m_lockObject)
+                {
+                    m_tangoEvent.timestamp = tangoEvent.timestamp;
+                    m_tangoEvent.type = tangoEvent.type;
+                    m_tangoEvent.event_key = tangoEvent.event_key;
+                    m_tangoEvent.event_value = tangoEvent.event_value;
+                    m_isDirty = true;
+                }
             }
         }
     }

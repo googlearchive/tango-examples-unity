@@ -28,6 +28,8 @@ public class SceneSwitcher : MonoBehaviour
 {
     private const int SCENE_BUTTON_SIZE_X = 250;
     private const int SCENE_BUTTON_SIZE_Y = 65;
+    private const int SCENE_BUTTON_GAP_X = 5;
+    private const int SCENE_BUTTON_GAP_Y = 3;
 
     /// <summary>
     /// The names of all the scenes this can switch between.
@@ -46,8 +48,8 @@ public class SceneSwitcher : MonoBehaviour
     {
         for (int it = 0; it < m_sceneNames.Length; ++it)
         {
-            Rect buttonRect = new Rect(Screen.width - Common.UI_BUTTON_GAP_X - SCENE_BUTTON_SIZE_X,
-                                       Common.UI_LABEL_GAP_Y + ((Common.UI_LABEL_GAP_Y + SCENE_BUTTON_SIZE_Y) * it),
+            Rect buttonRect = new Rect(Screen.width - SCENE_BUTTON_GAP_X - SCENE_BUTTON_SIZE_X,
+                                       SCENE_BUTTON_GAP_Y + ((SCENE_BUTTON_GAP_Y + SCENE_BUTTON_SIZE_Y) * it),
                                        SCENE_BUTTON_SIZE_X,
                                        SCENE_BUTTON_SIZE_Y);
             if (GUI.Button(buttonRect, "<size=20>" + m_sceneNames[it] + "</size>"))

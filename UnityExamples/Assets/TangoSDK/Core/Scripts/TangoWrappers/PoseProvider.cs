@@ -93,21 +93,6 @@ namespace Tango
         }
         
         /// <summary>
-        /// DEPRECATED: Sets the listener coordinate frame pairs.
-        /// </summary>
-        /// <param name="count">Count.</param>
-        /// <param name="frames">Frames.</param>
-        public static void SetListenerCoordinateFramePairs(int count,
-                                                           ref TangoCoordinateFramePair frames)
-        {
-            int returnValue = PoseProviderAPI.TangoService_setPoseListenerFrames(count, ref frames);
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log(CLASS_NAME + ".SetListenerCoordinateFramePairs() Could not set frame pairs");
-            }
-        }
-        
-        /// <summary>
         /// Resets the motion tracking system.
         /// 
         /// This reinitializes the <code>TANGO_COORDINATE_FRAME_START_OF_SERVICE</code> coordinate frame to where the

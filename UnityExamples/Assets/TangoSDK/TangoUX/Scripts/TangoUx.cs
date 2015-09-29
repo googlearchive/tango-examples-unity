@@ -19,7 +19,7 @@ using System.Collections;
 namespace Tango
 {
     [RequireComponent(typeof(TangoApplication))]
-    public class TangoUx : MonoBehaviour, ITangoPose, ITangoEvent, ITangoDepth
+    public class TangoUx : MonoBehaviour, ITangoPose, ITangoEventMultithreaded, ITangoDepth
     {
         public bool m_enableUXLibrary = true;
         public bool m_drawDefaultUXExceptions = true;
@@ -103,7 +103,7 @@ namespace Tango
         /// Raises the tango event available event handler event.
         /// </summary>
         /// <param name="tangoEvent">Tango event.</param>
-        public void OnTangoEventAvailableEventHandler(Tango.TangoEvent tangoEvent)
+        public void OnTangoEventMultithreadedAvailableEventHandler(Tango.TangoEvent tangoEvent)
         {
             if(m_enableUXLibrary)
             {

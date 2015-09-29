@@ -329,8 +329,9 @@ public class ARScreen : MonoBehaviour
     }
 
     /// <summary>
-    /// Create a projection matrix from window size, camera intrinsics, and clip settings.
+    /// Compute a projection matrix from window size, camera intrinsics, and clip settings.
     /// </summary>
+    /// <returns>Projection matrix.</returns>
     /// <param name="width">The width of the camera image.</param>
     /// <param name="height">The height of the camera image.</param> 
     /// <param name="fx">The x-axis focal length of the camera.</param> 
@@ -342,42 +343,44 @@ public class ARScreen : MonoBehaviour
     private Matrix4x4 ProjectionMatrixForCameraIntrinsics(float width, float height,
                                                           float fx, float fy,
                                                           float cx, float cy,
-                                                          float near, float far) {
+                                                          float near, float far)
+    {
         float xscale = near / fx;
         float yscale = near / fy;
         
-        float xoffset =  (cx - (width  / 2.0f)) * xscale;
+        float xoffset = (cx - (width  / 2.0f)) * xscale;
+
         // OpenGL coordinates has y pointing downwards so we negate this term.
         float yoffset = -(cy - (height / 2.0f)) * yscale;
         
-        return  Frustum(xscale * -width  / 2.0f - xoffset,
-                        xscale *  width  / 2.0f - xoffset,
-                        yscale * -height / 2.0f - yoffset,
-                        yscale *  height / 2.0f - yoffset,
-                        near, far);
+        return Frustum((xscale * -width / 2.0f) - xoffset,
+                       (xscale * +width / 2.0f) - xoffset,
+                       (yscale * -height / 2.0f) - yoffset,
+                       (yscale * +height / 2.0f) - yoffset,
+                       near, far);
     }
 
     /// <summary>
-    /// This is function compute the projection matrix based on frustum size.
+    /// Compute a projection matrix for a frustum.
+    /// 
     /// This function's implementation is same as glFrustum.
     /// </summary>
+    /// <returns>Projection matrix.</returns>
     /// <param name="left">Specify the coordinates for the left vertical clipping planes.</param>
     /// <param name="right">Specify the coordinates for the right vertical clipping planes.</param> 
     /// <param name="bottom">Specify the coordinates for the bottom horizontal clipping planes.</param> 
     /// <param name="top">Specify the coordinates for the top horizontal clipping planes.</param> 
     /// <param name="zNear">Specify the distances to the near depth clipping planes. Both distances must be positive.</param> 
-    /// <param name="zFar">Specify the distances to the far depth clipping planes. Both distances must be positive.</param> 
-    private Matrix4x4 Frustum(float left,
-                      float right,
-                      float bottom,
-                      float top,
-                      float zNear,
-                      float zFar) {
+    /// <param name="zFar">Specify the distances to the far depth clipping planes. Both distances must be positive.</param>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
+                                                     Justification = "Matrix visibility is more important.")]
+    private Matrix4x4 Frustum(float left, float right, float bottom, float top, float zNear, float zFar)
+    {
         Matrix4x4 m = new Matrix4x4();
-        m.SetRow(0, new Vector4(2.0f * zNear / (right - left), 0.0f,                         (right + left) / (right - left) , 0.0f));
-        m.SetRow(1, new Vector4(0.0f,                          2.0f * zNear/ (top - bottom), (top + bottom) / (top - bottom) , 0.0f));
-        m.SetRow(2, new Vector4(0.0f,                          0.0f,                         -(zFar + zNear) / (zFar - zNear), -(2 * zFar * zNear) / (zFar - zNear)));
-        m.SetRow(3, new Vector4(0.0f,                          0.0f,                         -1.0f, 0.0f));
+        m.SetRow(0, new Vector4(2.0f * zNear / (right - left), 0.0f,                          (right + left) / (right - left) , 0.0f));
+        m.SetRow(1, new Vector4(0.0f,                          2.0f * zNear / (top - bottom), (top + bottom) / (top - bottom) , 0.0f));
+        m.SetRow(2, new Vector4(0.0f,                          0.0f,                          -(zFar + zNear) / (zFar - zNear), -(2 * zFar * zNear) / (zFar - zNear)));
+        m.SetRow(3, new Vector4(0.0f,                          0.0f,                          -1.0f,                            0.0f));
         return m;
     }
 }
