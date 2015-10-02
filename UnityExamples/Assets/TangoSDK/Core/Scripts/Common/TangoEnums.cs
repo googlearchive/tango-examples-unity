@@ -225,6 +225,11 @@ namespace Tango
             TANGO_CONFIG_AREA_LEARNING,
 
             /// <summary>
+            /// Runtime configuration parameters.
+            /// </summary>
+            TANGO_CONFIG_RUNTIME,
+
+            /// <summary>
             /// Maximum number allowable.
             /// </summary>
             TANGO_MAX_CONFIG_TYPE
@@ -264,6 +269,22 @@ namespace Tango
             /// YCrCb 4:2:0 Planar.
             /// </summary>
             TANGO_HAL_PIXEL_FORMAT_YV12 = 0x32315659  
+        }
+
+        /// <summary>
+        /// Depth camera rates.
+        /// </summary>
+        public enum TangoDepthCameraRate
+        {
+            /// <summary>
+            /// Disable the depth camera entirely.
+            /// </summary>
+            DISABLED,
+
+            /// <summary>
+            /// The maximum depth camera rate supported.  This is 5 on the Tango tablet.
+            /// </summary>
+            MAXIMUM,
         }
     }
 }

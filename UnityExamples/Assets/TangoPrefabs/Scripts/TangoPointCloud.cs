@@ -31,6 +31,14 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// If set, the point cloud's mesh gets updated (much slower, useful for debugging).
     /// </summary>
     public bool m_updatePointsMesh;
+    
+    /// <summary>
+    /// If set, m_updatePointsMesh also gets set at start. Then PointCloud material's renderqueue is set to background
+    /// (which is same as YUV2RGB Shader) so that PointCloud data gets written to Z buffer for Depth test with virtual
+    /// objects in scene. Note this is a very rudimentary way of doing occlusion and limited by the capabilities of
+    /// depth camera.
+    /// </summary>
+    public bool m_enableOcclusion;
 
     /// <summary>
     /// The points of the point cloud, in world space.
@@ -63,6 +71,16 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// </summary>
     private const int MAX_POINT_COUNT = 61440;
     
+    /// <summary>
+    /// The Background renderqueue's number.
+    /// </summary>
+    private const int BACKGROUND_RENDER_QUEUE = 1000;
+
+    /// <summary>
+    /// Point size of PointCloud data when projected on to image plane.
+    /// </summary>
+    private const int POINTCLOUD_SPLATTER_UPSAMPLE_SIZE = 30;
+
     private TangoApplication m_tangoApplication;
     
     // Matrices for transforming pointcloud to world coordinates.
@@ -108,6 +126,13 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
         m_renderer = GetComponent<Renderer>();
         m_rand = new System.Random();
+        if (m_enableOcclusion) 
+        {
+            m_renderer.enabled = true;
+            m_renderer.material.renderQueue = BACKGROUND_RENDER_QUEUE;
+            m_renderer.material.SetFloat("point_size", POINTCLOUD_SPLATTER_UPSAMPLE_SIZE);
+            m_updatePointsMesh = true;
+        }
     }
     
     /// <summary>

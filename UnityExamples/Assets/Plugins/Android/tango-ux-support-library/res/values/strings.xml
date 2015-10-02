@@ -23,36 +23,45 @@
     <string name="moving_too_fast_title">Too fast.</string>
     <string name="moving_too_fast_description">Slow down and hold device steady.</string>
 
-    <string name="unable_to_detect_surface_title">Few depth points.</string>
-    <string name="unable_to_detect_surface_description">Keep objects to be scanned in the range of 0.5 &#8211; 4 meters.</string>
-    
+    <string name="unable_to_detect_surface_title">Nothing detected.</string>
+    <string name="unable_to_detect_surface_description">Keep the device at least an arm’s length from objects.</string>
+
 	<string name="space_not_recognized_title">Space not recognized.</string>
-    <string name="space_not_recognized_description">Avoid pointing at environments with few features.</string>
+    <string name="space_not_recognized_description">Point the device somewhere else.</string>
+
+    <string name="not_enough_light_title">Too dark.</string>
+    <string name="not_enough_light_description">Use the device in well-lit areas.</string>
     
-    <string name="not_enough_light_title">Not enough light.</string>
-    <string name="not_enough_light_description">Make sure nothing is blocking camera or light.</string>
-    
-    <string name="too_much_light_title">Too much light.</string>
+    <string name="too_much_light_title">Too bright.</string>
     <string name="too_much_light_description">Avoid pointing at bright lights.</string>
     
-    <string name="device_not_responding_title">Tango Service Crash.</string>
-    <string name="device_not_responding_description">Exit the application or reboot your device.</string>
+    <string name="device_not_responding_title">System unavailable.</string>
+    <string name="device_not_responding_description">Restart the app or reboot the device.</string>
     
-    <string name="service_updated_title">Library Mismatch.</string>
-    <string name="service_updated_description">Update your Tango Service to the latest version.</string>
+    <string name="service_updated_title">Incompatible version.</string>
+    <string name="service_updated_description">Update to the latest Project Tango Core.</string>
 
-    <string name="lying_on_surface_title">Lying on surface.</string>
+    <string name="lying_on_surface_title">Camera blocked.</string>
     <string name="lying_on_surface_description">Pick up the device to continue.</string>
     
-	<string name="motion_track_title">Motion Tracking lost.</string>
-    <string name="motion_track_description">Hold steady and wait for system to recover.</string>
+	<string name="motion_track_title">Tracking lost.</string>
+    <string name="motion_track_description">Hold steady to let the system recover.</string>
     
-	<string name="run_time_mismatch_title">Runtime Mismatch.</string>
-    <string name="run_time_mismatch_description">Go to system setting and use ART as runtime.</string>
+	<string name="run_time_mismatch_title">Incorrect configuration.</string>
+    <string name="run_time_mismatch_description">Go to Settings > Developer options and select “Use ART”.</string>
 
+    <string name="hold_posture_title">Incorrect tilt.</string>
+    <string name="hold_posture_description">Point the device %s.</string>
+    
     <string name="action_required">Action required</string>
     
     <!-- Connection Layout -->
-    <string name="connection_layout_message">Hold steady</string>
+    <string name="connection_layout_message_still">Hold still</string>
+    <string name="connection_layout_message_tight">Hold tight</string>
+
+    <!-- Hold postures -->
+    <string name="hold_posture_forward">forward</string>
+    <string name="hold_posture_up">up</string>
+    <string name="hold_posture_down">down</string>
 
 </resources>

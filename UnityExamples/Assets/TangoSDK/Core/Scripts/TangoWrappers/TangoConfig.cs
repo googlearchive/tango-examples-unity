@@ -29,7 +29,7 @@ namespace Tango
     /// <summary>
     /// C API wrapper for Tango Configuration Parameters.
     /// </summary>
-    internal class TangoConfig
+    internal sealed class TangoConfig : IDisposable
     {
         #region Attributes
         /// <summary>
@@ -58,76 +58,88 @@ namespace Tango
             // Utility
             public static readonly string ENABLE_DATASET_RECORDING = "config_enable_dataset_recording";
             public static readonly string GET_TANGO_SERVICE_VERSION_STRING = "tango_service_library_version";
+
+            // Runtime configs
+            public static readonly string RUNTIME_DEPTH_FRAMERATE = "config_runtime_depth_framerate";
         }
 
         private const string m_FailedConversionFormat = "Failed to convert object to generic type : {0}. Reverting to default.";
         private const string m_ErrorLogFormat = "{0}.{1}() Was unable to set key: {2} with value: {3}";
         private const string m_ConfigErrorFormat = "{0}.{1}() Invalid TangoConfig, make sure Tango Config is initialized properly.";
-        private static readonly string CLASS_NAME = "TangoConfig.";
+        private static readonly string CLASS_NAME = "TangoConfig";
         private static readonly string NO_CONFIG_FOUND = "No config file found.";
-        private static IntPtr m_tangoConfig = IntPtr.Zero;
+
+        /// <summary>
+        /// Pointer to the TangoConfig.
+        /// </summary>
+        private IntPtr m_configHandle;
 
         /// <summary>
         /// Delegate for internal API call that sets a config option.
         /// 
-        /// This matches the signature of TangoConfig_setBool, TangoConfig_Double, etc. 
+        /// This matches the signature of TangoConfig_setBool, TangoConfig_setDouble, etc. 
         /// </summary>
-        /// <param name="obj1">C pointer to a TangoConfig.</param>
-        /// <param name="obj2">Key we want to modify.</param>
-        /// <param name="obj3">Value to set, of the correct type.</param>
+        /// <param name="configHandle">TangoConfig handle.</param>
+        /// <param name="key">Key we want to modify.</param>
+        /// <param name="val">Value to set, of the correct type.</param>
         /// <returns>
         /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
         /// not be set.
         /// </returns>
-        private delegate int ConfigAPIDelegate<T>(IntPtr obj1, string obj2, T obj3);
+        private delegate int ConfigAPISetter<T>(IntPtr configHandle, string key, T val);
+
+        /// <summary>
+        /// Delegate for internal API call that gets a config option.
+        /// 
+        /// This matches the signature of TangoConfig_getBool, TangoConfig_getDouble, etc. 
+        /// </summary>
+        /// <param name="configHandle">TangoConfig handle.</param>
+        /// <param name="key">Key we want to get.</param>
+        /// <param name="val">Upon success, the value of for key.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
+        /// not be set.
+        /// </returns>
+        private delegate int ConfigAPIGetter<T>(IntPtr configHandle, string key, ref T val);
         #endregion
 
         /// <summary>
-        /// Gets the cached C pointer to a TangoConfig.
+        /// Create a new TangoConfig.
         /// 
-        /// This pointer is updated by calling InitConfig.
-        /// </summary>
-        /// <returns>C pointer to a Tango config.</returns>
-        internal static IntPtr GetConfig()
-        {
-            return m_tangoConfig;
-        }
-
-        /// <summary>
-        /// Update the cached C pointer to a TangoConfig.
-        /// 
-        /// This should be used to initialize a Config object for setting the configuration that TangoService should
-        /// be run in. The Config handle is passed to TangoService_connect() which starts the service running with
-        /// the parameters set at that time in that TangoConfig handle.  This function can be used to find the current
+        /// A TangoConfig is passed to TangoService_connect() which starts the service running with
+        /// the parameters set at that time in that TangoConfig.  This function can be used to find the current
         /// configuration of the service (i.e. what would be run if no config is specified on TangoService_connect()),
-        /// or to create one of a few "template" TangoConfigs.  The returned TangoConfig can be further modified by 
-        /// TangoConfig_set function calls.  The handle should be freed with Free().  The handle is needed 
-        /// only at the time of TangoService_connect() where it is used to configure the service, and can safely be
-        /// freed after it has been used in TangoService_connect().
+        /// or to create one of a few "template" TangoConfigs.
+        /// 
+        /// The class is needed only at the time of TangoService_connect() where it is used to configure the service
+        /// and can safely be disposed after it has been used in TangoService_connect().
         /// </summary>
         /// <param name="configType">The requested configuration type.</param>
-        internal static void InitConfig(TangoEnums.TangoConfigType configType)
+        public TangoConfig(TangoEnums.TangoConfigType configType)
         {
-            m_tangoConfig = TangoConfigAPI.TangoService_getConfig(configType);
-
-            // TODO : error check this!
+            m_configHandle = TangoConfigAPI.TangoService_getConfig(configType);
         }
 
         /// <summary>
-        /// Free a TangoConfig object.
-        /// 
-        /// Frees the TangoConfig object for the cached handle.
+        /// Releases all resource used by the <see cref="Tango.TangoConfig"/> object.
         /// </summary>
-        internal static void Free()
+        /// <remarks>Call <see cref="Dispose"/> when you are finished using the <see cref="Tango.TangoConfig"/>. The
+        /// <see cref="Dispose"/> method leaves the <see cref="Tango.TangoConfig"/> in an unusable state. After calling
+        /// <see cref="Dispose"/>, you must release all references to the <see cref="Tango.TangoConfig"/> so the garbage
+        /// collector can reclaim the memory that the <see cref="Tango.TangoConfig"/> was occupying.</remarks>
+        public void Dispose()
         {
-            if (m_tangoConfig != IntPtr.Zero)
+            if (m_configHandle != IntPtr.Zero)
             {
-                TangoConfigAPI.TangoConfig_free(m_tangoConfig);
-            } 
+                TangoConfigAPI.TangoConfig_free(m_configHandle);
+                m_configHandle = IntPtr.Zero;
+            }
             else
             {
                 Debug.Log(CLASS_NAME + ".Free() No allocated Tango Config found!");
             }
+
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
@@ -137,11 +149,11 @@ namespace Tango
         /// Note that many of these config values are read-only, unless otherwise documented.
         /// </summary>
         /// <returns>String representation of the cached configuration.</returns>
-        internal static string GetSettings()
+        internal string GetSettings()
         {
-            if (m_tangoConfig != IntPtr.Zero)
+            if (m_configHandle != IntPtr.Zero)
             {
-                return TangoConfigAPI.TangoConfig_toString(m_tangoConfig);
+                return TangoConfigAPI.TangoConfig_toString(m_configHandle);
             } 
             else
             {
@@ -150,14 +162,23 @@ namespace Tango
         }
 
         /// <summary>
+        /// Get the internal handle for this TangoConfig.
+        /// </summary>
+        /// <returns>The handle.</returns>
+        internal IntPtr GetHandle()
+        {
+            return m_configHandle;
+        }
+
+        /// <summary>
         /// Set a boolean configuration parameter.
         /// </summary>
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
         /// <param name="value">The value to set the configuration key to.</param>
-        internal static bool SetBool(string key, bool value)
+        internal bool SetBool(string key, bool value)
         {
-            return _ConfigHelperSet(new ConfigAPIDelegate<bool>(TangoConfigAPI.TangoConfig_setBool), m_tangoConfig, key, value, "SetBool");
+            return _ConfigHelperSet(new ConfigAPISetter<bool>(TangoConfigAPI.TangoConfig_setBool), key, value, "SetBool");
         }
 
         /// <summary>
@@ -166,9 +187,9 @@ namespace Tango
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
         /// <param name="value">The value to set the configuration key to.</param>
-        internal static bool SetInt32(string key, Int32 value)
+        internal bool SetInt32(string key, Int32 value)
         {
-            return _ConfigHelperSet(new ConfigAPIDelegate<Int32>(TangoConfigAPI.TangoConfig_setInt32), m_tangoConfig, key, value, "SetInt32");
+            return _ConfigHelperSet(new ConfigAPISetter<Int32>(TangoConfigAPI.TangoConfig_setInt32), key, value, "SetInt32");
         }
 
         /// <summary>
@@ -177,9 +198,9 @@ namespace Tango
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
         /// <param name="value">The value to set the configuration key to.</param>
-        internal static bool SetInt64(string key, Int64 value)
+        internal bool SetInt64(string key, Int64 value)
         {
-            return _ConfigHelperSet(new ConfigAPIDelegate<Int64>(TangoConfigAPI.TangoConfig_setInt64), m_tangoConfig, key, value, "SetInt64");
+            return _ConfigHelperSet(new ConfigAPISetter<Int64>(TangoConfigAPI.TangoConfig_setInt64), key, value, "SetInt64");
         }
 
         /// <summary>
@@ -188,9 +209,9 @@ namespace Tango
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
         /// <param name="value">The value to set the configuration key to.</param>
-        internal static bool SetDouble(string key, double value)
+        internal bool SetDouble(string key, double value)
         {
-            return _ConfigHelperSet(new ConfigAPIDelegate<double>(TangoConfigAPI.TangoConfig_setDouble), m_tangoConfig, key, value, "SetDouble");
+            return _ConfigHelperSet(new ConfigAPISetter<double>(TangoConfigAPI.TangoConfig_setDouble), key, value, "SetDouble");
         }
 
         /// <summary>
@@ -199,9 +220,9 @@ namespace Tango
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
         /// <param name="value">The value to set the configuration key to.</param>
-        internal static bool SetString(string key, string value)
+        internal bool SetString(string key, string value)
         {
-            return _ConfigHelperSet(new ConfigAPIDelegate<string>(TangoConfigAPI.TangoConfig_setString), m_tangoConfig, key, value, "SetString");
+            return _ConfigHelperSet(new ConfigAPISetter<string>(TangoConfigAPI.TangoConfig_setString), key, value, "SetString");
         }
 
         /// <summary>
@@ -210,20 +231,9 @@ namespace Tango
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
         /// <param name="value">On successful return, the value of the configuration key.</param>
-        internal static bool GetBool(string key, ref bool value)
+        internal bool GetBool(string key, ref bool value)
         {
-            bool wasSuccess = false;
-            if (m_tangoConfig != IntPtr.Zero)
-            {
-                wasSuccess = TangoConfigAPI.TangoConfig_getBool(m_tangoConfig, key, ref value) == Common.ErrorType.TANGO_SUCCESS;
-            }
-            if (!wasSuccess)
-            {
-#if UNITY_ANDROID && !UNITY_EDITOR
-                Debug.LogWarning(string.Format(m_ErrorLogFormat, "GetBool", key, false));
-#endif
-            }
-            return wasSuccess;
+            return _ConfigHelperGet(new ConfigAPIGetter<bool>(TangoConfigAPI.TangoConfig_getBool), key, ref value, "GetBool");
         }
 
         /// <summary>
@@ -232,18 +242,9 @@ namespace Tango
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
         /// <param name="value">On successful return, the value of the configuration key.</param>
-        internal static bool GetInt32(string key, ref Int32 value)
+        internal bool GetInt32(string key, ref Int32 value)
         {
-            bool wasSuccess = false;
-            if (m_tangoConfig != IntPtr.Zero)
-            {
-                wasSuccess = TangoConfigAPI.TangoConfig_getInt32(m_tangoConfig, key, ref value) == Common.ErrorType.TANGO_SUCCESS;
-            }
-            if (!wasSuccess)
-            {
-                Debug.Log(string.Format(m_ErrorLogFormat, "GetInt32", key, value));
-            }
-            return wasSuccess;
+            return _ConfigHelperGet(new ConfigAPIGetter<Int32>(TangoConfigAPI.TangoConfig_getInt32), key, ref value, "GetInt32");
         }
 
         /// <summary>
@@ -252,18 +253,9 @@ namespace Tango
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
         /// <param name="value">On successful return, the value of the configuration key.</param>
-        internal static bool GetInt64(string key, ref Int64 value)
+        internal bool GetInt64(string key, ref Int64 value)
         {
-            bool wasSuccess = false;
-            if (m_tangoConfig != IntPtr.Zero)
-            {
-                wasSuccess = TangoConfigAPI.TangoConfig_getInt64(m_tangoConfig, key, ref value) == Common.ErrorType.TANGO_SUCCESS;
-            }
-            if (!wasSuccess)
-            {
-                Debug.Log(string.Format(m_ErrorLogFormat, "GetInt64", key, value));
-            }
-            return wasSuccess;
+            return _ConfigHelperGet(new ConfigAPIGetter<Int64>(TangoConfigAPI.TangoConfig_getInt64), key, ref value, "GetInt64");
         }
 
         /// <summary>
@@ -272,18 +264,9 @@ namespace Tango
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
         /// <param name="value">On successful return, the value of the configuration key.</param>
-        internal static bool GetDouble(string key, ref double value)
+        internal bool GetDouble(string key, ref double value)
         {
-            bool wasSuccess = false;
-            if (m_tangoConfig != IntPtr.Zero)
-            {
-                wasSuccess = TangoConfigAPI.TangoConfig_getDouble(m_tangoConfig, key, ref value) == 0;
-            }
-            if (!wasSuccess)
-            {
-                Debug.Log(string.Format(m_ErrorLogFormat, "GetDouble", key, value));
-            }
-            return wasSuccess;
+            return _ConfigHelperGet(new ConfigAPIGetter<double>(TangoConfigAPI.TangoConfig_getDouble), key, ref value, "GetDouble");
         }
 
         /// <summary>
@@ -292,71 +275,96 @@ namespace Tango
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
         /// <param name="value">On successful return, the value of the configuration key.</param>
-        internal static bool GetString(string key, ref string value)
+        internal bool GetString(string key, ref string value)
         {
-            bool wasSuccess = false;
-            if (m_tangoConfig != IntPtr.Zero)
-            {
-                UInt32 stringLength = 512;
+            // Can't use _ConfigHelperGet because the API takes a size parameter.
+            string tangoMethodName = "GetString";
 
-                StringBuilder tempString = new StringBuilder(512); 
-                wasSuccess = TangoConfigAPI.TangoConfig_getString(m_tangoConfig, key, tempString, stringLength) == Common.ErrorType.TANGO_SUCCESS;
-                if (wasSuccess)
-                {
-                    value = tempString.ToString();
-                } 
-                else
-                {
-                    Debug.Log(string.Format(m_ErrorLogFormat, "GetString", key, value));
-                }
+            if (m_configHandle == IntPtr.Zero)
+            {
+                Debug.Log(string.Format(m_ConfigErrorFormat, CLASS_NAME, tangoMethodName));
+                return false;
+            }
+            
+            bool wasSuccess = false;
+            StringBuilder stringBuilder = new StringBuilder(512);
+            wasSuccess = TangoConfigAPI.TangoConfig_getString(m_configHandle, key, stringBuilder, (uint)stringBuilder.Capacity) == Common.ErrorType.TANGO_SUCCESS;
+            value = stringBuilder.ToString();
+            if (!wasSuccess)
+            {
+                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
             }
             return wasSuccess;
+        }
+
+        /// <summary>
+        /// Set this config as the current runtime config.
+        /// </summary>
+        internal void SetRuntimeConfig()
+        {
+            bool wasSuccess = TangoConfigAPI.TangoService_setRuntimeConfig(m_configHandle) == Common.ErrorType.TANGO_SUCCESS;
+            if (!wasSuccess)
+            {
+                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, "SetRuntimeConfig"));
+            }
         }
 
         /// <summary>
         /// Helper method for setting a configuration parameter.
         /// </summary>
         /// <returns><c>true</c> if the API call returned success, <c>false</c> otherwise.</returns>
-        /// <param name="apiCall">The API call we want to perform.</param>
-        /// <param name="tangoConfig">Handle to a Tango Config.</param>
-        /// <param name="configKey">The string key value of the configuration parameter to set.</param>
-        /// <param name="configValue">The value to set the configuration key to.</param>
-        /// <param name="tangoMethodName">Name of the method we are calling. Used for logging purposes.</param>
-        /// <typeparam name="T">The type of object we are trying to set.</typeparam>
-        private static bool _ConfigHelperSet<T>(ConfigAPIDelegate<T> apiCall, IntPtr tangoConfig, string configKey, object configValue, 
-                                                 string tangoMethodName)
+        /// <param name="apiCall">The API call to perform.</param>
+        /// <param name="key">The key of the configuration parameter to set.</param>
+        /// <param name="value">The value to set the configuration key to.</param>
+        /// <param name="tangoMethodName">Name of the calling method. Used for logging purposes.</param>
+        /// <typeparam name="T">The type of object to set.</typeparam>
+        private bool _ConfigHelperSet<T>(ConfigAPISetter<T> apiCall, string key, T value, string tangoMethodName)
         {
-            if (tangoConfig == IntPtr.Zero)
+            if (m_configHandle == IntPtr.Zero)
             {
                 Debug.Log(string.Format(m_ConfigErrorFormat, CLASS_NAME, tangoMethodName));
                 return false;
             }
+
             bool wasSuccess = false;
-            T genericObj;
-            try
-            {
-                genericObj = (T)configValue;
-            } 
-            catch
-            {
-                Debug.Log(string.Format(m_FailedConversionFormat, typeof(T)));
-                genericObj = default(T);
-            }
-            wasSuccess = apiCall(tangoConfig, configKey, genericObj) == Common.ErrorType.TANGO_SUCCESS;
+            wasSuccess = apiCall(m_configHandle, key, value) == Common.ErrorType.TANGO_SUCCESS;
             if (!wasSuccess)
             {
-                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, configKey, configValue));
+                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key, value));
             }
             return wasSuccess;
         }
 
         /// <summary>
-        /// DEPRECATED: Internal API, should be private.
+        /// Helper method for getting a configuration parameter.
         /// </summary>
+        /// <returns><c>true</c>, if the API call returned success, <c>false</c> otherwise.</returns>
+        /// <param name="apiCall">The API call to perfom.</param>
+        /// <param name="key">The key of the configuration parameter to get.</param>
+        /// <param name="value">On success, this is filled with the value of the configuration parameter.</param>
+        /// <param name="tangoMethodName">Name of the calling method. Used for logging purposes.</param>
+        /// <typeparam name="T">The 1type of object to get.</typeparam>
+        private bool _ConfigHelperGet<T>(ConfigAPIGetter<T> apiCall, string key, ref T value, string tangoMethodName)
+        {
+            if (m_configHandle == IntPtr.Zero)
+            {
+                Debug.Log(string.Format(m_ConfigErrorFormat, CLASS_NAME, tangoMethodName));
+                return false;
+            }
+
+            bool wasSuccess = false;
+            wasSuccess = apiCall(m_configHandle, key, ref value) == Common.ErrorType.TANGO_SUCCESS;
+            if (!wasSuccess)
+            {
+                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
+            }
+            return wasSuccess;
+        }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
                                                          "SA1600:ElementsMustBeDocumented",
                                                          Justification = "C API Wrapper.")]
-        internal struct TangoConfigAPI
+        private struct TangoConfigAPI
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(Common.TANGO_UNITY_DLL)]
@@ -417,6 +425,9 @@ namespace Tango
                                                            [MarshalAs(UnmanagedType.LPStr)] string key,
                                                            [In, Out] StringBuilder value,
                                                            UInt32 size);
+
+            [DllImport(Common.TANGO_UNITY_DLL)]
+            public static extern int TangoService_setRuntimeConfig(IntPtr tangoConfig);
 #else
             public static void TangoConfig_free(IntPtr tangoConfig)
             {
@@ -499,6 +510,11 @@ namespace Tango
                                                     [MarshalAs(UnmanagedType.LPStr)] string key,
                                                     [In, Out] StringBuilder value,
                                                     UInt32 size)
+            {
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoService_setRuntimeConfig(IntPtr tangoConfig)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }

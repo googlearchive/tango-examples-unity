@@ -60,10 +60,10 @@ public class SaveADFController : MonoBehaviour
     {
         if (m_tangoApplication.m_enableAreaLearning)
         {
-            if (GUI.Button(new Rect(Common.UI_BUTTON_GAP_X, 
-                                    Screen.height - (Common.UI_BUTTON_SIZE_Y + Common.UI_LABEL_GAP_Y),
-                                    Common.UI_BUTTON_SIZE_X, 
-                                    Common.UI_BUTTON_SIZE_Y), "<size=20>Save ADF</size>"))
+            if (GUI.Button(new Rect(AreaLearningGUIController.UI_BUTTON_GAP_X, 
+                                    Screen.height - (AreaLearningGUIController.UI_BUTTON_SIZE_Y + AreaLearningGUIController.UI_LABEL_GAP_Y),
+                                    AreaLearningGUIController.UI_BUTTON_SIZE_X, 
+                                    AreaLearningGUIController.UI_BUTTON_SIZE_Y), "<size=20>Save ADF</size>"))
             {
                 m_keyboardState = KeyboardState.OPEN;
             }

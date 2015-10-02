@@ -170,15 +170,13 @@ namespace Tango
         }
 
         /// <summary>
-        /// DEPRECATED: Handle the callback sent by the Tango Service
-        /// when a new image is sampled.
+        /// Handle the callback sent by the Tango Service when a new image is sampled.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="cameraId">Camera identifier.</param>
         /// <param name="imageBuffer">Image buffer.</param>
-        protected void _OnImageAvailable(IntPtr callbackContext,
-                                         TangoEnums.TangoCameraId cameraId, 
-                                         TangoImageBuffer imageBuffer)
+        private void _OnImageAvailable(IntPtr callbackContext, TangoEnums.TangoCameraId cameraId,
+                                       TangoImageBuffer imageBuffer)
         {
             m_previousCameraId = cameraId;
 
@@ -200,11 +198,11 @@ namespace Tango
         }
 
         /// <summary>
-        /// DEPRECATED: Handle the callback set by the Tango Service when a new image is available.
+        /// Handle the callback set by the Tango Service when a new image is available.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="cameraId">Camera identifier.</param>
-        protected void _OnExperimentalUnityFrameAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId)
+        private void _OnExperimentalUnityFrameAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId)
         {
             m_previousCameraId = cameraId;
             m_shouldSendEvent = true;

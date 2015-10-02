@@ -34,12 +34,13 @@ namespace Tango
     /// </summary>
     public class PoseListener
     {
-        /// <summary>
-        /// DEPRECATED: The pose available callback.
-        /// </summary>
-        internal Tango.PoseProvider.TangoService_onPoseAvailable m_poseAvailableCallback;
-
         private const int SIZE_OF_POSE_DATA_POOL = 3;
+
+        /// <summary>
+        /// Called when a new Tango pose is available.
+        /// </summary>
+        private Tango.PoseProvider.TangoService_onPoseAvailable m_poseAvailableCallback;
+
         private TangoPoseData m_motionTrackingData = null;
         private TangoPoseData m_areaLearningData = null;
         private TangoPoseData m_relocalizationData = null;
@@ -49,20 +50,10 @@ namespace Tango
         private object m_lockObject = new object();
 
         /// <summary>
-        /// DEPRECATED: Gets or sets a value indicating whether this <see cref="PoseListener"/> is using auto reset.
+        /// Gets or sets a value indicating whether this <see cref="PoseListener"/> is using auto reset.
         /// </summary>
         /// <value><c>true</c> if auto reset; otherwise, <c>false</c>.</value>
-        public bool AutoReset
-        {
-            get;
-            set;
-        }
-
-        /// <summary>
-        /// DEPRECATED: Gets or sets a value indicating whether this <see cref="PoseListener"/> use camera intrinsics.
-        /// </summary>
-        /// <value><c>true</c> if use camera intrinsics; otherwise, <c>false</c>.</value>
-        public bool UseCameraIntrinsics
+        internal bool AutoReset
         {
             get;
             set;

@@ -67,6 +67,8 @@ public class TangoInspector : Editor
             tangoApplication.m_motionTrackingAutoReset = EditorGUILayout.Toggle("Auto Reset", 
                                                                                 tangoApplication.m_motionTrackingAutoReset);
 
+            tangoApplication.m_enableADFLoading = EditorGUILayout.Toggle("Load ADF",
+                                                                         tangoApplication.m_enableADFLoading);
             tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
                                                                            tangoApplication.m_enableAreaLearning);
             if (tangoApplication.m_enableAreaLearning)

@@ -74,8 +74,8 @@ public class PointCloudFPSCounter : MonoBehaviour
             Color oldColor = GUI.color;
             GUI.color = Color.black;
             
-            GUI.Label(new Rect(Common.UI_LABEL_START_X, Common.UI_FPS_LABEL_START_Y, Common.UI_LABEL_SIZE_X, Common.UI_LABEL_SIZE_Y),
-                      Common.UI_FONT_SIZE + m_FPSText + "</size>");
+            GUI.Label(new Rect(PointCloudGUIController.UI_LABEL_START_X, PointCloudGUIController.UI_FPS_LABEL_START_Y, PointCloudGUIController.UI_LABEL_SIZE_X, PointCloudGUIController.UI_LABEL_SIZE_Y),
+                      PointCloudGUIController.UI_FONT_SIZE + m_FPSText + "</size>");
             
             GUI.color = oldColor;
         }

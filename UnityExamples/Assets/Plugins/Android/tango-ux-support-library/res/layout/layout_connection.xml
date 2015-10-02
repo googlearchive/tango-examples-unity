@@ -32,10 +32,11 @@
 
     <TextView
         style="@style/ConnectionLayoutText"
+        android:id="@+id/connection_layout_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
-        android:text="@string/connection_layout_message"
+        android:text="@string/connection_layout_message_tight"
         android:textAllCaps="true" />
 
 </LinearLayout>

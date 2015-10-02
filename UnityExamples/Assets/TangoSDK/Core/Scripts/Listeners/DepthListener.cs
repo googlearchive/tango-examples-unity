@@ -38,7 +38,7 @@ namespace Tango
         private Tango.DepthProvider.TangoService_onDepthAvailable m_onDepthAvailableCallback;
 
         /// <summary>
-        /// Occurs when m_on tango depth available.
+        /// Called when a new Tango depth is available.
         /// </summary>
         private event OnTangoDepthAvailableEventHandler OnTangoDepthAvailable;
 
@@ -100,12 +100,11 @@ namespace Tango
         }
 
         /// <summary>
-        /// DEPRECATED: Callback that gets called when depth is available
-        /// from the Tango Service.
+        /// Callback that gets called when depth is available from the Tango Service.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="xyzij">Xyzij.</param>
-        protected void _OnDepthAvailable(IntPtr callbackContext, TangoXYZij xyzij)
+        private void _OnDepthAvailable(IntPtr callbackContext, TangoXYZij xyzij)
         {
             // Fill in the data to draw the point cloud.
             if (xyzij != null)

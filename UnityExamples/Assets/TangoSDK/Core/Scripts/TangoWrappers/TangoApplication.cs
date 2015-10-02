@@ -75,6 +75,7 @@ namespace Tango
         public bool m_enableVideoOverlay = false;
         public bool m_motionTrackingAutoReset = true;
         public bool m_enableAreaLearning = false;
+        public bool m_enableADFLoading = false;
         public bool m_useExperimentalVideoOverlay = true;
         public bool m_useExperimentalADF = false;
 #if UNITY_EDITOR
@@ -120,6 +121,8 @@ namespace Tango
         private VideoOverlayListener m_videoOverlayListener;
         private TangoEventListener m_tangoEventListener;
         private YUVTexture m_yuvTexture;
+        private TangoConfig m_tangoConfig;
+        private TangoConfig m_tangoRuntimeConfig;
 
         /// <summary>
         /// Get the Tango service version name.
@@ -158,6 +161,13 @@ namespace Tango
             if (tangoEvent != null)
             {
                 RegisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+            }
+
+            ITangoEventMultithreaded tangoEventMultithreaded = tangoObject as ITangoEventMultithreaded;
+
+            if (tangoEventMultithreaded != null)
+            {
+                RegisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
             }
 
             if (m_enableMotionTracking)
@@ -216,6 +226,13 @@ namespace Tango
             if (tangoEvent != null)
             {
                 UnregisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+            }
+
+            ITangoEventMultithreaded tangoEventMultithreaded = tangoObject as ITangoEventMultithreaded;
+
+            if (tangoEventMultithreaded != null)
+            {
+                UnregisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
             }
 
             if (m_enableMotionTracking)
@@ -292,20 +309,6 @@ namespace Tango
         /// </summary>
         /// <param name="permissionsEventHandler">Event to remove.</param>
         public void UnregisterPermissionsCallback(PermissionsEvent permissionsEventHandler)
-        {
-            if (permissionsEventHandler != null)
-            {
-                PermissionEvent -= permissionsEventHandler;
-            }
-        }
-
-        /// <summary>
-        /// DEPRECATED: Unregister from the permission callbacks.
-        /// 
-        /// See TangoApplication.RegisterPermissionsCallback for more details.
-        /// </summary>
-        /// <param name="permissionsEventHandler">Event to remove.</param>
-        public void RemovePermissionsCallback(PermissionsEvent permissionsEventHandler)
         {
             if (permissionsEventHandler != null)
             {
@@ -399,7 +402,14 @@ namespace Tango
         {
             Debug.Log("-----------------------------------Initializing Tango");
             _TangoInitialize();
-            TangoConfig.InitConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
+            if (m_tangoConfig == null)
+            {
+                m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
+            }
+            if (m_tangoRuntimeConfig == null)
+            {
+                m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
+            }
 
             if (m_enableVideoOverlay && m_useExperimentalVideoOverlay)
             {
@@ -408,10 +418,10 @@ namespace Tango
                 int uvTextureWidth = 0;
                 int uvTextureHeight = 0;
                 
-                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_WIDTH, ref yTextureWidth);
-                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_HEIGHT, ref yTextureHeight);
-                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_WIDTH, ref uvTextureWidth);
-                TangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_HEIGHT, ref uvTextureHeight);
+                m_tangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_WIDTH, ref yTextureWidth);
+                m_tangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_Y_TEXTURE_HEIGHT, ref yTextureHeight);
+                m_tangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_WIDTH, ref uvTextureWidth);
+                m_tangoConfig.GetInt32(TangoConfig.Keys.EXPERIMENTAL_UV_TEXTURE_HEIGHT, ref uvTextureHeight);
                 
                 if (yTextureWidth == 0 || yTextureHeight == 0 || uvTextureWidth == 0 || uvTextureHeight == 0)
                 {
@@ -461,8 +471,77 @@ namespace Tango
         public void Shutdown()
         {
             Debug.Log("Tango Shutdown");
-            TangoConfig.Free();
+            if (m_tangoConfig != null)
+            {
+                m_tangoConfig.Dispose();
+                m_tangoConfig = null;
+            }
+            if (m_tangoRuntimeConfig != null)
+            {
+                m_tangoRuntimeConfig.Dispose();
+                m_tangoRuntimeConfig = null;
+            }
             _TangoDisconnect();
+        }
+
+        /// <summary>
+        /// Set the framerate of the depth camera.
+        /// 
+        /// Disabling or reducing the framerate of the depth camera when it is running can save a significant amount
+        /// of battery.
+        /// </summary>
+        /// <param name="rate">The rate in frames per second, for the depth camera to run at.</param>
+        public void SetDepthCameraRate(int rate)
+        {
+            if (rate < 0)
+            {
+                Debug.Log("Invalid rate passed to SetDepthCameraRate");
+                return;
+            }
+
+            m_tangoRuntimeConfig.SetInt32(TangoConfig.Keys.RUNTIME_DEPTH_FRAMERATE, rate);
+            m_tangoRuntimeConfig.SetRuntimeConfig();
+        }
+
+        /// <summary>
+        /// Set the framerate of the depth camera.
+        /// 
+        /// Disabling or reducing the framerate of the depth camera when it is running can save a significant amount
+        /// of battery.
+        /// </summary>
+        /// <param name="rate">A special rate to set the depth camera to.</param>
+        public void SetDepthCameraRate(TangoEnums.TangoDepthCameraRate rate)
+        {
+            switch (rate)
+            {
+            case TangoEnums.TangoDepthCameraRate.DISABLED:
+                SetDepthCameraRate(0);
+                break;
+                
+            case TangoEnums.TangoDepthCameraRate.MAXIMUM:
+                // Set the depth frame rate to a sufficiently high number, it will get rounded down.  There is no 
+                // way to actually get the maximum value to pass in.
+                SetDepthCameraRate(9000);
+                break;
+            }
+        }
+
+        /// <summary>
+        /// Get the Tango config.  Useful for debugging.
+        /// </summary>
+        /// <value>The config.</value>
+        internal TangoConfig Config
+        {
+            get { return m_tangoConfig; }
+        }
+
+        /// <summary>
+        /// Get the current Tango runtime config.  Useful for debugging.
+        /// </summary>
+        /// <value>The current runtime config.</value>
+        internal TangoConfig RuntimeConfig
+        {
+            get { return m_tangoRuntimeConfig; }
         }
 
         /// <summary>
@@ -546,6 +625,34 @@ namespace Tango
             if (m_tangoEventListener != null)
             {
                 m_tangoEventListener.UnregisterOnTangoEventAvailable(handler);
+            }
+        }
+        
+        /// <summary>
+        /// Register to get Tango event callbacks.
+        /// 
+        /// See TangoApplication.Register for details.
+        /// </summary>
+        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        internal void RegisterOnTangoEventMultithreaded(OnTangoEventAvailableEventHandler handler)
+        {
+            if (m_tangoEventListener != null)
+            {
+                m_tangoEventListener.RegisterOnTangoEventMultithreadedAvailable(handler);
+            }
+        }
+        
+        /// <summary>
+        /// Unregister from the Tango event callbacks.
+        /// 
+        /// See TangoApplication.Register for more details.
+        /// </summary>
+        /// <param name="handler">Event to remove.</param>
+        internal void UnregisterOnTangoEventMultithreaded(OnTangoEventAvailableEventHandler handler)
+        {
+            if (m_tangoEventListener != null)
+            {
+                m_tangoEventListener.UnregisterOnTangoEventMultithreadedAvailable(handler);
             }
         }
 
@@ -685,22 +792,33 @@ namespace Tango
         {
             System.Collections.Generic.List<TangoCoordinateFramePair> framePairs = new System.Collections.Generic.List<TangoCoordinateFramePair>();
             
-            if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_BOOL, m_enableMotionTracking) && m_enableMotionTracking)
+            if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_BOOL, m_enableMotionTracking) && m_enableMotionTracking)
             {
                 TangoCoordinateFramePair motionTracking;
                 motionTracking.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
                 motionTracking.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
                 framePairs.Add(motionTracking);
-                
-                if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_enableAreaLearning) && m_enableAreaLearning)
+
+                bool areaLearningEnabled = false;
+                if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_enableAreaLearning) && m_enableAreaLearning)
                 {
+                    areaLearningEnabled = true;
                     Debug.Log("Area Learning is enabled.");
+                }
+
+                // For backward compatibility, don't require the m_enableADFLoading to be set.
+                if (areaLearningEnabled || m_enableADFLoading)
+                {
+                    m_tangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
+
                     if (!string.IsNullOrEmpty(uuid))
                     {
-                        TangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
-                        TangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid);
+                        m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid);
                     }
-                    
+                }
+
+                if (areaLearningEnabled || m_enableADFLoading)
+                {
                     TangoCoordinateFramePair areaDescription;
                     areaDescription.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
                     areaDescription.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
@@ -720,9 +838,9 @@ namespace Tango
             }
 
             // The C API does not default this to on, but it is locked down.
-            TangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, true);
+            m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, true);
 
-            TangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
+            m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
         }
 
         /// <summary>
@@ -730,7 +848,7 @@ namespace Tango
         /// </summary>
         private void _InitializeDepth()
         {
-            if (TangoConfig.SetBool(TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL, m_enableDepth) && m_enableDepth)
+            if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL, m_enableDepth) && m_enableDepth)
             {
                 _SetDepthCallbacks();
             }
@@ -777,7 +895,7 @@ namespace Tango
             {
                 m_isServiceConnected = true;
                 AndroidHelper.PerformanceLog("Unity _TangoConnect start");
-                if (TangoServiceAPI.TangoService_connect(m_callbackContext, TangoConfig.GetConfig()) != Common.ErrorType.TANGO_SUCCESS)
+                if (TangoServiceAPI.TangoService_connect(m_callbackContext, m_tangoConfig.GetHandle()) != Common.ErrorType.TANGO_SUCCESS)
                 {
                     Debug.Log(CLASS_NAME + ".Connect() Could not connect to the Tango Service!");
                 }
@@ -955,6 +1073,7 @@ namespace Tango
             {
                 m_requiredPermissions |= m_enableMotionTracking ? PermissionsTypes.MOTION_TRACKING : PermissionsTypes.NONE;
                 m_requiredPermissions |= m_enableAreaLearning ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
+                m_requiredPermissions |= m_enableADFLoading ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
             }
         }
 
