@@ -16,13 +16,6 @@
 -->
 <resources>
 
-    <dimen name="connection_progress_bar_sub_margin">4dp</dimen>
-    
-    <dimen name="exception_component_height">58dp</dimen>
-    <dimen name="exception_status_component_size">30dp</dimen>
-    
-    <dimen name="hold_steady_frame_transform_pivot_x">98dp</dimen>
-    <dimen name="hold_steady_frame_transform_pivot_y">110dp</dimen>
-    <dimen name="hold_steady_trace_size">112dp</dimen>
+    <dimen name="hold_steady_bubble_level_max_y">15dp</dimen>
     
 </resources>

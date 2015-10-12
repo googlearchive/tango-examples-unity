@@ -35,6 +35,12 @@ public class TangoGestureCamera : MonoBehaviour
         TOP_DOWN = 0x4
     }
     
+    // UI fields.
+    public const float UI_BUTTON_SIZE_X = 125.0f;
+    public const float UI_BUTTON_SIZE_Y = 65.0f;
+    public const float UI_BUTTON_GAP_X = 5.0f;
+    public const float UI_BUTTON_GAP_Y = 3.0f;
+    
     public GameObject m_targetFollowingObject;
 
     // Set this to enable the First / Third / Top UI buttons.
@@ -42,12 +48,6 @@ public class TangoGestureCamera : MonoBehaviour
 
     // The default camera mode.
     public CameraType m_defaultCameraMode = CameraType.FIRST_PERSON;
-
-    // UI fields.
-    public const float UI_BUTTON_SIZE_X = 125.0f;
-    public const float UI_BUTTON_SIZE_Y = 65.0f;
-    public const float UI_BUTTON_GAP_X = 5.0f;
-    public const float UI_BUTTON_GAP_Y = 3.0f;
 
     private Vector3 m_curOffset;
     

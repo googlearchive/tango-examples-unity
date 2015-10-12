@@ -67,8 +67,6 @@ public class AugmentedRealityGUIController : MonoBehaviour
     /// </summary>
     public const float MIN_PLANE_FIT_PERCENTAGE = 0.8f;
 
-    public ARScreen m_arScreen;
-
     /// <summary>
     /// The location prefab to place on taps.
     /// </summary>
@@ -88,6 +86,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
     
     private Rect m_label;
     private TangoApplication m_tangoApplication;
+    private TangoARPoseController m_tangoPose;
     private string m_tangoServiceVersion;
 
     /// <summary>
@@ -121,6 +120,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
         m_fpsText = "FPS = Calculating";
         m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_tangoPose = FindObjectOfType<TangoARPoseController>();
         m_tangoServiceVersion = TangoApplication.GetTangoServiceVersion();
     }
     
@@ -174,8 +174,8 @@ public class AugmentedRealityGUIController : MonoBehaviour
                                UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
             
-            Vector3 pos = m_arScreen.transform.position;
-            Quaternion quat = m_arScreen.transform.rotation;
+            Vector3 pos = m_tangoPose.transform.position;
+            Quaternion quat = m_tangoPose.transform.rotation;
             string positionString = pos.x.ToString(UI_FLOAT_FORMAT) + ", " + 
                 pos.y.ToString(UI_FLOAT_FORMAT) + ", " + 
                     pos.z.ToString(UI_FLOAT_FORMAT);
@@ -184,8 +184,8 @@ public class AugmentedRealityGUIController : MonoBehaviour
                     quat.z.ToString(UI_FLOAT_FORMAT) + ", " + 
                     quat.w.ToString(UI_FLOAT_FORMAT);
             string statusString = String.Format(UX_STATUS,
-                                                _GetLoggingStringFromPoseStatus(m_arScreen.m_status),
-                                                _GetLoggingStringFromFrameCount(m_arScreen.m_frameCount),
+                                                _GetLoggingStringFromPoseStatus(m_tangoPose.m_poseStatus),
+                                                _GetLoggingStringFromFrameCount(m_tangoPose.m_poseCount),
                                                 positionString, rotationString);
             GUI.Label(new Rect(UI_LABEL_START_X, 
                                UI_POSE_LABEL_START_Y,
@@ -379,7 +379,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
             // Single tap -- place new location or select existing location.
             Touch t = Input.GetTouch(0);
             Vector2 guiPosition = new Vector2(t.position.x, Screen.height - t.position.y);
-            Camera cam = m_arScreen.m_renderCamera;
+            Camera cam = Camera.main;
             RaycastHit hitInfo;
 
             if (t.phase != TouchPhase.Began)

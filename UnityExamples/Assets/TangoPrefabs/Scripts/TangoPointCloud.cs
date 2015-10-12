@@ -38,6 +38,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// objects in scene. Note this is a very rudimentary way of doing occlusion and limited by the capabilities of
     /// depth camera.
     /// </summary>
+    [HideInInspector]
     public bool m_enableOcclusion;
 
     /// <summary>
