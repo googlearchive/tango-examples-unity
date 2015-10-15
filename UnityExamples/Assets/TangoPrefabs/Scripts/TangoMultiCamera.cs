@@ -37,6 +37,12 @@ public class TangoMultiCamera : MonoBehaviour
         TopDown
     }
 
+    // UI fields.
+    public const float UI_BUTTON_SIZE_X = 125.0f;
+    public const float UI_BUTTON_SIZE_Y = 65.0f;
+    public const float UI_BUTTON_GAP_X = 5.0f;
+    public const float UI_BUTTON_GAP_Y = 3.0f;
+
     /// <summary>
     /// The target object to follow.
     /// </summary>
@@ -51,12 +57,6 @@ public class TangoMultiCamera : MonoBehaviour
     /// The default camera type.
     /// </summary>
     public CameraType m_defaultCameraType = CameraType.FirstPerson;
-
-    // UI fields.
-    public const float UI_BUTTON_SIZE_X = 125.0f;
-    public const float UI_BUTTON_SIZE_Y = 65.0f;
-    public const float UI_BUTTON_GAP_X = 5.0f;
-    public const float UI_BUTTON_GAP_Y = 3.0f;
 
     /// <summary>
     /// Scaling factor when doing a pinch to zoom gesture.

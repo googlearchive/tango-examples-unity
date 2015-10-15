@@ -335,18 +335,14 @@ namespace Tango
                 Debug.Log("Missing file path for exporting area description. Please define one.");
                 return Common.ErrorType.TANGO_ERROR;
             }
-            int returnValue = PoseProviderAPI.TangoService_exportAreaDescription(uuid, filePath);
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log(CLASS_NAME + ".ExportAreaDescription() Could not export area description: " + uuid +
-                          " with path: " + filePath);
-            }
-            return returnValue;
+            AndroidHelper.StartExportADFActivity(uuid, filePath);
+            return Common.ErrorType.TANGO_SUCCESS;
         }
 
         /// <summary>
-        /// Import an area description from a file path to the default area storage location. 
+        /// Deprecated: Import an area description from a file path to the default area storage location. 
         /// 
+        /// Please call ImportAreaDescriptionFromFile(string filePath) instead.
         /// The new area description will get a new ID, which will be stored in adfID.
         /// </summary>
         /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the UUID was imported successfully.</returns>
@@ -372,6 +368,22 @@ namespace Tango
                 adfID.SetDataUUID(tempDataBuffer);
             }
             return returnValue;
+        }
+
+        /// <summary>
+        /// Import an area description from a file path to the default area storage location. 
+        /// </summary>
+        /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the UUID was imported successfully.</returns>
+        /// <param name="filePath">File path of the area descrption to be imported.</param>
+        public static int ImportAreaDescriptionFromFile(string filePath)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                Debug.Log("Missing file path for exporting area description. Please define one.");
+                return Common.ErrorType.TANGO_ERROR;
+            }
+            AndroidHelper.StartImportADFActivity(filePath);
+            return Common.ErrorType.TANGO_SUCCESS;
         }
 
         /// <summary>

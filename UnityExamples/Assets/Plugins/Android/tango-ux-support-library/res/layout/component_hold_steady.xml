@@ -59,7 +59,7 @@
         android:id="@+id/bubble_level_group"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:transformPivotX="98dp"
+        android:transformPivotX="@dimen/hold_steady_frame_transform_pivot_x"
         android:transformPivotY="@dimen/hold_steady_frame_transform_pivot_y" >
 
         <ImageView

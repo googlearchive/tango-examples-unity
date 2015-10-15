@@ -197,6 +197,11 @@ namespace Tango
             /// Feature Tracking Event.
             /// </summary>
             TANGO_EVENT_FEATURE_TRACKING,
+
+            /// <summary>
+            /// Area Learning Event.
+            /// </summary>
+            TANGO_EVENT_AREA_LEARNING,
         }    
 
         /// <summary>

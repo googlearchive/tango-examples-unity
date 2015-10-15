@@ -70,6 +70,7 @@ namespace Tango
             AREA_LEARNING = 0x2,
         }
 
+        public bool m_allowOutOfDateTangoAPI = false;
         public bool m_enableMotionTracking = true;
         public bool m_enableDepth = true;
         public bool m_enableVideoOverlay = false;
@@ -77,19 +78,11 @@ namespace Tango
         public bool m_enableAreaLearning = false;
         public bool m_enableADFLoading = false;
         public bool m_useExperimentalVideoOverlay = true;
-        public bool m_useExperimentalADF = false;
 #if UNITY_EDITOR
         public static bool m_mouseEmulationViaPoseUpdates = false;
 #endif
         private const string CLASS_NAME = "TangoApplication";
-        private const string ANDROID_PRO_LABEL_TEXT = "<size=30>Tango plugin requires Unity Android Pro!</size>";
-        private const float ANDROID_PRO_LABEL_PERCENT_X = 0.5f;
-        private const float ANDROID_PRO_LABEL_PERCENT_Y = 0.5f;
-        private const float ANDROID_PRO_LABEL_WIDTH = 200.0f;
-        private const float ANDROID_PRO_LABEL_HEIGHT = 200.0f;
-        private const string DEFAULT_AREA_DESCRIPTION = "/sdcard/defaultArea";
-        private const string MOTION_TRACKING_LOG_PREFIX = "Motion tracking mode : ";
-        private const int MINIMUM_API_VERSION = 1978;
+        private const int MINIMUM_API_VERSION = 5145;
         private static string m_tangoServiceVersion = string.Empty;
 
         /// <summary>
@@ -108,10 +101,8 @@ namespace Tango
         private event OnTangoDisconnectEventHandler OnTangoDisconnect;
 
         private PermissionsTypes m_requiredPermissions = 0;
-        private static bool m_isValidTangoAPIVersion = false;
-        private static bool m_hasVersionBeenChecked = false;
-        private DepthProvider m_depthProvider;
         private IntPtr m_callbackContext = IntPtr.Zero;
+        private bool m_isServiceInitialized = false;
         private bool m_isServiceConnected = false;
         private bool m_shouldReconnectService = false;
         private bool m_sendPermissions = false;
@@ -391,7 +382,7 @@ namespace Tango
         }
         
         /// <summary>
-        /// Init step 2.  Call this to initialize interal state on TangoApplication.
+        /// Init step 2.  Call this to initialize internal state on TangoApplication.
         /// 
         /// Call this in the permissions callback if all permissions have been granted.
         /// 
@@ -401,7 +392,7 @@ namespace Tango
         public void InitApplication()
         {
             Debug.Log("-----------------------------------Initializing Tango");
-            _TangoInitialize();
+            _CheckTangoVersion();
             if (m_tangoConfig == null)
             {
                 m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
@@ -809,8 +800,6 @@ namespace Tango
                 // For backward compatibility, don't require the m_enableADFLoading to be set.
                 if (areaLearningEnabled || m_enableADFLoading)
                 {
-                    m_tangoConfig.SetBool("config_experimental_high_accuracy_small_scale_adf", m_useExperimentalADF);
-
                     if (!string.IsNullOrEmpty(uuid))
                     {
                         m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid);
@@ -863,27 +852,23 @@ namespace Tango
         }
         
         /// <summary>
-        /// Initialize the Tango Service.
+        /// Validate the TangoService version is supported.
         /// </summary>
-        private void _TangoInitialize()
+        private void _CheckTangoVersion()
         {
-            if (_IsValidTangoAPIVersion())
+            int tangoVersion = _GetTangoAPIVersion();
+            if (tangoVersion < MINIMUM_API_VERSION)
             {
-                int status = TangoServiceAPI.TangoService_initialize(IntPtr.Zero, IntPtr.Zero);
-                if (status != Common.ErrorType.TANGO_SUCCESS)
+                Debug.Log(string.Format(CLASS_NAME + ".Initialize() Invalid API version {0}. Please update Project Tango Core to at least {1}.", tangoVersion, MINIMUM_API_VERSION));
+                if (!m_allowOutOfDateTangoAPI)
                 {
-                    Debug.Log("-------------------Tango initialize status : " + status);
-                    Debug.Log(CLASS_NAME + ".Initialize() The service has not been initialized!");
-                }
-                else
-                {
-                    Debug.Log(CLASS_NAME + ".Initialize() Tango was initialized!");
+                    AndroidHelper.ShowAndroidToastMessage("Please update Tango Core", false);
+                    return;
                 }
             }
-            else
-            {
-                Debug.Log(CLASS_NAME + ".Initialize() Invalid API version. please update to minimul API version.");
-            }
+
+            m_isServiceInitialized = true;
+            Debug.Log(CLASS_NAME + ".Initialize() Tango was initialized!");
         }
         
         /// <summary>
@@ -891,12 +876,18 @@ namespace Tango
         /// </summary>
         private void _TangoConnect()
         {
+            if (!m_isServiceInitialized)
+            {
+                return;
+            }
+
             if (!m_isServiceConnected)
             {
                 m_isServiceConnected = true;
                 AndroidHelper.PerformanceLog("Unity _TangoConnect start");
                 if (TangoServiceAPI.TangoService_connect(m_callbackContext, m_tangoConfig.GetHandle()) != Common.ErrorType.TANGO_SUCCESS)
                 {
+                    AndroidHelper.ShowAndroidToastMessage("Failed to connect to Tango Service.");
                     Debug.Log(CLASS_NAME + ".Connect() Could not connect to the Tango Service!");
                 }
                 else
@@ -932,31 +923,6 @@ namespace Tango
                     OnTangoDisconnect();
                 }
             }
-        }
-
-        /// <summary>
-        /// Checks to see if the current Tango Service is supported.
-        /// </summary>
-        /// <returns><c>true</c>, if is valid tango API version is greater
-        /// than or equal to the minimum supported version, <c>false</c> otherwise.</returns>
-        private bool _IsValidTangoAPIVersion()
-        {
-            if (!m_hasVersionBeenChecked)
-            {
-                int versionCode = _GetTangoAPIVersion();
-                if (versionCode < 0)
-                {
-                    m_isValidTangoAPIVersion = false;
-                }
-                else
-                {
-                    m_isValidTangoAPIVersion = versionCode >= MINIMUM_API_VERSION;
-                }
-                
-                m_hasVersionBeenChecked = true;
-            }
-            
-            return m_isValidTangoAPIVersion;
         }
 
         /// <summary>

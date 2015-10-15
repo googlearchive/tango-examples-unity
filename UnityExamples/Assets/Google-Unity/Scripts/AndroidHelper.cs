@@ -1,21 +1,27 @@
-﻿#if UNITY_ANDROID && !UNITY_EDITOR
+﻿//-----------------------------------------------------------------------
+// <copyright file="AndroidHelper.cs" company="Google">
+//
+// Copyright 2015 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// </copyright>
+//-----------------------------------------------------------------------
+
+#if UNITY_ANDROID && !UNITY_EDITOR
 #define ANDROID_DEVICE
 #endif
-/*
- * Copyright 2014 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+
 using System;
 using System.Collections;
 using UnityEngine;
@@ -38,12 +44,12 @@ public partial class AndroidHelper : MonoBehaviour
     public static void RegisterPauseEvent(OnPauseEventHandler onPause)
     {
         #if ANDROID_DEVICE
-		if(m_callbacks == null)
-		{
-			RegisterCallbacks();
-		}
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
 
-		m_callbacks.RegisterOnPause(onPause);
+        m_callbacks.RegisterOnPause(onPause);
         #endif
     }
 
@@ -54,12 +60,12 @@ public partial class AndroidHelper : MonoBehaviour
     public static void RegisterResumeEvent(OnResumeEventHandler onResume)
     {
         #if ANDROID_DEVICE
-		if(m_callbacks == null)
-		{
-			RegisterCallbacks();
-		}
-		
-		m_callbacks.RegisterOnResume(onResume);
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
+
+        m_callbacks.RegisterOnResume(onResume);
         #endif
     }
 
@@ -70,29 +76,12 @@ public partial class AndroidHelper : MonoBehaviour
     public static void RegisterOnActivityResultEvent(OnActivityResultEventHandler onActivityResult)
     {
         #if ANDROID_DEVICE
-		if(m_callbacks == null)
-		{
-			RegisterCallbacks();
-		}
-		
-		m_callbacks.RegisterOnActivityResult(onActivityResult);
-        #endif
-    }
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
 
-    /// <summary>
-    /// Inializes the AndroidJavaProxy for the Android lifecycle callbacks.
-    /// </summary>
-    private static void RegisterCallbacks()
-    {
-        #if ANDROID_DEVICE
-		m_callbacks = new AndroidLifecycleCallbacks();
-
-		m_unityActivity = GetUnityActivity();
-		if(m_unityActivity != null)
-		{
-			Debug.Log("AndroidLifecycle callback set");
-			m_unityActivity.Call("attachLifecycleListener", m_callbacks);
-		}
+        m_callbacks.RegisterOnActivityResult(onActivityResult);
         #endif
     }
 
@@ -103,20 +92,20 @@ public partial class AndroidHelper : MonoBehaviour
     public static AndroidJavaObject GetUnityActivity()
     {
         #if ANDROID_DEVICE
-		if(m_unityActivity == null)
-		{
+        if (m_unityActivity == null)
+        {
             try
             {
-    			AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
-    			m_unityActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
+                AndroidJavaClass unityPlayer = new AndroidJavaClass("com.unity3d.player.UnityPlayer");
+                m_unityActivity = unityPlayer.GetStatic<AndroidJavaObject>("currentActivity");
             }
-            catch(AndroidJavaException e)
+            catch (AndroidJavaException e)
             {
                 Debug.Log("AndroidJavaException : " + e.Message);
                 m_unityActivity = null;
             }
-		}
-		return m_unityActivity;
+        }
+        return m_unityActivity;
         #else
         return null;
         #endif
@@ -331,7 +320,8 @@ public partial class AndroidHelper : MonoBehaviour
             try
             {
                 AndroidJavaClass toastClass = new AndroidJavaClass("android.widget.Toast");
-                unityActivity.Call("runOnUiThread", new AndroidJavaRunnable(() => {
+                unityActivity.Call("runOnUiThread", new AndroidJavaRunnable(() =>
+                {
                     AndroidJavaObject toastObject = toastClass.CallStatic<AndroidJavaObject>("makeText", unityActivity, message, 0x00000001);
                     toastObject.Call("show");
                 }));
@@ -349,7 +339,7 @@ public partial class AndroidHelper : MonoBehaviour
     public static void AndroidFinish()
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
-		
+
         if (unityActivity != null)
         {
             try
@@ -362,7 +352,7 @@ public partial class AndroidHelper : MonoBehaviour
             }
         }
     }
-	
+
     /// <summary>
     /// Calls quit on the Unity Activity.
     /// </summary>
@@ -371,12 +361,29 @@ public partial class AndroidHelper : MonoBehaviour
         #if ANDROID_DEVICE
         try
         {
-    		AndroidJavaClass system = new AndroidJavaClass("java.lang.System");
-    		system.CallStatic("exit", 0);
+            AndroidJavaClass system = new AndroidJavaClass("java.lang.System");
+            system.CallStatic("exit", 0);
         }
-        catch(AndroidJavaException e)
+        catch (AndroidJavaException e)
         {
             Debug.Log("AndroidJavaException : " + e.Message);
+        }
+        #endif
+    }
+
+    /// <summary>
+    /// Inializes the AndroidJavaProxy for the Android lifecycle callbacks.
+    /// </summary>
+    private static void _RegisterCallbacks()
+    {
+        #if ANDROID_DEVICE
+        m_callbacks = new AndroidLifecycleCallbacks();
+        
+        m_unityActivity = GetUnityActivity();
+        if (m_unityActivity != null)
+        {
+            Debug.Log("AndroidLifecycle callback set");
+            m_unityActivity.Call("attachLifecycleListener", m_callbacks);
         }
         #endif
     }
