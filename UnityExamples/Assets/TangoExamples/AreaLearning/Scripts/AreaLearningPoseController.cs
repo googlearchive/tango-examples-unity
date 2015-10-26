@@ -366,8 +366,16 @@ public class AreaLearningPoseController : MonoBehaviour, ITangoPose
 
             // Load the most recent ADF.
             PoseProvider.RefreshADFList();
-            string uuid = PoseProvider.GetLatestADFUUID().GetStringDataUUID();
-            m_tangoApplication.InitProviders(uuid);
+            UUIDUnityHolder latestAreaDescription = PoseProvider.GetLatestADFUUID();
+            if (latestAreaDescription != null)
+            {
+                string uuid = latestAreaDescription.GetStringDataUUID();
+                m_tangoApplication.InitProviders(uuid);
+            }
+            else
+            {
+                m_tangoApplication.InitProviders(null);
+            }
 
             m_tangoApplication.ConnectToService();
         }

@@ -55,7 +55,7 @@ public class ADFPicker : MonoBehaviour
     {
         foreach (Transform child in transform)
         {
-            Destroy(transform.gameObject);
+            Destroy(child.gameObject);
         }
         int numberOfADFs = list.Count;
         Vector3 startPosition = transform.position;

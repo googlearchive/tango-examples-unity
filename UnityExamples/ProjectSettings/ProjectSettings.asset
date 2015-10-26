@@ -72,14 +72,14 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleIdentifier: com.projecttango.unityexamples
-  bundleVersion: 1.24
+  bundleVersion: 1.25
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   metroEnableLowLatencyPresentationAPI: 0
   xboxOneDisableKinectGpuReservation: 0
   virtualRealitySupported: 0
   productGUID: c6391136f507d40acbbba7382166aeb8
-  AndroidBundleVersionCode: 24
+  AndroidBundleVersionCode: 25
   AndroidMinSdkVersion: 17
   AndroidPreferredInstallLocation: 1
   aotOptions: 
@@ -391,12 +391,14 @@ PlayerSettings:
   XboxOneAllowedProductIds: []
   XboxOnePersistentLocalStorageSize: 0
   intPropertyNames:
+  - Standalone::ScriptingBackend
   - WebGL::ScriptingBackend
   - WebGL::audioCompressionFormat
   - WebGL::exceptionSupport
   - WebGL::memorySize
   - iOS::Architecture
   - iOS::ScriptingBackend
+  Standalone::ScriptingBackend: 0
   WebGL::ScriptingBackend: 1
   WebGL::audioCompressionFormat: 4
   WebGL::exceptionSupport: 1
@@ -415,8 +417,10 @@ PlayerSettings:
   stringPropertyNames:
   - WebGL::emscriptenArgs
   - WebGL::template
+  - additionalIl2CppArgs::additionalIl2CppArgs
   WebGL::emscriptenArgs: 
   WebGL::template: APPLICATION:Default
+  additionalIl2CppArgs::additionalIl2CppArgs: 
   firstStreamedSceneWithResources: 0
   cloudProjectId: 
   projectId: 

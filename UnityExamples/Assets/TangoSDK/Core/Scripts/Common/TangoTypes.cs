@@ -63,8 +63,8 @@ namespace Tango
         /// user's right, and +Y points toward the bottom of the screen. The origin is the focal centre of the color
         /// camera. The output is in units of metres.
         /// </summary>
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 3, ArraySubType = UnmanagedType.SysUInt)]
-        public IntPtr[] xyz;
+        [MarshalAs(UnmanagedType.LPArray)]
+        public IntPtr xyz;
 
         /// <summary>
         /// The dimensions of the ij index buffer.
@@ -333,6 +333,41 @@ namespace Tango
         /// </summary>
         [MarshalAs(UnmanagedType.R8)]
         public double cy;
+
+        /// <summary>
+        /// Distortion coefficient 0.  Meaning of this value depends on the distortion model specified by
+        /// <c>calibration_type</c>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double distortion0;
+
+        /// <summary>
+        /// Distortion coefficient 1.  Meaning of this value depends on the distortion model specified by
+        /// <c>calibration_type</c>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double distortion1;
+
+        /// <summary>
+        /// Distortion coefficient 2.  Meaning of this value depends on the distortion model specified by
+        /// <c>calibration_type</c>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double distortion2;
+
+        /// <summary>
+        /// Distortion coefficient 3.  Meaning of this value depends on the distortion model specified by
+        /// <c>calibration_type</c>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double distortion3;
+
+        /// <summary>
+        /// Distortion coefficient 4.  Meaning of this value depends on the distortion model specified by
+        /// <c>calibration_type</c>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double distortion4;
     }
     
     /// <summary>
@@ -444,7 +479,7 @@ namespace Tango
     }
 
     /// <summary>
-    /// Unity-side representation of a area description ID and its associated metadata.
+    /// DEPRECATED: Unity-side representation of a area description ID and its associated metadata.
     /// 
     /// Used to avoid too many conversions when needing to access the information.
     /// </summary>
@@ -541,7 +576,7 @@ namespace Tango
     }
 
     /// <summary>
-    /// The unique id associated with a single area description.
+    /// DEPRECATED: The unique id associated with a single area description.
     /// 
     /// Should be 36 characters including dashes and a null terminating character.
     /// </summary>
@@ -553,7 +588,7 @@ namespace Tango
     }
 
     /// <summary>
-    /// List of all UUIDs on device.
+    /// DEPRECATED: List of all UUIDs on device.
     /// </summary>
     public class UUID_list
     {
@@ -584,7 +619,7 @@ namespace Tango
         public void PopulateUUIDList(string uuidNames)
         {
             System.Text.UTF8Encoding encoder = new System.Text.UTF8Encoding();
-            string[] splitNames = uuidNames.Split(',');
+            string[] splitNames = uuidNames.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
             uuids = new UUIDUnityHolder[splitNames.Length];
             count = splitNames.Length;
             for (int i = 0; i < count; ++i)
@@ -653,7 +688,7 @@ namespace Tango
     }
     
     /// <summary>
-    /// UUID Metadata list.
+    /// DEPRECATED: UUID Metadata list.
     /// </summary>
     public class Metadata
     {

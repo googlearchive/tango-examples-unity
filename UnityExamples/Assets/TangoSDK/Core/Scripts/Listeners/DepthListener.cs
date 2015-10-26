@@ -128,7 +128,7 @@ namespace Tango
                         // copy new points
                         if (numberOfActivePoints > 0)
                         {
-                            Marshal.Copy(xyzij.xyz[0], m_tangoDepth.m_points, 0, numberOfActivePoints);
+                            Marshal.Copy(xyzij.xyz, m_tangoDepth.m_points, 0, numberOfActivePoints);
                             m_isDirty = true;
                         }
                     }
