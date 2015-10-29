@@ -67,6 +67,42 @@ Material:
         first:
           name: _Alpha
         second: 1
+      data:
+        first:
+          name: _Fx
+        second: 1043.13
+      data:
+        first:
+          name: _Fy
+        second: 1038.62
+      data:
+        first:
+          name: _Cx
+        second: 641.926025
+      data:
+        first:
+          name: _Cy
+        second: 359.115997
+      data:
+        first:
+          name: _K0
+        second: .246231005
+      data:
+        first:
+          name: _K1
+        second: -.727204025
+      data:
+        first:
+          name: _K2
+        second: .72606498
+      data:
+        first:
+          name: _TexHeight
+        second: 720
+      data:
+        first:
+          name: _RunDistortion
+        second: 0
     m_Colors:
       data:
         first:

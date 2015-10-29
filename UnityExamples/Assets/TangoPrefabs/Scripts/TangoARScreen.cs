@@ -32,7 +32,15 @@ using Tango;
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TangoARScreen : MonoBehaviour
-{
+{   
+    /// <summary>
+    /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to background-1
+    /// so that PointCloud data gets written to Z buffer for Depth test with virtual
+    /// objects in scene. Note 1: This is a very rudimentary way of doing occlusion and limited by the capabilities of
+    /// depth camera. Note 2: To enable occlusion TangoPointCloud prefab must be present in the scene as well.
+    /// </summary>
+    public bool m_enableOcclusion;
+
     /// <summary>
     /// Set this to the AR Screen material.
     /// </summary>
@@ -44,8 +52,19 @@ public class TangoARScreen : MonoBehaviour
     [HideInInspector]
     public double m_screenUpdateTime;
 
+    /// <summary>
+    /// The Background renderqueue's number.
+    /// </summary>
+    private const int BACKGROUND_RENDER_QUEUE = 1000;
+    
+    /// <summary>
+    /// Point size of PointCloud data when projected on to image plane.
+    /// </summary>
+    private const int POINTCLOUD_SPLATTER_UPSAMPLE_SIZE = 30;
     private TangoApplication m_tangoApplication;
     private YUVTexture m_textures;
+
+    private ARCameraPostProcess m_arCameraPostProcess;
 
     /// <summary>
     /// Initialize the AR Screen.
@@ -53,6 +72,7 @@ public class TangoARScreen : MonoBehaviour
     private void Start()
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
+        m_arCameraPostProcess = gameObject.GetComponent<ARCameraPostProcess>();
         if (m_tangoApplication != null)
         {
             m_tangoApplication.RegisterOnTangoConnect(_SetCameraIntrinsics);
@@ -62,6 +82,28 @@ public class TangoARScreen : MonoBehaviour
             m_screenMaterial.SetTexture("_YTex", m_textures.m_videoOverlayTextureY);
             m_screenMaterial.SetTexture("_UTex", m_textures.m_videoOverlayTextureCb);
             m_screenMaterial.SetTexture("_VTex", m_textures.m_videoOverlayTextureCr);
+        }
+
+        if (m_enableOcclusion) 
+        {
+            TangoPointCloud pointCloud = FindObjectOfType<TangoPointCloud>();
+            if (pointCloud != null)
+            {
+                Renderer renderer = pointCloud.GetComponent<Renderer>();
+                renderer.enabled = true;
+
+                // Set the renderpass as background renderqueue's number minus one. YUV2RGB shader executes in 
+                // Background queue which is 1000.
+                // But since we want to write depth data to Z buffer before YUV2RGB shader executes so that YUV2RGB 
+                // data ignores Ztest from the depth data we set renderqueue of PointCloud as 999.
+                renderer.material.renderQueue = BACKGROUND_RENDER_QUEUE - 1;
+                renderer.material.SetFloat("point_size", POINTCLOUD_SPLATTER_UPSAMPLE_SIZE);
+                pointCloud.m_updatePointsMesh = true;
+            }
+            else
+            {
+                Debug.Log("Point Cloud data is not available, occlusion is not possible.");
+            }
         }
     }
 
@@ -129,6 +171,7 @@ public class TangoARScreen : MonoBehaviour
 
         if (intrinsics.width != 0 && intrinsics.height != 0)
         {
+            m_arCameraPostProcess.SetupIntrinsic(intrinsics);
             Camera.main.projectionMatrix = ProjectionMatrixForCameraIntrinsics((float)intrinsics.width,
                                                                                (float)intrinsics.height,
                                                                                (float)intrinsics.fx,
@@ -154,6 +197,10 @@ public class TangoARScreen : MonoBehaviour
                 float normalizedOffset = ((heightRatio / widthRatio) - 1.0f) / 2.0f;
                 _SetScreenVertices(normalizedOffset, 0);
             }
+        }
+        else
+        {
+            m_arCameraPostProcess.enabled = false;
         }
     }
 

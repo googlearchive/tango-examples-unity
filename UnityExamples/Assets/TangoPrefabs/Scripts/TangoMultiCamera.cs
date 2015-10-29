@@ -173,7 +173,7 @@ public class TangoMultiCamera : MonoBehaviour
                     m_touchStartPosition = touch.position;
                     m_thirdPersonRotationEulerStart = m_thirdPersonRotationEuler;
                 }
-                else if (touch.phase == TouchPhase.Moved)
+                else if (touch.phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
                 {
                     Vector2 delta = touch.position - m_touchStartPosition;
                     
@@ -194,7 +194,8 @@ public class TangoMultiCamera : MonoBehaviour
                     m_touchStartDistance = xDist + yDist;
                     m_thirdPersonDistanceStart = m_thirdPersonDistance;
                 }
-                else if (touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved)
+                else if ((touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved)
+                         && GUIUtility.hotControl == 0)
                 {
                     float xDist = Mathf.Abs(touch0.position.x - touch1.position.x);
                     float yDist = Mathf.Abs(touch0.position.y - touch1.position.y);
@@ -235,7 +236,7 @@ public class TangoMultiCamera : MonoBehaviour
                     m_touchStartPosition = touch.position;
                     m_topDownOffsetStart = m_topDownOffset;
                 }
-                else if (touch.phase == TouchPhase.Moved)
+                else if (touch.phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
                 {
                     Vector2 delta = TOP_DOWN_PAN_SCALE * (touch.position - m_touchStartPosition);
                     
@@ -256,7 +257,8 @@ public class TangoMultiCamera : MonoBehaviour
                     m_touchStartDistance = xDist + yDist;
                     m_topDownOffsetStart = m_topDownOffset;
                 }
-                else if (touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved)
+                else if ((touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved)
+                         && GUIUtility.hotControl == 0)
                 {
                     float xDist = Mathf.Abs(touch0.position.x - touch1.position.x);
                     float yDist = Mathf.Abs(touch0.position.y - touch1.position.y);

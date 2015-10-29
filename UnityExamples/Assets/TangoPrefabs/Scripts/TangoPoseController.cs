@@ -60,9 +60,6 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     private Matrix4x4 m_matrixuwTss;
     private Matrix4x4 m_matrixdTuc;
 
-    // Flag for initilizing Tango.
-    private bool m_shouldInitTango = false;
-
     /// <summary>
     /// Handle the callback sent by the Tango Service
     /// when a new pose is sampled.

@@ -15,6 +15,7 @@ GameObject:
   - 23: {fileID: 2394646}
   - 114: {fileID: 11482468}
   - 114: {fileID: 11488288}
+  - 114: {fileID: 11402180}
   m_Layer: 0
   m_Name: Tango AR Camera
   m_TagString: MainCamera
@@ -105,6 +106,20 @@ Behaviour:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 103230}
   m_Enabled: 1
+--- !u!114 &11402180
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 103230}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b8e39e0216e0a4783ac39940e0893aa3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_postProcessMaterial: {fileID: 2100000, guid: ccd39aeaff7fe4b629a797eb73526e36,
+    type: 2}
+  m_arScreenMaterial: {fileID: 2100000, guid: aaf9e2fe0204a438aaff24a73507f2b8, type: 2}
 --- !u!114 &11482468
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -129,6 +144,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9d2fb8dda2d8e7445a90ba8bcf89f17d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_enableOcclusion: 0
   m_screenMaterial: {fileID: 2100000, guid: aaf9e2fe0204a438aaff24a73507f2b8, type: 2}
   m_screenUpdateTime: 0
 --- !u!124 &12494314

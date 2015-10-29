@@ -21,7 +21,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Tando User Experience exception listener.
+/// Tango User Experience exception listener.
 /// </summary>
 public class UxExceptionEventListener : AndroidJavaProxy
 {

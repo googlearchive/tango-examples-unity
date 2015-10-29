@@ -175,7 +175,6 @@ public partial class AndroidHelper
 
         if (unityActivity != null)
         {
-            int requestCode = 1;
             string[] args = new string[2];
             args[0] = "SOURCE_UUID:" + srcAdfUuid;
             args[1] = "DESTINATION_FILE:" + exportLocation;
@@ -183,7 +182,7 @@ public partial class AndroidHelper
                                TANGO_APPLICATION_ID,
                                ADF_IMPORT_EXPORT_ACTIVITY,
                                args,
-                               1);
+                               Tango.Common.TANGO_ADF_EXPORT_REQUEST_CODE);
         }
     }
 
@@ -204,7 +203,7 @@ public partial class AndroidHelper
                                TANGO_APPLICATION_ID,
                                ADF_IMPORT_EXPORT_ACTIVITY,
                                args,
-                               1);
+                               Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE);
         }
     }
 }

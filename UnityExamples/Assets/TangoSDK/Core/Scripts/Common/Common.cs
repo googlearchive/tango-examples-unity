@@ -115,6 +115,16 @@ namespace Tango
         internal const int TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE = 43;
 
         /// <summary>
+        /// Code used to identify the result came from the ADF import activity.
+        /// </summary>
+        internal const int TANGO_ADF_IMPORT_REQUEST_CODE = 44;
+
+        /// <summary>
+        /// Code used to identify the result came from the ADF export activity.
+        /// </summary>
+        internal const int TANGO_ADF_EXPORT_REQUEST_CODE = 45;
+
+        /// <summary>
         /// Max number of vertices the Point Cloud supports.
         /// </summary>
         internal const int UNITY_MAX_SUPPORTED_VERTS_PER_MESH = 65534;

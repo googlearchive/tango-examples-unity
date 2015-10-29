@@ -173,6 +173,18 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     private Matrix4x4 m_uwOffsetTuw;
 
     /// <summary>
+    /// Gets the unity world offset which can be then multiplied to any transform to apply this offset.
+    /// </summary>
+    /// <value>The unity world offset.</value>
+    public Matrix4x4 UnityWorldOffset
+    {
+        get
+        {
+            return m_uwOffsetTuw;
+        }
+    }
+
+    /// <summary>
     /// Awake is called when the script instance is being loaded.
     /// </summary>
     public void Awake()

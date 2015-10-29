@@ -111,6 +111,7 @@ namespace Tango
         private DepthListener m_depthListener;
         private VideoOverlayListener m_videoOverlayListener;
         private TangoEventListener m_tangoEventListener;
+        private AreaDescriptionEventListener m_areaDescriptionEventListener;
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
         private TangoConfig m_tangoRuntimeConfig;
@@ -147,6 +148,14 @@ namespace Tango
         /// <param name="tangoObject">Object to get Tango callbacks from.</param>
         public void Register(System.Object tangoObject)
         {
+            ITangoAreaDescriptionEvent areaDescriptionEvent = tangoObject as ITangoAreaDescriptionEvent;
+            
+            if (areaDescriptionEvent != null)
+            {
+                RegisterOnAreaDescriptionEvent(areaDescriptionEvent.OnAreaDescriptionImported,
+                                               areaDescriptionEvent.OnAreaDescriptionExported);
+            }
+
             ITangoEvent tangoEvent = tangoObject as ITangoEvent;
             
             if (tangoEvent != null)
@@ -212,6 +221,14 @@ namespace Tango
         /// <param name="tangoObject">Object to stop getting Tango callbacks from.</param>
         public void Unregister(System.Object tangoObject)
         {
+            ITangoAreaDescriptionEvent areaDescriptionEvent = tangoObject as ITangoAreaDescriptionEvent;
+            
+            if (areaDescriptionEvent != null)
+            {
+                UnregisterOnAreaDescriptionEvent(areaDescriptionEvent.OnAreaDescriptionImported,
+                                                 areaDescriptionEvent.OnAreaDescriptionExported);
+            }
+
             ITangoEvent tangoEvent = tangoObject as ITangoEvent;
             
             if (tangoEvent != null)
@@ -702,6 +719,38 @@ namespace Tango
         }
 
         /// <summary>
+        /// Register to get Tango event callbacks.
+        /// 
+        /// See TangoApplication.Register for details.
+        /// </summary>
+        /// <param name="import">The handler to the import callback function.</param>
+        /// <param name="export">The handler to the export callback function.</param>
+        internal void RegisterOnAreaDescriptionEvent(OnAreaDescriptionImportEventHandler import,
+                                                     OnAreaDescriptionExportEventHandler export)
+        {
+            if (m_areaDescriptionEventListener != null)
+            {
+                m_areaDescriptionEventListener.Register(import, export);
+            }
+        }
+        
+        /// <summary>
+        /// Unregister from the Tango event callbacks.
+        /// 
+        /// See TangoApplication.Register for more details.
+        /// </summary>
+        /// <param name="import">The handler to the import callback function.</param>
+        /// <param name="export">The handler to the export callback function.</param>
+        internal void UnregisterOnAreaDescriptionEvent(OnAreaDescriptionImportEventHandler import,
+                                                       OnAreaDescriptionExportEventHandler export)
+        {
+            if (m_areaDescriptionEventListener != null)
+            {
+                m_areaDescriptionEventListener.Unregister(import, export);
+            }
+        }
+
+        /// <summary>
         /// Gets the get tango API version code.
         /// </summary>
         /// <returns>The get tango API version code.</returns>
@@ -1007,6 +1056,7 @@ namespace Tango
             AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
 
             m_tangoEventListener = new TangoEventListener();
+            m_areaDescriptionEventListener = new AreaDescriptionEventListener();
 
             if (m_enableMotionTracking)
             {
@@ -1154,6 +1204,11 @@ namespace Tango
             if (m_videoOverlayListener != null)
             {
                 m_videoOverlayListener.SendIfVideoOverlayAvailable();
+            }
+
+            if (m_areaDescriptionEventListener != null)
+            {
+                m_areaDescriptionEventListener.SendEventIfAvailable();
             }
         }
 

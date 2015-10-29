@@ -60,11 +60,10 @@ namespace Tango
         /// </summary>
         public enum UxHoldPostureType
         {
-            TYPE_HOLD_POSTURE_NONE,  /**< No posture defined */
-            TYPE_HOLD_POSTURE_FORWARD,  /**< Device should be pointed forward */
-            TYPE_HOLD_POSTURE_UP,  /**< Device should be pointed upwards */
-            TYPE_HOLD_POSTURE_DOWN,  /**< Device should be pointed downwards */
-            NA  /***<Not Available, not a real Ux Hold Posture type */
+            NONE,  /**< No posture defined */
+            FORWARD,  /**< Device should be pointed forward */
+            UP,  /**< Device should be pointed upwards */
+            DOWN  /**< Device should be pointed downwards */
         }
     }
 }

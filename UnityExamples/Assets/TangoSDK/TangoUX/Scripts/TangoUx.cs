@@ -34,6 +34,7 @@ namespace Tango
         public bool m_enableUXLibrary = true;
         public bool m_drawDefaultUXExceptions = true;
         public bool m_showConnectionScreen = true;
+        public TangoUxEnums.UxHoldPostureType m_holdPosture = TangoUxEnums.UxHoldPostureType.NONE;
 
         private TangoApplication m_tangoApplication;
 
@@ -48,6 +49,7 @@ namespace Tango
             m_tangoApplication.RegisterOnTangoDisconnect(_OnTangoServiceDisconnected);
             m_tangoApplication.Register(this);
             AndroidHelper.InitTangoUx();
+            SetHoldPosture(m_holdPosture);
         }
 
         /// <summary>

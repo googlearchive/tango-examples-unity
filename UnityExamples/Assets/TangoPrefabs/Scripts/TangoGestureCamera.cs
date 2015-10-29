@@ -51,7 +51,6 @@ public class TangoGestureCamera : MonoBehaviour
 
     private Vector3 m_curOffset;
     
-    private Vector3 m_firstPersonCamOffset = Vector3.zero;
     private Vector3 m_thirdPersonCamOffset = new Vector3(0.0f, 3.0f, -3.0f);
     private Vector3 m_topDownCamOffset = new Vector3(0.0f, 7.0f, 0.0f);
     
@@ -143,7 +142,7 @@ public class TangoGestureCamera : MonoBehaviour
                 startThirdPersonRotationX = curThirdPersonRotationX;
                 startThirdPersonRotationY = curThirdPersonRotationY;
             }
-            if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved)
+            if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
             {
                 Vector2 offset = Input.touches[0].deltaPosition;
                 curThirdPersonRotationX += -offset.y;
@@ -157,8 +156,9 @@ public class TangoGestureCamera : MonoBehaviour
                 touchStartDist = Mathf.Abs(Input.GetTouch(0).position.x - Input.GetTouch(1).position.x) +
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);
             }
-            if (Input.touchCount == 2 && 
-                (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved))
+            if (Input.touchCount == 2
+                && (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
+                && GUIUtility.hotControl == 0)
             {
                 float curTouchDist = Mathf.Abs(Input.GetTouch(0).position.x - Input.GetTouch(1).position.x) +
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);
@@ -182,7 +182,7 @@ public class TangoGestureCamera : MonoBehaviour
                 topDownStartPos = new Vector2(m_topDownCamOffset.x, 
                                               m_topDownCamOffset.z);
             }
-            if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved)
+            if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
             {
                 Vector2 offset = Input.GetTouch(0).position - touchStartPoint;
                 Vector2 curPos = topDownStartPos - (offset / 300.0f);
@@ -197,8 +197,9 @@ public class TangoGestureCamera : MonoBehaviour
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);
                 topDownStartY = m_topDownCamOffset.y;
             }
-            if (Input.touchCount == 2 && 
-                (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved))
+            if (Input.touchCount == 2
+                && (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
+                && GUIUtility.hotControl == 0)
             {
                 float curTouchDist = Mathf.Abs(Input.GetTouch(0).position.x - Input.GetTouch(1).position.x) +
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);

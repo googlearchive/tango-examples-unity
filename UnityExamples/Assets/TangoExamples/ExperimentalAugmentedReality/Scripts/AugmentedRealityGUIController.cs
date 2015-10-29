@@ -36,7 +36,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
     public const float UI_BUTTON_SIZE_X = 250.0f;
     public const float UI_BUTTON_SIZE_Y = 130.0f;
     public const float UI_BUTTON_GAP_X = 5.0f;
-    public const float UI_CAMERA_BUTTON_OFFSET = UI_BUTTON_SIZE_X + UI_BUTTON_GAP_X; 
+    public const float UI_CAMERA_BUTTON_OFFSET = UI_BUTTON_SIZE_X + UI_BUTTON_GAP_X;
     public const float UI_LABEL_OFFSET = UI_LABEL_GAP_Y + UI_LABEL_SIZE_Y;
     public const float UI_FPS_LABEL_START_Y = UI_LABEL_START_Y + UI_LABEL_OFFSET;
     public const float UI_EVENT_LABEL_START_Y = UI_FPS_LABEL_START_Y + UI_LABEL_OFFSET;
@@ -44,28 +44,18 @@ public class AugmentedRealityGUIController : MonoBehaviour
     public const float UI_DEPTH_LABLE_START_Y = UI_POSE_LABEL_START_Y + UI_LABEL_OFFSET;
     public const string UI_FLOAT_FORMAT = "F3";
     public const string UI_FONT_SIZE = "<size=25>";
-    
+
     public const float UI_TANGO_VERSION_X = UI_LABEL_START_X;
     public const float UI_TANGO_VERSION_Y = UI_LABEL_START_Y;
     public const float UI_TANGO_APP_SPECIFIC_START_X = UI_TANGO_VERSION_X;
     public const float UI_TANGO_APP_SPECIFIC_START_Y = UI_TANGO_VERSION_Y + (UI_LABEL_OFFSET * 2);
-    
+
     public const string UX_SERVICE_VERSION = "Service version: {0}";
     public const string UX_TANGO_SERVICE_VERSION = "Tango service version: {0}";
     public const string UX_TANGO_SYSTEM_EVENT = "Tango system event: {0}";
     public const string UX_TARGET_TO_BASE_FRAME = "Target->{0}, Base->{1}:";
     public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
     public const float SECOND_TO_MILLISECOND = 1000.0f;
-
-    /// <summary>
-    /// How big (in pixels) is a tap.
-    /// </summary>
-    public const float TAP_PIXEL_TOLERANCE = 40;
-
-    /// <summary>
-    /// Minimum inlier percentage to consider a plane a fit.
-    /// </summary>
-    public const float MIN_PLANE_FIT_PERCENTAGE = 0.8f;
 
     /// <summary>
     /// The location prefab to place on taps.
@@ -83,11 +73,11 @@ public class AugmentedRealityGUIController : MonoBehaviour
     private int m_framesSinceUpdate;
     private float m_accumulation;
     private float m_currentTime;
-    
-    private Rect m_label;
+
     private TangoApplication m_tangoApplication;
     private TangoARPoseController m_tangoPose;
     private string m_tangoServiceVersion;
+    private ARCameraPostProcess m_arCameraPostProcess;
 
     /// <summary>
     /// If set, this is the selected marker.
@@ -108,26 +98,26 @@ public class AugmentedRealityGUIController : MonoBehaviour
     /// If set, show debug text.
     /// </summary>
     private bool m_showDebug = false;
-    
+
     /// <summary>
     /// Unity Start() callback, we set up some initial values here.
     /// </summary>
-    public void Start() 
+    public void Start()
     {
         m_currentFPS = 0;
         m_framesSinceUpdate = 0;
         m_currentTime = 0.0f;
         m_fpsText = "FPS = Calculating";
-        m_label = new Rect((Screen.width * 0.025f) - 50, (Screen.height * 0.96f) - 25, 600.0f, 50.0f);
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_tangoPose = FindObjectOfType<TangoARPoseController>();
+        m_arCameraPostProcess = FindObjectOfType<ARCameraPostProcess>();
         m_tangoServiceVersion = TangoApplication.GetTangoServiceVersion();
     }
-    
+
     /// <summary>
     /// Updates UI and handles player input.
     /// </summary>
-    public void Update() 
+    public void Update()
     {
         m_currentTime += Time.deltaTime;
         ++m_framesSinceUpdate;
@@ -143,54 +133,65 @@ public class AugmentedRealityGUIController : MonoBehaviour
 
         _UpdateLocationMarker();
     }
-    
+
     /// <summary>
     /// Display simple GUI.
     /// </summary>
     public void OnGUI()
     {
+        Rect distortionButtonRec = new Rect(UI_BUTTON_GAP_X,
+                                            Screen.height - UI_BUTTON_SIZE_Y - UI_BUTTON_GAP_X,
+                                            UI_BUTTON_SIZE_X,
+                                            UI_BUTTON_SIZE_Y);
+        string isOn = m_arCameraPostProcess.enabled ? "Off" : "On";
+        if (GUI.Button(distortionButtonRec,
+                       UI_FONT_SIZE + "Turn Distortion " + isOn + "</size>"))
+        {
+            m_arCameraPostProcess.enabled = !m_arCameraPostProcess.enabled;
+        }
+
         if (m_showDebug && m_tangoApplication.HasRequestedPermissions())
         {
             Color oldColor = GUI.color;
             GUI.color = Color.white;
-            
+
             GUI.color = Color.black;
-            GUI.Label(new Rect(UI_LABEL_START_X, 
-                               UI_LABEL_START_Y, 
-                               UI_LABEL_SIZE_X, 
-                               UI_LABEL_SIZE_Y), 
+            GUI.Label(new Rect(UI_LABEL_START_X,
+                               UI_LABEL_START_Y,
+                               UI_LABEL_SIZE_X,
+                               UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + String.Format(UX_TANGO_SERVICE_VERSION, m_tangoServiceVersion) + "</size>");
-            
-            GUI.Label(new Rect(UI_LABEL_START_X, 
-                               UI_FPS_LABEL_START_Y, 
-                               UI_LABEL_SIZE_X, 
+
+            GUI.Label(new Rect(UI_LABEL_START_X,
+                               UI_FPS_LABEL_START_Y,
+                               UI_LABEL_SIZE_X,
                                UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + m_fpsText + "</size>");
-            
+
             // MOTION TRACKING
-            GUI.Label(new Rect(UI_LABEL_START_X, 
+            GUI.Label(new Rect(UI_LABEL_START_X,
                                UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET,
-                               UI_LABEL_SIZE_X, 
+                               UI_LABEL_SIZE_X,
                                UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
-            
+
             Vector3 pos = m_tangoPose.transform.position;
             Quaternion quat = m_tangoPose.transform.rotation;
-            string positionString = pos.x.ToString(UI_FLOAT_FORMAT) + ", " + 
-                pos.y.ToString(UI_FLOAT_FORMAT) + ", " + 
+            string positionString = pos.x.ToString(UI_FLOAT_FORMAT) + ", " +
+                pos.y.ToString(UI_FLOAT_FORMAT) + ", " +
                     pos.z.ToString(UI_FLOAT_FORMAT);
-            string rotationString = quat.x.ToString(UI_FLOAT_FORMAT) + ", " + 
-                quat.y.ToString(UI_FLOAT_FORMAT) + ", " + 
-                    quat.z.ToString(UI_FLOAT_FORMAT) + ", " + 
+            string rotationString = quat.x.ToString(UI_FLOAT_FORMAT) + ", " +
+                quat.y.ToString(UI_FLOAT_FORMAT) + ", " +
+                    quat.z.ToString(UI_FLOAT_FORMAT) + ", " +
                     quat.w.ToString(UI_FLOAT_FORMAT);
             string statusString = String.Format(UX_STATUS,
                                                 _GetLoggingStringFromPoseStatus(m_tangoPose.m_poseStatus),
                                                 _GetLoggingStringFromFrameCount(m_tangoPose.m_poseCount),
                                                 positionString, rotationString);
-            GUI.Label(new Rect(UI_LABEL_START_X, 
+            GUI.Label(new Rect(UI_LABEL_START_X,
                                UI_POSE_LABEL_START_Y,
-                               UI_LABEL_SIZE_X, 
-                               UI_LABEL_SIZE_Y), 
+                               UI_LABEL_SIZE_X,
+                               UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + statusString + "</size>");
             GUI.color = oldColor;
         }
@@ -253,7 +254,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
         Vector3 center = bounds.center;
         Vector3 extents = bounds.extents;
         Bounds screenBounds = new Bounds(cam.WorldToScreenPoint(center), Vector3.zero);
-        
+
         screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, +extents.y, +extents.z)));
         screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, +extents.y, -extents.z)));
         screenBounds.Encapsulate(cam.WorldToScreenPoint(center + new Vector3(+extents.x, -extents.y, +extents.z)));
@@ -293,7 +294,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
         }
         return statusString;
     }
-    
+
     /// <summary>
     /// Reformat string from vector3 type for data logging.
     /// </summary>
@@ -307,13 +308,13 @@ public class AugmentedRealityGUIController : MonoBehaviour
         }
         else
         {
-            return string.Format("{0}, {1}, {2}", 
+            return string.Format("{0}, {1}, {2}",
                                  vec.x.ToString(UI_FLOAT_FORMAT),
                                  vec.y.ToString(UI_FLOAT_FORMAT),
                                  vec.z.ToString(UI_FLOAT_FORMAT));
         }
     }
-    
+
     /// <summary>
     /// Reformat string from quaternion type for data logging.
     /// </summary>
@@ -334,7 +335,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
                                  quat.w.ToString(UI_FLOAT_FORMAT));
         }
     }
-    
+
     /// <summary>
     /// Return a string to the get logging from frame count.
     /// </summary>
@@ -351,7 +352,7 @@ public class AugmentedRealityGUIController : MonoBehaviour
             return frameCount.ToString();
         }
     }
-    
+
     /// <summary>
     /// Return a string to get logging of FrameDeltaTime.
     /// </summary>
@@ -405,9 +406,8 @@ public class AugmentedRealityGUIController : MonoBehaviour
                 // Place a new point at that location, clear selection
                 Vector3 planeCenter;
                 Plane plane;
-                if (!m_pointCloud.FindPlane(cam, t.position,
-                                            TAP_PIXEL_TOLERANCE, MIN_PLANE_FIT_PERCENTAGE,
-                                            out planeCenter, out plane))
+
+                if (!m_pointCloud.FindPlane(cam, t.position, out planeCenter, out plane))
                 {
                     return;
                 }

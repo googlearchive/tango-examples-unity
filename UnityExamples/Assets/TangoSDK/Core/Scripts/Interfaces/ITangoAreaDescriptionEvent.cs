@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="ARLocationMarker.cs" company="Google">
+// <copyright file="ITangoAreaDescriptionEvent.cs" company="Google">
 //
 // Copyright 2015 Google Inc. All Rights Reserved.
 //
@@ -21,39 +21,22 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Location marker script to show hide/show animations.
-///
-/// Instead of calling destroy on this, send the "Hide" message.
+/// Tango Area Descrrption event interface.
 /// </summary>
-public class ARLocationMarker : MonoBehaviour
+public interface ITangoAreaDescriptionEvent
 {
     /// <summary>
-    /// The animation playing.
+    /// This is called when the Area Description export operation completes.
     /// </summary>
-    private Animation m_anim;
+    /// <param name="isSuccessful">If the export operation completed successfully.</param>
+    void OnAreaDescriptionExported(bool isSuccessful);
 
     /// <summary>
-    /// Start this instance.
+    /// This is called when the Area Description import operation completes.
+    /// 
+    /// Please note that the Tango Service can only load Area Description file from internal storage.
     /// </summary>
-    private void Start()
-    {
-        m_anim = GetComponent<Animation>();
-        m_anim.Play("Show", PlayMode.StopAll);
-    }
-
-    /// <summary>
-    /// Plays an animation, then destroys.
-    /// </summary>
-    private void Hide()
-    {
-        m_anim.Play("Hide", PlayMode.StopAll);
-    }
-
-    /// <summary>
-    /// Callback for the animation system.
-    /// </summary>
-    private void HideDone()
-    {
-        Destroy(gameObject);
-    }
+    /// <param name="isSuccessful">If the import operation completed successfully.</param>
+    /// <param name="areaDescription">The imported Area Description.</param>
+    void OnAreaDescriptionImported(bool isSuccessful, Tango.AreaDescription areaDescription);
 }
