@@ -95,11 +95,11 @@ namespace Tango
         /// <summary>
         /// Resets the motion tracking system.
         /// 
-        /// This reinitializes the <code>TANGO_COORDINATE_FRAME_START_OF_SERVICE</code> coordinate frame to where the
+        /// This reinitializes the <c>TANGO_COORDINATE_FRAME_START_OF_SERVICE</c> coordinate frame to where the
         /// device is when you call this function; afterwards, if you ask for the pose with relation to start of
         /// service, it uses this as the new origin.  You can call this function at any time.
         ///
-        /// If you are using Area Learning, the <code>TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</code> coordinate frame
+        /// If you are using Area Learning, the <c>TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</c> coordinate frame
         /// is not affected by calling this function; however, the device needs to localize again before you can use
         /// the area description.
         /// </summary>
@@ -109,8 +109,9 @@ namespace Tango
         }
 
 #if UNITY_EDITOR
+        /// DEPRECATED: Set the <c>m_mouseEmulationViaPoseUpdates</c> field in the TangoApplication script to true.
         /// <summary>
-        /// DEPRECATED: Legacy function that gets mouse / keyboard PoseEmulation data.
+        /// Legacy function that gets mouse / keyboard PoseEmulation data.
         /// </summary>
         /// <param name="controllerPostion">Controller postion.</param>
         /// <param name="controllerRotation">Controller rotation.</param>
@@ -148,10 +149,11 @@ namespace Tango
 #endif
 
         #region ADF Functionality
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Gets the full list of unique area description IDs available on a device.
+        /// Gets the full list of unique area description IDs available on a device.
         /// 
-        /// This is updated by calling <code>RefreshADFList</code>.
+        /// This is updated by calling <c>RefreshADFList()</c>.
         /// </summary>
         /// <returns>The cached ADF list.</returns>
         public static UUID_list GetCachedADFList()
@@ -159,8 +161,9 @@ namespace Tango
             return m_adfList;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Gets the latest area description ID available on a device.
+        /// Gets the latest area description ID available on a device.
         /// </summary>
         /// <returns>The most recent area description ID.</returns>
         public static UUIDUnityHolder GetLatestADFUUID()
@@ -172,8 +175,9 @@ namespace Tango
             return m_adfList.GetLatestADFUUID();
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Check if an area description ID is valid.
+        /// Check if an area description ID is valid.
         /// </summary>
         /// <returns><c>true</c> if the ID is valid; otherwise, <c>false</c>.</returns>
         /// <param name="toCheck">Area description ID to check.</param>
@@ -182,8 +186,9 @@ namespace Tango
             return toCheck != null && toCheck.IsObjectValid();
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Gets the area description ID at the specified index as a string.
+        /// Gets the area description ID at the specified index as a string.
         /// </summary>
         /// <returns>The area description ID as a string.</returns>
         /// <param name="index">The index of the area description ID.</param>
@@ -196,8 +201,9 @@ namespace Tango
             return m_adfList.GetUUIDAsString(index);
         }
         
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Gets the area description ID at the specified index as a char array.
+        /// Gets the area description ID at the specified index as a char array.
         /// </summary>
         /// <returns>The area description ID as a char array.</returns>
         /// <param name="index">The index of the area description ID.</param>
@@ -211,8 +217,9 @@ namespace Tango
             return uuidString.ToCharArray();
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Update the list returned by <code>GetCachedADFList</code>.
+        /// Update the list returned by <c>GetCachedADFList()</c>.
         /// </summary>
         /// <returns>Returns TANGO_SUCCESS on success, or TANGO_ERROR on failure to retrieve the list.</returns>
         public static int RefreshADFList()
@@ -246,8 +253,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Saves the area description, returning the unique ID associated with the saved map.
+        /// Saves the area description, returning the unique ID associated with the saved map.
         /// 
         /// You can only save an area description while connected to the Tango Service and if you have enabled Area
         /// Learning mode. If you loaded an ADF before connecting, then calling this method appends any new learned
@@ -282,8 +290,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Saves the metadata associated with a single area description unique ID.
+        /// Saves the metadata associated with a single area description unique ID.
         /// </summary>
         /// <returns>
         /// Returns TANGO_SUCCESS on successful save, or TANGO_ERROR on failure, or if the service needs to be
@@ -316,8 +325,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Export an area with the UUID from the default area storage location to the destination file
+        /// Export an area with the UUID from the default area storage location to the destination file
         /// directory with the UUID as its name.
         /// </summary>
         /// <returns>Returns TANGO_SUCCESS if the file was exported, or TANGO_ERROR if the export failed.</returns>
@@ -339,8 +349,9 @@ namespace Tango
             return Common.ErrorType.TANGO_SUCCESS;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Import an area description from a file path to the default area storage location. 
+        /// Import an area description from a file path to the default area storage location. 
         /// 
         /// Please call ImportAreaDescriptionFromFile(string filePath) instead.
         /// The new area description will get a new ID, which will be stored in adfID.
@@ -370,8 +381,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Import an area description from a file path to the default area storage location. 
+        /// Import an area description from a file path to the default area storage location. 
         /// </summary>
         /// <returns><c>Common.ErrorType.TANGO_SUCCESS</c> if the UUID was imported successfully.</returns>
         /// <param name="filePath">File path of the area descrption to be imported.</param>
@@ -386,8 +398,9 @@ namespace Tango
             return Common.ErrorType.TANGO_SUCCESS;
         }
 
+        /// DEPRECATED: Use the AreaDescription class to work with area descriptions.
         /// <summary>
-        /// DEPRECATED: Deletes an area description with the specified unique ID.
+        /// Deletes an area description with the specified unique ID.
         /// </summary>
         /// <returns>
         /// Returns TANGO_SUCCESS if area description file with specified unique ID is found and can be removed.
@@ -410,8 +423,9 @@ namespace Tango
         #endregion // ADF Functionality
 
         #region ADF Metadata Functionality
+        /// DEPRECATED: Use the AreaDescription class and AreaDescription.GetMetadata instead.
         /// <summary>
-        /// DEPRECATED: Gets the metadata handle associated with a single area description unique ID.
+        /// Gets the metadata handle associated with a single area description unique ID.
         /// </summary>
         /// <returns>
         /// Returns TANGO_SUCCESS on successful load of metadata, or TANGO_ERROR if the service needs to be initialized
@@ -438,8 +452,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class and AreaDescription.Metadata instead.
         /// <summary>
-        /// DEPRECATED: Populates the Metadata key/value pairs of a given metadataPointer.
+        /// Populates the Metadata key/value pairs of a given metadataPointer.
         /// 
         /// metaDataPointer should be initialized to a valid Metadata by calling the getAreaDescriptionMetaData().
         /// </summary>
@@ -481,8 +496,9 @@ namespace Tango
             return returnValue;
         }
 
+        /// DEPRECATED: Use the AreaDescription class and AreaDescription.Metadata instead.
         /// <summary>
-        /// DEPRECATED: Get the value of a key from a metadata.
+        /// Get the value of a key from a metadata.
         /// </summary>
         /// <returns>TANGO_SUCCESS if successful, else TANGO_INVALID or TANGO_ERROR.</returns>
         /// <param name="key">Key to lookup.</param>
@@ -512,8 +528,9 @@ namespace Tango
             }
         }
 
+        /// DEPRECATED: Use the AreaDescription class and AreaDescription.Metadata instead.
         /// <summary>
-        /// DEPRECATED: Set the value of a key in a metadata.
+        /// Set the value of a key in a metadata.
         /// </summary>
         /// <returns>TANGO_SUCCESS if successful, else TANGO_INVALID or TANGO_ERROR.</returns>
         /// <param name="key">Key to set the value of.</param>

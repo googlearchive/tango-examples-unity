@@ -29,7 +29,7 @@ namespace Tango
     /// UX library can be done in the Unity editor or by programatically setting the member flags.
     /// </summary>
     [RequireComponent(typeof(TangoApplication))]
-    public class TangoUx : MonoBehaviour, ITangoPose, ITangoEventMultithreaded, ITangoDepth
+    public class TangoUx : MonoBehaviour, ITangoLifecycle, ITangoPose, ITangoEventMultithreaded, ITangoDepth
     {
         public bool m_enableUXLibrary = true;
         public bool m_drawDefaultUXExceptions = true;
@@ -44,9 +44,6 @@ namespace Tango
         public void Start()
         {
             m_tangoApplication = GetComponent<TangoApplication>();
-            m_tangoApplication.RegisterPermissionsCallback(_OnTangoPermissionsEvent);
-            m_tangoApplication.RegisterOnTangoConnect(_OnTangoServiceConnected);
-            m_tangoApplication.RegisterOnTangoDisconnect(_OnTangoServiceDisconnected);
             m_tangoApplication.Register(this);
             AndroidHelper.InitTangoUx();
             SetHoldPosture(m_holdPosture);
@@ -59,9 +56,6 @@ namespace Tango
         {
             if (m_tangoApplication)
             {
-                m_tangoApplication.UnregisterPermissionsCallback(_OnTangoPermissionsEvent);
-                m_tangoApplication.UnregisterOnTangoConnect(_OnTangoServiceConnected);
-                m_tangoApplication.UnregisterOnTangoDisconnect(_OnTangoServiceDisconnected);
                 m_tangoApplication.Unregister(this);
             }
         }
@@ -97,6 +91,40 @@ namespace Tango
                 {
                     UxExceptionEventListener.GetInstance.UnregisterOnUxExceptionEventHandler(tangoUX.OnUxExceptionEventHandler);
                 }
+            }
+        }
+
+        /// <summary>
+        /// This is called when the permission granting process is finished.
+        /// </summary>
+        /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+        public void OnTangoPermissions(bool permissionsGranted)
+        {
+            if (m_enableUXLibrary && permissionsGranted)
+            {
+                StartCoroutine(_StartExceptionsListener());
+            }
+        }
+
+        /// <summary>
+        /// This is called when succesfully connected to the Tango service.
+        /// </summary>
+        public void OnTangoServiceConnected()
+        {
+            if (m_enableUXLibrary)
+            {
+                AndroidHelper.StartTangoUX(m_tangoApplication.m_enableMotionTracking && m_showConnectionScreen);
+            }
+        }
+
+        /// <summary>
+        /// This is called when disconnected from the Tango service.
+        /// </summary>
+        public void OnTangoServiceDisconnected()
+        {
+            if (m_enableUXLibrary)
+            {
+                AndroidHelper.StopTangoUX();
             }
         }
 
@@ -157,40 +185,6 @@ namespace Tango
             AndroidHelper.ShowStandardTangoExceptionsUI(m_drawDefaultUXExceptions);
             AndroidHelper.SetUxExceptionEventListener();
             yield return 0;
-        }
-        
-        /// <summary>
-        /// On tango service connected.
-        /// </summary>
-        private void _OnTangoServiceConnected()
-        {
-            if (m_enableUXLibrary)
-            {
-                AndroidHelper.StartTangoUX(m_tangoApplication.m_enableMotionTracking && m_showConnectionScreen);
-            }
-        }
-        
-        /// <summary>
-        /// On tango service disconnected.
-        /// </summary>
-        private void _OnTangoServiceDisconnected()
-        {
-            if (m_enableUXLibrary)
-            {
-                AndroidHelper.StopTangoUX();
-            }
-        }
-        
-        /// <summary>
-        /// On tango permissions event.
-        /// </summary>
-        /// <param name="permissionsGranted">If set to <c>true</c> permissions granted.</param>
-        private void _OnTangoPermissionsEvent(bool permissionsGranted)
-        {
-            if (m_enableUXLibrary && permissionsGranted)
-            {
-                StartCoroutine(_StartExceptionsListener());
-            }
         }
     }
 }

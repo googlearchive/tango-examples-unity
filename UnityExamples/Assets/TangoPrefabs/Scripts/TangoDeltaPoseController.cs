@@ -29,7 +29,7 @@ using Tango;
 /// This updates the position with deltas, so movement can be done using a
 /// CharacterController, or physics, or anything else that wants deltas.
 /// </summary>
-public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
+public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPose
 {
     /// <summary>
     /// The change in time since the last pose update.
@@ -50,6 +50,36 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     public TangoEnums.TangoPoseStatusType m_poseStatus;
 
     /// <summary>
+    /// If set, the Area Description used for relocalization.
+    /// </summary>
+    [HideInInspector]
+    public AreaDescription m_areaDescription;
+
+    /// <summary>
+    /// The most recent pose timestamp received.
+    /// </summary>
+    [HideInInspector]
+    public float m_poseTimestamp;
+
+    /// <summary>
+    /// The most recent Tango rotation.
+    /// 
+    /// This is different from the pose's rotation because it takes into
+    /// account teleporting and the clutch.
+    /// </summary>
+    [HideInInspector]
+    public Vector3 m_tangoPosition;
+    
+    /// <summary>
+    /// The most recent Tango position.
+    /// 
+    /// This is different from the pose's position because it takes into
+    /// account teleporting and the clutch.
+    /// </summary>
+    [HideInInspector]
+    public Quaternion m_tangoRotation;
+
+    /// <summary>
     /// If set, use the character controller to move the object.
     /// </summary>
     public bool m_characterMotion;
@@ -60,14 +90,14 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     public bool m_enableClutchUI;
 
     /// <summary>
+    /// If set, this contoller will use the Device with respect Area Description frame pose.
+    /// </summary>
+    public bool m_useAreaDescriptionPose;
+
+    /// <summary>
     /// The TangoApplication being listened to.
     /// </summary>
     private TangoApplication m_tangoApplication;
-
-    /// <summary>
-    /// The most recent pose timestamp received.
-    /// </summary>
-    private float m_poseTimestamp;
 
     /// <summary>
     /// The previous Tango's position.
@@ -84,22 +114,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     /// account teleporting and the clutch.
     /// </summary>
     private Quaternion m_prevTangoRotation;
-
-    /// <summary>
-    /// The most recent Tango rotation.
-    /// 
-    /// This is different from the pose's rotation because it takes into
-    /// account teleporting and the clutch.
-    /// </summary>
-    private Vector3 m_tangoPosition;
-
-    /// <summary>
-    /// The most recent Tango position.
-    /// 
-    /// This is different from the pose's position because it takes into
-    /// account teleporting and the clutch.
-    /// </summary>
-    private Quaternion m_tangoRotation;
 
     /// <summary>
     /// If the clutch is active.
@@ -224,12 +238,11 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
         
         if (m_tangoApplication != null)
         {
+            m_tangoApplication.Register(this);
             if (AndroidHelper.IsTangoCorePresent())
             {
                 // Request Tango permissions
-                m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
-                m_tangoApplication.RequestNecessaryPermissionsAndConnect();
-                m_tangoApplication.Register(this);
+                m_tangoApplication.RequestPermissions();
             }
             else
             {
@@ -317,16 +330,92 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
         }
 
         // Only interested in pose updates relative to the start of service pose.
-        if (pose.framePair.baseFrame != TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE
-            || pose.framePair.targetFrame != TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+        if (!m_useAreaDescriptionPose)
         {
-            return;
+            if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE
+                && pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+            {
+                _UpdateTransformationFromPose(pose);
+            }
         }
-        
+        else
+        {
+            if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION
+                && pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+            {
+                _UpdateTransformationFromPose(pose);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Sets the pose on this component.  Future Tango pose updates will move relative to this pose.
+    /// </summary>
+    /// <param name="pos">New position.</param>
+    /// <param name="quat">New rotation.</param>
+    public void SetPose(Vector3 pos, Quaternion quat)
+    {
+        Quaternion uwQuc = Quaternion.LookRotation(m_uwTuc.GetColumn(2), m_uwTuc.GetColumn(1));
+        Vector3 eulerAngles = quat.eulerAngles;
+        eulerAngles.x = uwQuc.eulerAngles.x;
+        eulerAngles.z = uwQuc.eulerAngles.z;
+        quat.eulerAngles = eulerAngles;
+
+        m_uwOffsetTuw = Matrix4x4.TRS(pos, quat, Vector3.one) * m_uwTuc.inverse;
+
+        m_prevTangoPosition = m_tangoPosition = pos;
+        m_prevTangoRotation = m_tangoRotation = quat;
+        m_characterController.transform.position = pos;
+        m_characterController.transform.rotation = quat;
+    }
+
+    /// <summary>
+    /// This is called when the permission granting process is finished.
+    /// </summary>
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
+    {
+        if (permissionsGranted)
+        {
+            if (m_tangoApplication.m_enableADFLoading && m_areaDescription != null)
+            {
+                m_tangoApplication.Startup(m_areaDescription);
+            }
+            else
+            {
+                m_tangoApplication.Startup(null);
+            }
+        }
+        else
+        {
+            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
+        }
+    }
+    
+    /// <summary>
+    /// This is called when succesfully connected to the Tango service.
+    /// </summary>
+    public void OnTangoServiceConnected()
+    {
+    }
+    
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
+    }
+
+    /// <summary>
+    /// Set controller's transformation based on received pose.
+    /// </summary>
+    /// <param name="pose">Received Tango pose data.</param>
+    private void _UpdateTransformationFromPose(TangoPoseData pose)
+    {
         // Remember the previous position, so you can do delta motion
         m_prevTangoPosition = m_tangoPosition;
         m_prevTangoRotation = m_tangoRotation;
-        
+
         // The callback pose is for device with respect to start of service pose.
         if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
@@ -389,27 +478,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
-    /// Sets the pose on this component.  Future Tango pose updates will move relative to this pose.
-    /// </summary>
-    /// <param name="pos">New position.</param>
-    /// <param name="quat">New rotation.</param>
-    public void SetPose(Vector3 pos, Quaternion quat)
-    {
-        Quaternion uwQuc = Quaternion.LookRotation(m_uwTuc.GetColumn(2), m_uwTuc.GetColumn(1));
-        Vector3 eulerAngles = quat.eulerAngles;
-        eulerAngles.x = uwQuc.eulerAngles.x;
-        eulerAngles.z = uwQuc.eulerAngles.z;
-        quat.eulerAngles = eulerAngles;
-
-        m_uwOffsetTuw = Matrix4x4.TRS(pos, quat, Vector3.one) * m_uwTuc.inverse;
-
-        m_prevTangoPosition = m_tangoPosition = pos;
-        m_prevTangoRotation = m_tangoRotation = quat;
-        m_characterController.transform.position = pos;
-        m_characterController.transform.rotation = quat;
-    }
-
-    /// <summary>
     /// Internal callback when no Tango core is present.
     /// </summary>
     /// <returns>Coroutine IEnumerator.</returns>
@@ -418,23 +486,5 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
         AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
         yield return new WaitForSeconds(2.0f);
         Application.Quit();
-    }
-
-    /// <summary>
-    /// Internal callback when a permissions event happens.
-    /// </summary>
-    /// <param name="permissionsGranted">If set to <c>true</c> permissions granted.</param>
-    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
-    {
-        if (permissionsGranted)
-        {
-            m_tangoApplication.InitApplication();
-            m_tangoApplication.InitProviders(string.Empty);
-            m_tangoApplication.ConnectToService();
-        }
-        else
-        {
-            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-        }
     }
 }

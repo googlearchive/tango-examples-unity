@@ -40,9 +40,10 @@ public class BuildTools
         Icon = "TangoExamples/Common/Textures/ProjectTango_Logo.png",
         Scenes = new string[]
         {
-            "Scenes/AreaLearning.unity",
             "Scenes/MotionTracking.unity",
             "Scenes/PointCloud.unity",
+            "Scenes/AreaLearning.unity",
+            "Scenes/AreaDescriptionManagement.unity",
         },
         BundleIdentifier = "com.google.projecttango.examples"
     };

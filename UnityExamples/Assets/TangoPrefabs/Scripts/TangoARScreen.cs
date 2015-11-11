@@ -31,7 +31,7 @@ using Tango;
 /// shader.
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class TangoARScreen : MonoBehaviour
+public class TangoARScreen : MonoBehaviour, ITangoLifecycle
 {   
     /// <summary>
     /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to background-1
@@ -69,13 +69,13 @@ public class TangoARScreen : MonoBehaviour
     /// <summary>
     /// Initialize the AR Screen.
     /// </summary>
-    private void Start()
+    public void Start()
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_arCameraPostProcess = gameObject.GetComponent<ARCameraPostProcess>();
         if (m_tangoApplication != null)
         {
-            m_tangoApplication.RegisterOnTangoConnect(_SetCameraIntrinsics);
+            m_tangoApplication.Register(this);
 
             // Pass YUV textures to shader for process.
             m_textures = m_tangoApplication.GetVideoOverlayTextureYUV();
@@ -110,14 +110,73 @@ public class TangoARScreen : MonoBehaviour
     /// <summary>
     /// Unity update function, we update our texture from here.
     /// </summary>
-    private void Update()
+    public void Update()
     {
         m_screenUpdateTime = VideoOverlayProvider.RenderLatestFrame(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
 
         // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL state.
         GL.InvalidateState();
     }
-    
+
+    /// <summary>
+    /// This is called when the permission granting process is finished.
+    /// </summary>
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
+    {
+    }
+
+    /// <summary>
+    /// This is called when succesfully connected to the Tango service.
+    /// </summary>
+    public void OnTangoServiceConnected()
+    {
+        // Set up the size of ARScreen based on camera intrinsics.
+        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+
+        if (intrinsics.width != 0 && intrinsics.height != 0)
+        {
+            m_arCameraPostProcess.SetupIntrinsic(intrinsics);
+            Camera.main.projectionMatrix = ProjectionMatrixForCameraIntrinsics((float)intrinsics.width,
+                                                                               (float)intrinsics.height,
+                                                                               (float)intrinsics.fx,
+                                                                               (float)intrinsics.fy,
+                                                                               (float)intrinsics.cx,
+                                                                               (float)intrinsics.cy,
+                                                                               0.1f,
+                                                                               1000.0f);
+
+            // Here we are scaling the image plane to make sure the image plane's ratio is set as the
+            // color camera image ratio.
+            // If we don't do this, because we are drawing the texture fullscreen, the image plane will
+            // be set to the screen's ratio.
+            float widthRatio = (float)Screen.width / (float)intrinsics.width;
+            float heightRatio = (float)Screen.height / (float)intrinsics.height;
+            if (widthRatio >= heightRatio)
+            {
+                float normalizedOffset = ((widthRatio / heightRatio) - 1.0f) / 2.0f;
+                _SetScreenVertices(0, normalizedOffset);
+            }
+            else
+            {
+                float normalizedOffset = ((heightRatio / widthRatio) - 1.0f) / 2.0f;
+                _SetScreenVertices(normalizedOffset, 0);
+            }
+        }
+        else
+        {
+            m_arCameraPostProcess.enabled = false;
+        }
+    }
+
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
+    }
+
     /// <summary>
     /// Set the screen (video overlay image plane) size and vertices. The image plane is not
     /// applying any project matrix or view matrix. So it's drawing space is the normalized
@@ -159,49 +218,6 @@ public class TangoARScreen : MonoBehaviour
 
         // Make this mesh never fail the occlusion cull
         mesh.bounds = new Bounds(Vector3.zero, new Vector3(float.MaxValue, float.MaxValue, float.MaxValue));
-    }
-    
-    /// <summary>
-    /// Set up the size of ARScreen based on camera intrinsics.
-    /// </summary>
-    private void _SetCameraIntrinsics()
-    {
-        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
-
-        if (intrinsics.width != 0 && intrinsics.height != 0)
-        {
-            m_arCameraPostProcess.SetupIntrinsic(intrinsics);
-            Camera.main.projectionMatrix = ProjectionMatrixForCameraIntrinsics((float)intrinsics.width,
-                                                                               (float)intrinsics.height,
-                                                                               (float)intrinsics.fx,
-                                                                               (float)intrinsics.fy,
-                                                                               (float)intrinsics.cx,
-                                                                               (float)intrinsics.cy,
-                                                                               0.1f,
-                                                                               1000.0f);
-
-            // Here we are scaling the image plane to make sure the image plane's ratio is set as the
-            // color camera image ratio.
-            // If we don't do this, because we are drawing the texture fullscreen, the image plane will
-            // be set to the screen's ratio.
-            float widthRatio = (float)Screen.width / (float)intrinsics.width;
-            float heightRatio = (float)Screen.height / (float)intrinsics.height;
-            if (widthRatio >= heightRatio)
-            {
-                float normalizedOffset = ((widthRatio / heightRatio) - 1.0f) / 2.0f;
-                _SetScreenVertices(0, normalizedOffset);
-            }
-            else
-            {
-                float normalizedOffset = ((heightRatio / widthRatio) - 1.0f) / 2.0f;
-                _SetScreenVertices(normalizedOffset, 0);
-            }
-        }
-        else
-        {
-            m_arCameraPostProcess.enabled = false;
-        }
     }
 
     /// <summary>

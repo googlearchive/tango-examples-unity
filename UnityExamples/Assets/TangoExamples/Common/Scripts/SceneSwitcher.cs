@@ -26,7 +26,7 @@ using Tango;
 /// </summary>
 public class SceneSwitcher : MonoBehaviour
 {
-    private const int SCENE_BUTTON_SIZE_X = 250;
+    private const int SCENE_BUTTON_SIZE_X = 300;
     private const int SCENE_BUTTON_SIZE_Y = 65;
     private const int SCENE_BUTTON_GAP_X = 5;
     private const int SCENE_BUTTON_GAP_Y = 3;
@@ -36,9 +36,10 @@ public class SceneSwitcher : MonoBehaviour
     /// </summary>
     private readonly string[] m_sceneNames =
     {
-        "AreaLearning",
         "MotionTracking",
-        "PointCloud" 
+        "PointCloud",
+        "AreaLearning",
+        "AreaDescriptionManagement"
     };
 
     /// <summary>

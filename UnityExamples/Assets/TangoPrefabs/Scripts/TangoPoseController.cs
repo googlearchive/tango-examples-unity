@@ -25,7 +25,7 @@ using Tango;
 /// This is a basic movement controller based on
 /// pose estimation returned from the Tango Service.
 /// </summary>
-public class TangoPoseController : MonoBehaviour, ITangoPose
+public class TangoPoseController : MonoBehaviour, ITangoLifecycle, ITangoPose
 {
     // Tango pose data for debug logging and transform update.
     [HideInInspector]
@@ -61,75 +61,9 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     private Matrix4x4 m_matrixdTuc;
 
     /// <summary>
-    /// Handle the callback sent by the Tango Service
-    /// when a new pose is sampled.
-    /// </summary>
-    /// <param name="pose">Pose.</param>
-    public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
-    {
-        // Get out of here if the pose is null
-        if (pose == null)
-        {
-            Debug.Log("TangoPoseDate is null.");
-            return;
-        }
-        
-        // The callback pose is for device with respect to start of service pose.
-        if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
-            pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
-        {
-            // Update the stats for the pose for the debug text
-            if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
-            {
-                // Create new Quaternion and Vec3 from the pose data received in the event.
-                m_tangoPosition = new Vector3((float)pose.translation[0],
-                                              (float)pose.translation[1],
-                                              (float)pose.translation[2]);
-
-                m_tangoRotation = new Quaternion((float)pose.orientation[0],
-                                                 (float)pose.orientation[1],
-                                                 (float)pose.orientation[2],
-                                                 (float)pose.orientation[3]);
-
-                // Reset the current status frame count if the status code changed.
-                if (pose.status_code != m_status)
-                {
-                    m_frameCount = 0;
-                }
-                m_frameCount++;
-
-                // Compute delta frame timestamp.
-                m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
-                m_prevFrameTimestamp = (float)pose.timestamp;
-
-                // Construct the start of service with respect to device matrix from the pose.
-                Matrix4x4 matrixssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
-                
-                // Converting from Tango coordinate frame to Unity coodinate frame.
-                Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
-                
-                // Extract new local position
-                transform.position = matrixuwTuc.GetColumn(3);
-                
-                // Extract new local rotation
-                transform.rotation = Quaternion.LookRotation(matrixuwTuc.GetColumn(2), matrixuwTuc.GetColumn(1));
-            }
-            else
-            {
-                // if the current pose is not valid we set the pose to identity
-                m_tangoPosition = Vector3.zero;
-                m_tangoRotation = Quaternion.identity;
-            }
-
-            // Finally, apply the new pose status
-            m_status = pose.status_code;
-        }
-    }
-    
-    /// <summary>
     /// Initialize the controller.
     /// </summary>
-    private void Awake()
+    public void Awake()
     {
         // Constant matrix converting start of service frame to Unity world frame.
         m_matrixuwTss = new Matrix4x4();
@@ -156,18 +90,17 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     /// <summary>
     /// Start this instance.
     /// </summary>
-    private void Start()
+    public void Start()
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         
         if (m_tangoApplication != null)
         {
+            m_tangoApplication.Register(this);
             if (AndroidHelper.IsTangoCorePresent())
             {
                 // Request Tango permissions
-                m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
-                m_tangoApplication.RequestNecessaryPermissionsAndConnect();
-                m_tangoApplication.Register(this);
+                m_tangoApplication.RequestPermissions();
                 m_tangoServiceVersionName = TangoApplication.GetTangoServiceVersion();
             }
             else
@@ -181,22 +114,11 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
             Debug.Log("No Tango Manager found in scene.");
         }
     }
-    
-    /// <summary>
-    /// Informs the user that they should install Tango Core via Android toast.
-    /// </summary>
-    /// <returns>IEnumerator used for coroutines.</returns>
-    private IEnumerator _InformUserNoTangoCore()
-    {
-        AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
-        yield return new WaitForSeconds(2.0f);
-        Application.Quit();
-    }
-    
+
     /// <summary>
     /// Apply any needed changes to the pose.
     /// </summary>
-    private void Update()
+    public void Update()
     {
         #if UNITY_ANDROID && !UNITY_EDITOR
         if(Input.GetKeyDown(KeyCode.Escape))
@@ -224,7 +146,7 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     /// Unity callback when application is paused.
     /// </summary>
     /// <param name="pauseStatus">The pauseStatus as reported by Unity.</param>
-    private void OnApplicationPause(bool pauseStatus)
+    public void OnApplicationPause(bool pauseStatus)
     {
         m_frameDeltaTime = -1.0f;
         m_prevFrameTimestamp = -1.0f;
@@ -235,20 +157,109 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
-    /// Internal callback when a permissions event happens.
+    /// This is called when the permission granting process is finished.
     /// </summary>
-    /// <param name="permissionsGranted">If set to <c>true</c> permissions granted.</param>
-    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
     {
         if (permissionsGranted)
         {
-            m_tangoApplication.InitApplication();
-            m_tangoApplication.InitProviders(string.Empty);
-            m_tangoApplication.ConnectToService();
+            m_tangoApplication.Startup(null);
         }
         else
         {
             AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
         }
+    }
+
+    /// <summary>
+    /// This is called when succesfully connected to the Tango service.
+    /// </summary>
+    public void OnTangoServiceConnected()
+    {
+    }
+
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
+    }
+
+    /// <summary>
+    /// Handle the callback sent by the Tango Service
+    /// when a new pose is sampled.
+    /// </summary>
+    /// <param name="pose">Pose.</param>
+    public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
+    {
+        // Get out of here if the pose is null
+        if (pose == null)
+        {
+            Debug.Log("TangoPoseDate is null.");
+            return;
+        }
+
+        // The callback pose is for device with respect to start of service pose.
+        if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
+            pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+        {
+            // Update the stats for the pose for the debug text
+            if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+            {
+                // Create new Quaternion and Vec3 from the pose data received in the event.
+                m_tangoPosition = new Vector3((float)pose.translation[0],
+                                              (float)pose.translation[1],
+                                              (float)pose.translation[2]);
+
+                m_tangoRotation = new Quaternion((float)pose.orientation[0],
+                                                 (float)pose.orientation[1],
+                                                 (float)pose.orientation[2],
+                                                 (float)pose.orientation[3]);
+                
+                // Reset the current status frame count if the status code changed.
+                if (pose.status_code != m_status)
+                {
+                    m_frameCount = 0;
+                }
+                m_frameCount++;
+
+                // Compute delta frame timestamp.
+                m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
+                m_prevFrameTimestamp = (float)pose.timestamp;
+
+                // Construct the start of service with respect to device matrix from the pose.
+                Matrix4x4 matrixssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
+
+                // Converting from Tango coordinate frame to Unity coodinate frame.
+                Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
+
+                // Extract new local position
+                transform.position = matrixuwTuc.GetColumn(3);
+
+                // Extract new local rotation
+                transform.rotation = Quaternion.LookRotation(matrixuwTuc.GetColumn(2), matrixuwTuc.GetColumn(1));
+            }
+            else
+            {
+                // if the current pose is not valid we set the pose to identity
+                m_tangoPosition = Vector3.zero;
+                m_tangoRotation = Quaternion.identity;
+            }
+            
+            // Finally, apply the new pose status
+            m_status = pose.status_code;
+        }
+    }
+
+    /// <summary>
+    /// Informs the user that they should install Tango Core via Android toast.
+    /// </summary>
+    /// <returns>IEnumerator used for coroutines.</returns>
+    private IEnumerator _InformUserNoTangoCore()
+    {
+        AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
+        yield return new WaitForSeconds(2.0f);
+        Application.Quit();
     }
 }

@@ -35,6 +35,10 @@ public class TangoInspector : Editor
     /// </summary>
     public override void OnInspectorGUI()
     {
+        m_tangoApplication.m_autoConnectToService = EditorGUILayout.Toggle("Auto-connect to Service",
+                                                                           m_tangoApplication.m_autoConnectToService);
+        EditorGUILayout.Space();
+
         _DrawMotionTrackingOptions(m_tangoApplication);
         _DrawDepthOptions(m_tangoApplication);
         _DrawVideoOverlayOptions(m_tangoApplication);
@@ -72,6 +76,13 @@ public class TangoInspector : Editor
                                                                          tangoApplication.m_enableADFLoading);
             tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
                                                                            tangoApplication.m_enableAreaLearning);
+
+            tangoApplication.m_enableCloudADF = EditorGUILayout.Toggle("Cloud ADF", tangoApplication.m_enableCloudADF);
+            if (tangoApplication.m_enableCloudADF)
+            {
+                tangoApplication.m_cloudApiKey = EditorGUILayout.TextField("Cloud API Key", tangoApplication.m_cloudApiKey);
+            }
+
             EditorGUI.indentLevel--;
         }
         EditorGUILayout.Space();

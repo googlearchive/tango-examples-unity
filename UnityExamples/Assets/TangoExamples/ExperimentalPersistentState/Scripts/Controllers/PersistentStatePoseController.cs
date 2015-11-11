@@ -47,10 +47,8 @@ public class PersistentStatePoseController : MonoBehaviour, ITangoPose
         {
             tangoApplication = FindObjectOfType<TangoApplication>();
         }
-        tangoApplication.InitApplication();
-        tangoApplication.InitProviders(Statics.curADFId);
         tangoApplication.Register(this);
-        tangoApplication.ConnectToService();
+        tangoApplication.Startup(AreaDescription.ForUUID(Statics.curADFId));
         
         startingRotation = transform.rotation;
     }

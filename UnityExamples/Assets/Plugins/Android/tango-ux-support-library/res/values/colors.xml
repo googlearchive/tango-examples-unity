@@ -16,6 +16,8 @@
 -->
 <resources>
 
+    <color name="gray_medium">#808080</color>
+    <color name="gray_light">#e1e1e1</color>
     <color name="gray_dark">#1a1a1a</color>
     <color name="text_exception_description">#333333</color>
     <color name="text_exception_action_required">#b4b4b4</color>
@@ -24,5 +26,9 @@
     <color name="tango_green">#1c9b5a</color>
     <color name="tango_blue">#467ecb</color>
     <color name="tango_yellow">#febd2c</color>
+
+    <!-- Exception Status colors -->
+    <color name="status_tick_red">#ffcc0e15</color>
+    <color name="status_tick_green">#ff508c68</color>
 
 </resources>

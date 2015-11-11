@@ -19,6 +19,7 @@
     android:layout_height="match_parent"
     android:background="@android:color/white"
     android:gravity="center"
+    android:clickable="true"
     android:orientation="vertical" >
 
     <com.google.atap.tango.ux.HoldSteadyComponent

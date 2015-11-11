@@ -17,6 +17,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
     <application
 		android:icon="@drawable/app_icon"
@@ -29,7 +30,7 @@
         <activity android:name="com.google.unity.GoogleUnityActivity"
                   android:label="@string/app_name"
                   android:configChanges="fontScale|keyboard|keyboardHidden|locale|mnc|mcc|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode|touchscreen">
-            <meta-data android:name="unityplayer.ForwardNativeEventsToDalvik" android:value="false" />
+            <meta-data android:name="unityplayer.ForwardNativeEventsToDalvik" android:value="true" />
             <meta-data android:name="unityplayer.UnityActivity" android:value="true" />
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -77,12 +77,16 @@ namespace Tango
         public bool m_motionTrackingAutoReset = true;
         public bool m_enableAreaLearning = false;
         public bool m_enableADFLoading = false;
+        public bool m_enableCloudADF = false;
         public bool m_useExperimentalVideoOverlay = true;
+        public bool m_autoConnectToService = false;
+        public string m_cloudApiKey = string.Empty;
+
 #if UNITY_EDITOR
         public static bool m_mouseEmulationViaPoseUpdates = false;
 #endif
         private const string CLASS_NAME = "TangoApplication";
-        private const int MINIMUM_API_VERSION = 5145;
+        private const int MINIMUM_API_VERSION = 6804;
         private static string m_tangoServiceVersion = string.Empty;
 
         /// <summary>
@@ -100,6 +104,13 @@ namespace Tango
         /// </summary>
         private event OnTangoDisconnectEventHandler OnTangoDisconnect;
 
+        /// <summary>
+        /// If RequestPermissions() has been called automatically.
+        /// 
+        /// This only matters if m_autoConnectToService is set.
+        /// </summary>
+        private bool m_autoConnectRequestedPermissions = false;
+
         private PermissionsTypes m_requiredPermissions = 0;
         private IntPtr m_callbackContext = IntPtr.Zero;
         private bool m_isServiceInitialized = false;
@@ -111,6 +122,7 @@ namespace Tango
         private DepthListener m_depthListener;
         private VideoOverlayListener m_videoOverlayListener;
         private TangoEventListener m_tangoEventListener;
+        private TangoCloudEventListener m_tangoCloudEventListener;
         private AreaDescriptionEventListener m_areaDescriptionEventListener;
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
@@ -168,6 +180,21 @@ namespace Tango
             if (tangoEventMultithreaded != null)
             {
                 RegisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
+            }
+
+            ITangoLifecycle tangoLifecycle = tangoObject as ITangoLifecycle;
+            if (tangoLifecycle != null)
+            {
+                RegisterPermissionsCallback(tangoLifecycle.OnTangoPermissions);
+                RegisterOnTangoConnect(tangoLifecycle.OnTangoServiceConnected);
+                RegisterOnTangoDisconnect(tangoLifecycle.OnTangoServiceDisconnected);
+            }
+
+            ITangoCloudEvent tangoCloudEvent = tangoObject as ITangoCloudEvent;
+
+            if (tangoCloudEvent != null)
+            {
+                RegisterOnTangoCloudEvent(tangoCloudEvent.OnTangoCloudEventAvailableEventHandler);
             }
 
             if (m_enableMotionTracking)
@@ -243,6 +270,21 @@ namespace Tango
                 UnregisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
             }
 
+            ITangoLifecycle tangoLifecycle = tangoObject as ITangoLifecycle;
+            if (tangoLifecycle != null)
+            {
+                UnregisterPermissionsCallback(tangoLifecycle.OnTangoPermissions);
+                UnregisterOnTangoConnect(tangoLifecycle.OnTangoServiceConnected);
+                UnregisterOnTangoDisconnect(tangoLifecycle.OnTangoServiceDisconnected);
+            }
+
+            ITangoCloudEvent tangoCloudEvent = tangoObject as ITangoCloudEvent;
+
+            if (tangoCloudEvent != null)
+            {
+                UnregisterOnTangoCloudEvent(tangoCloudEvent.OnTangoCloudEventAvailableEventHandler);
+            }
+
             if (m_enableMotionTracking)
             {
                 ITangoPose poseHandler = tangoObject as ITangoPose;
@@ -296,7 +338,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Register to get an event callback when all permissions are granted.
+        /// DEPRECATED: Register to get an event callback when all permissions are granted.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Register.
         /// 
         /// The passed event will get called once all Tango permissions have been granted.  Registering 
         /// after all permissions have already been granted will cause the event to never fire.
@@ -311,7 +355,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Unregister from the permission callbacks.
+        /// DEPRECATED: Unregister from the permission callbacks.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Unregister.
         /// 
         /// See TangoApplication.RegisterPermissionsCallback for more details.
         /// </summary>
@@ -325,7 +371,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Register to get an event callback when connected to the Tango service.
+        /// DEPRECATED: Register to get an event callback when connected to the Tango service.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Register.
         /// 
         /// The passed event will get called once connected to the Tango service.  Registering 
         /// after already connected will cause the event to not fire until disconnected and then
@@ -341,7 +389,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Unregister from the callback when connected to the Tango service.
+        /// DEPRECATED: Unregister from the callback when connected to the Tango service.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Unregister.
         /// 
         /// See TangoApplication.RegisterOnTangoConnect for more details.
         /// </summary>
@@ -355,7 +405,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Register to get an event callback when disconnected from the Tango service.
+        /// DEPRECATED: Register to get an event callback when disconnected from the Tango service.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Register.
         /// 
         /// The passed event will get called when disconnected from the Tango service.
         /// </summary>
@@ -369,7 +421,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Unregister from the callback when disconnected from the Tango service.
+        /// DEPRECATED: Unregister from the callback when disconnected from the Tango service.
+        /// 
+        /// Instead, inherit from ITangoLifecycle and call TangoApplication.Unregister.
         /// 
         /// See TangoApplication.RegisterOnTangoDisconnect for more details.
         /// </summary>
@@ -383,7 +437,51 @@ namespace Tango
         }
 
         /// <summary>
-        /// Init step 1.  Call this to request Tango permissions.
+        /// Manual initialization step 1: Call this to request Tango permissions.
+        /// 
+        /// To know the result of the permissions request, implement the interface ITangoLifecycle and register
+        /// yourself before calling this.
+        /// 
+        /// Once all permissions have been granted, you can call TangoApplication.Startup, optionally passing in the
+        /// AreaDescription to load.  You can get the list of AreaDescriptions once the appropriate permission is
+        /// granted.
+        /// </summary>
+        public void RequestPermissions()
+        {
+            RequestNecessaryPermissionsAndConnect();
+        }
+
+        /// <summary>
+        /// Manual initalization step 2: Call this to connect to the Tango service.
+        /// 
+        /// After connecting to the Tango service, you will get updates for Motion Tracking, Depth Sensing, and Area
+        /// Learning.  If you have a specific Area Description you want to localize too, pass that Area Description in
+        /// here.
+        /// </summary>
+        /// <param name="areaDescription">If not null, the Area Description to localize to.</param>
+        public void Startup(AreaDescription areaDescription)
+        {
+            // Make sure all required permissions have been granted.
+            if (m_requiredPermissions != PermissionsTypes.NONE)
+            {
+                Debug.Log("TangoApplication.Startup() -- ERROR: Not all required permissions were accepted yet.");
+                return;
+            }
+
+            InitApplication();
+            if (areaDescription != null)
+            {
+                InitProviders(areaDescription.m_uuid);
+            }
+            else
+            {
+                InitProviders(null);
+            }
+            ConnectToService();
+        }
+
+        /// <summary>
+        /// DEPRECATED: Init step 1.  Call this to request Tango permissions.
         /// 
         /// After setting up the necessary permissions and callbacks, call this to request each of
         /// the permissions in order.  Once all the permissions are granted, the permission callback
@@ -399,7 +497,7 @@ namespace Tango
         }
         
         /// <summary>
-        /// Init step 2.  Call this to initialize internal state on TangoApplication.
+        /// DEPRECATED: Init step 2.  Call this to initialize internal state on TangoApplication.
         /// 
         /// Call this in the permissions callback if all permissions have been granted.
         /// 
@@ -408,16 +506,8 @@ namespace Tango
         /// </summary>
         public void InitApplication()
         {
-            Debug.Log("-----------------------------------Initializing Tango");
+            Debug.Log("TangoApplication.InitApplication()");
             _CheckTangoVersion();
-            if (m_tangoConfig == null)
-            {
-                m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
-            }
-            if (m_tangoRuntimeConfig == null)
-            {
-                m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
-            }
 
             if (m_enableVideoOverlay && m_useExperimentalVideoOverlay)
             {
@@ -441,7 +531,7 @@ namespace Tango
         }
         
         /// <summary>
-        /// Init step 3.  Call this to choose what area description ID to use, if any.
+        /// DEPRECATED: Init step 3.  Call this to choose what area description ID to use, if any.
         /// 
         /// Call this in the permissions callback after calling TangoApplication.InitApplication.
         /// 
@@ -458,7 +548,7 @@ namespace Tango
         }
         
         /// <summary>
-        /// Init step 4.  Call this to connect to the Tango service.
+        /// DEPRECATED: Init step 4.  Call this to connect to the Tango service.
         /// 
         /// Also see TangoApplication.RequestNecessaryPermissionsAndConnect, TangoApplication.InitApplication, 
         /// and TangoApplication.InitProviders.
@@ -479,16 +569,6 @@ namespace Tango
         public void Shutdown()
         {
             Debug.Log("Tango Shutdown");
-            if (m_tangoConfig != null)
-            {
-                m_tangoConfig.Dispose();
-                m_tangoConfig = null;
-            }
-            if (m_tangoRuntimeConfig != null)
-            {
-                m_tangoRuntimeConfig.Dispose();
-                m_tangoRuntimeConfig = null;
-            }
             _TangoDisconnect();
         }
 
@@ -535,6 +615,26 @@ namespace Tango
         }
 
         /// <summary>
+        /// Propagates an event from the java plugin connected to the Cloud Service through UnitySendMessage().
+        /// </summary>
+        /// <param name="message">A string representation of the cloud event key and value.</param>
+        internal void SendCloudEvent(string message)
+        {
+            Debug.Log("New message from Cloud Service: " + message);
+            string[] keyValue = message.Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+
+            int key;
+            int value;
+            if (m_tangoCloudEventListener != null &&
+                    keyValue.Length == 2 &&
+                    Int32.TryParse(keyValue[0], out key) &&
+                    Int32.TryParse(keyValue[1], out value))
+            {
+                m_tangoCloudEventListener.OnCloudEventAvailable(key, value);
+            }
+        }
+
+        /// <summary>
         /// Get the Tango config.  Useful for debugging.
         /// </summary>
         /// <value>The config.</value>
@@ -571,7 +671,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Event to remove.</param>
+        /// <param name="handler">Event handler to remove.</param>
         internal void UnregisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
         {
             if (m_poseListener != null)
@@ -585,7 +685,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        /// <param name="handler">Event handler.</param>
         internal void RegisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
         {
             if (m_depthListener != null)
@@ -599,7 +699,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Event to remove.</param>
+        /// <param name="handler">Event handler to remove.</param>
         internal void UnregisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
         {
             if (m_depthListener != null)
@@ -609,11 +709,39 @@ namespace Tango
         }
 
         /// <summary>
+        /// Register to get Tango cloud event callbacks.
+        /// 
+        /// See TangoApplication.Register for details.
+        /// </summary>
+        /// <param name="handler">Event handler.</param>
+        internal void RegisterOnTangoCloudEvent(OnTangoCloudEventAvailableEventHandler handler)
+        {
+            if (m_tangoCloudEventListener != null)
+            {
+                m_tangoCloudEventListener.RegisterOnTangoCloudEventAvailable(handler);
+            }
+        }
+
+        /// <summary>
+        /// Unregister from the Tango cloud event callbacks.
+        /// 
+        /// See TangoApplication.Register for more details.
+        /// </summary>
+        /// <param name="handler">Event handler to remove.</param>
+        internal void UnregisterOnTangoCloudEvent(OnTangoCloudEventAvailableEventHandler handler)
+        {
+            if (m_tangoCloudEventListener != null)
+            {
+                m_tangoCloudEventListener.UnregisterOnTangoCloudEventAvailable(handler);
+            }
+        }
+
+        /// <summary>
         /// Register to get Tango event callbacks.
         /// 
         /// See TangoApplication.Register for details.
         /// </summary>
-        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        /// <param name="handler">Event handler.</param>
         internal void RegisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
         {
             if (m_tangoEventListener != null)
@@ -627,7 +755,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Event to remove.</param>
+        /// <param name="handler">Event handler to remove.</param>
         internal void UnregisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
         {
             if (m_tangoEventListener != null)
@@ -641,7 +769,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for details.
         /// </summary>
-        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        /// <param name="handler">Event handler.</param>
         internal void RegisterOnTangoEventMultithreaded(OnTangoEventAvailableEventHandler handler)
         {
             if (m_tangoEventListener != null)
@@ -669,7 +797,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for details.
         /// </summary>
-        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        /// <param name="handler">Event handler.</param>
         internal void RegisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
         {
             if (m_videoOverlayListener != null)
@@ -683,7 +811,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Event to remove.</param>
+        /// <param name="handler">Event handler to remove.</param>
         internal void UnregisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
         {
             if (m_videoOverlayListener != null)
@@ -695,7 +823,7 @@ namespace Tango
         /// <summary>
         /// Experimental API only, subject to change.  Register to get Tango video overlay callbacks.
         /// </summary>
-        /// <param name="handler">Object to stop getting Tango callbacks from.</param>
+        /// <param name="handler">Event handler.</param>
         internal void RegisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
         {
             if (m_videoOverlayListener != null)
@@ -709,7 +837,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Event to remove.</param>
+        /// <param name="handler">Event handler to remove.</param>
         internal void UnregisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
         {
             if (m_videoOverlayListener != null)
@@ -879,6 +1007,12 @@ namespace Tango
             m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, true);
 
             m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
+
+            if (m_enableCloudADF)
+            {
+                Debug.Log("Connect to Cloud Service.");
+                AndroidHelper.ConnectCloud(m_cloudApiKey);
+            }
         }
 
         /// <summary>
@@ -972,6 +1106,12 @@ namespace Tango
                     OnTangoDisconnect();
                 }
             }
+
+            if (m_enableCloudADF)
+            {
+                Debug.Log("Disconnect from Cloud Service.");
+                AndroidHelper.DisconnectCloud();
+            }
         }
 
         /// <summary>
@@ -1055,8 +1195,14 @@ namespace Tango
             AndroidHelper.RegisterResumeEvent(_androidOnResume);
             AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
 
+            // Setup listeners.
             m_tangoEventListener = new TangoEventListener();
             m_areaDescriptionEventListener = new AreaDescriptionEventListener();
+
+            if (m_enableCloudADF)
+            {
+                m_tangoCloudEventListener = new TangoCloudEventListener();
+            }
 
             if (m_enableMotionTracking)
             {
@@ -1078,6 +1224,10 @@ namespace Tango
                 m_yuvTexture = new YUVTexture(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight, TextureFormat.RGBA32, false);
                 m_videoOverlayListener = new VideoOverlayListener();
             }
+
+            // Setup configs.
+            m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
+            m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
         }
 
         /// <summary>
@@ -1087,7 +1237,6 @@ namespace Tango
         {
             if (m_requiredPermissions == PermissionsTypes.NONE)
             {
-                m_requiredPermissions |= m_enableMotionTracking ? PermissionsTypes.MOTION_TRACKING : PermissionsTypes.NONE;
                 m_requiredPermissions |= m_enableAreaLearning ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
                 m_requiredPermissions |= m_enableADFLoading ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
             }
@@ -1177,11 +1326,28 @@ namespace Tango
         /// </summary>
         private void Update()
         {
+            // Autoconnect requesting permissions can not be moved earlier into Awake() or Start().  All other scripts
+            // must be able to register for the permissions callback before RequestPermissions() is called.  The
+            // earliest another script can register is in Start().  Therefore, this logic must be run after Start() has
+            // run on all scripts.  That means it must be in FixedUpdate(), Update(), LateUpdate(), or a coroutine.
+            if (m_autoConnectToService)
+            {
+                if (!m_autoConnectRequestedPermissions)
+                {
+                    RequestPermissions();
+                    m_autoConnectRequestedPermissions = true;
+                }
+            }
+
             if (m_sendPermissions)
             {
                 if (PermissionEvent != null)
                 {
                     PermissionEvent(m_permissionsSuccessful);
+                }
+                if (m_permissionsSuccessful && m_autoConnectToService)
+                {
+                    Startup(null);
                 }
                 m_sendPermissions = false;
             }
@@ -1194,6 +1360,10 @@ namespace Tango
             if (m_tangoEventListener != null)
             {
                 m_tangoEventListener.SendIfTangoEventAvailable();
+            }
+            if (m_tangoCloudEventListener != null)
+            {
+                m_tangoCloudEventListener.SendIfTangoCloudEventAvailable();
             }
 
             if (m_depthListener != null)
@@ -1218,6 +1388,18 @@ namespace Tango
         private void OnDestroy()
         {
             Shutdown();
+
+            // Clean up configs.
+            if (m_tangoConfig != null)
+            {
+                m_tangoConfig.Dispose();
+                m_tangoConfig = null;
+            }
+            if (m_tangoRuntimeConfig != null)
+            {
+                m_tangoRuntimeConfig.Dispose();
+                m_tangoRuntimeConfig = null;
+            }
         }
 
         #region NATIVE_FUNCTIONS

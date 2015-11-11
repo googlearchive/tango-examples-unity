@@ -28,6 +28,26 @@ using UnityEngine;
 public class ARLocationMarker : MonoBehaviour
 {
     /// <summary>
+    /// The type of the location mark.
+    /// 
+    /// This field is used in the Area Learning example for identify the marker type.
+    /// </summary>
+    public int m_type = 0;
+
+    /// <summary>
+    /// The Tango time stamp when this objec is created
+    /// 
+    /// This field is used in the Area Learning example, the timestamp is save for the position adjustment when the
+    /// loop closure happens.
+    /// </summary>
+    public float m_timestamp = -1.0f;
+
+    /// <summary>
+    /// The marker's transformation with respect to the device frame.
+    /// </summary>
+    public Matrix4x4 m_deviceTMarker = new Matrix4x4();
+
+    /// <summary>
     /// The animation playing.
     /// </summary>
     private Animation m_anim;

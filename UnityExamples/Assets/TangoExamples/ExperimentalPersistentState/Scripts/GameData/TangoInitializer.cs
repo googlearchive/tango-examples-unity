@@ -26,17 +26,14 @@ using UnityEngine;
 /// <summary>
 /// Script to connect to the Tango service.
 /// </summary>
-public class TangoInitializer : MonoBehaviour
+public class TangoInitializer : MonoBehaviour, ITangoLifecycle
 {
     public TangoApplication tangoApplication; 
-
-    private bool isInitialized = false;
-    private bool shouldInitTango = false;
 
     /// <summary>
     /// Use this to initialize.
     /// </summary>
-    private void Start()
+    public void Start()
     {
         tangoApplication = FindObjectOfType<TangoApplication>();
         if (tangoApplication != null)
@@ -44,8 +41,8 @@ public class TangoInitializer : MonoBehaviour
             if (AndroidHelper.IsTangoCorePresent())
             {
                 // Request Tango permissions
-                tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
-                tangoApplication.RequestNecessaryPermissionsAndConnect();
+                tangoApplication.Register(this);
+                tangoApplication.RequestPermissions();
             }
         }
         else
@@ -55,34 +52,32 @@ public class TangoInitializer : MonoBehaviour
     }
 
     /// <summary>
-    /// Update is called once per frame.
-    /// </summary>
-    private void Update()
-    {
-        if (shouldInitTango)
-        {
-            tangoApplication.InitApplication();
-            isInitialized = true;
-            shouldInitTango = false;
-        }
-    }
-
-    /// <summary>
     /// Tango permissions event callback.
     /// </summary>
-    /// <param name="permissionsGranted">If set to <c>true</c> permissions granted.</param>
-    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
     {
-        if (permissionsGranted && !isInitialized)
+        if (permissionsGranted)
         {
-            isInitialized = true;
-            shouldInitTango = true;
-            tangoApplication.InitApplication();
             EventManager.Instance.SendTangoServiceInitialized();
         }
         else if (!permissionsGranted)
         {
             AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
         }
+    }
+
+    /// <summary>
+    /// This is called when succesfully connected to the Tango service.
+    /// </summary>
+    public void OnTangoServiceConnected()
+    {
+    }
+
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
     }
 }
