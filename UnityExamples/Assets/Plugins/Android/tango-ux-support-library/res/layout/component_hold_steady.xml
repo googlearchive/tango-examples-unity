@@ -15,40 +15,8 @@
    limitations under the License.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="196dp"
-    android:layout_height="196dp" >
-
-    <View
-        android:id="@+id/trace_left_2"
-        android:layout_width="@dimen/hold_steady_trace_size"
-        android:layout_height="@dimen/hold_steady_trace_size"
-        android:layout_gravity="center"
-        android:layout_marginTop="2dp"
-        android:background="@drawable/hold_steady_trace_left_2" />
-
-    <View
-        android:id="@+id/trace_right_2"
-        android:layout_width="@dimen/hold_steady_trace_size"
-        android:layout_height="@dimen/hold_steady_trace_size"
-        android:layout_gravity="center"
-        android:layout_marginTop="2dp"
-        android:background="@drawable/hold_steady_trace_right_2" />
-
-    <View
-        android:id="@+id/trace_left_1"
-        android:layout_width="@dimen/hold_steady_trace_size"
-        android:layout_height="@dimen/hold_steady_trace_size"
-        android:layout_gravity="center"
-        android:layout_marginTop="2dp"
-        android:background="@drawable/hold_steady_trace_left_1" />
-
-    <View
-        android:id="@+id/trace_right_1"
-        android:layout_width="@dimen/hold_steady_trace_size"
-        android:layout_height="@dimen/hold_steady_trace_size"
-        android:layout_gravity="center"
-        android:layout_marginTop="2dp"
-        android:background="@drawable/hold_steady_trace_right_1" />
+    android:layout_width="@dimen/hold_steady_component_size"
+    android:layout_height="@dimen/hold_steady_component_size" >
 
     <com.google.atap.tango.ux.HoldSteadyFrameView
         android:id="@+id/frame"

@@ -35,7 +35,7 @@ namespace Tango
         /// Easy access to the metadata fields for an Area Description.
         /// 
         /// If you want to look at a specific Area Description's metadata, get it with
-        /// <c>AreaDescription.GetMetadata</c> and save it with <c>AreaDescription.SaveMetadat</c>.
+        /// <c>AreaDescription.GetMetadata</c> and save it with <c>AreaDescription.SaveMetadata</c>.
         /// 
         /// If you want to create a metadata for a not yet saved Area Description, use the default constructor to construct
         /// an empty metadata and save it after saving the Area Description.
@@ -136,7 +136,7 @@ namespace Tango
         /// <summary>
         /// Get a list of all the area descriptions on the device.
         /// </summary>
-        /// <returns>A list of string UUIDs, or <c>null</c> if the list could not be queried.</returns>
+        /// <returns>A list of area descriptions, or <c>null</c> if the list could not be queried.</returns>
         public static AreaDescription[] GetList()
         {
             string[] uuids = _GetUUIDList();
@@ -158,14 +158,15 @@ namespace Tango
         /// Saves the current area description, returning the area description saved.
         /// 
         /// You can only save an area description while connected to the Tango Service and if you have enabled Area
-        /// Learning mode. If you loaded an ADF before connecting, then calling this method appends any new learned
-        /// areas to that ADF and returns the same UUID. If you did not load an ADF, this method creates a new ADF and
-        /// a new UUID for that ADF.
+        /// Learning mode. If you loaded an area description before connecting, then calling this method appends any
+        /// new learned areas to that area description and returns an area description with the same UUID. If you did
+        /// not load an area description, this method creates a new area description and a new UUID for that area
+        /// description.
         /// </summary>
         /// <returns>
         /// AreaDescription instance for the newly saved area description if saved successfully, <c>null</c> otherwise.
         /// 
-        /// See logcat for details of why the saved failed.
+        /// See logcat for details of why a saved failed.
         /// </returns>
         public static AreaDescription SaveCurrent()
         {
@@ -176,14 +177,16 @@ namespace Tango
                 return null;
             }
 
-            string uuid = Encoding.UTF8.GetString(rawUUID);
+            // Don't want to include the null terminator in the C# string.
+            string uuid = Encoding.UTF8.GetString(rawUUID, 0, Common.UUID_LENGTH - 1);
+
             return AreaDescription.ForUUID(uuid);
         }
         
         /// <summary>
         /// Import an area description from a file path to the default area storage location. 
         /// </summary>
-        /// <returns><c>true</c> if the UUID was imported successfully, <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c> if the area description was imported successfully, <c>false</c> otherwise.</returns>
         /// <param name="filePath">File path of the area descrption to be imported.</param>
         public static bool ImportFromFile(string filePath)
         {

@@ -165,6 +165,37 @@ public partial class AndroidHelper
     }
 
     /// <summary>
+    /// Connects to the TangoCloudService.
+    /// </summary>
+    /// <param name="apiKey">API key for making requests to the frontend server.</param>
+    /// <returns><c>true</c> if we successfully connect; otherwise, <c>false</c>.</returns>
+    public static bool ConnectCloud(string apiKey)
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<bool>("connectCloud", apiKey);
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Disconnects from the TangoCloudService.
+    /// </summary>
+    /// <returns><c>true</c> if we successfully disconnect; otherwise, <c>false</c>.</returns>
+    public static bool DisconnectCloud()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<bool>("disconnectCloud");
+        }
+        return false;
+    }
+
+    /// <summary>
     /// Call export ADF permission activity.
     /// </summary>
     /// <param name="srcAdfUuid">ADF that is going to be exported.</param>

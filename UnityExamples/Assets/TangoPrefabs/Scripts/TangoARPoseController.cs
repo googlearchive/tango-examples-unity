@@ -27,7 +27,7 @@ using Tango;
 /// for augmented reality.
 /// </summary>
 [RequireComponent(typeof(TangoARScreen))]
-public class TangoARPoseController : MonoBehaviour
+public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
 {
     /// <summary>
     /// Total number of poses ever applied by this controller.
@@ -122,8 +122,8 @@ public class TangoARPoseController : MonoBehaviour
             if (AndroidHelper.IsTangoCorePresent())
             {
                 // Request Tango permissions
-                m_tangoApplication.RegisterPermissionsCallback(_OnTangoApplicationPermissionsEvent);
-                m_tangoApplication.RequestNecessaryPermissionsAndConnect();
+                m_tangoApplication.Register(this);
+                m_tangoApplication.RequestPermissions();
             }
             else
             {
@@ -170,6 +170,39 @@ public class TangoARPoseController : MonoBehaviour
         m_poseTimestamp = -1.0f;
         m_poseCount = -1;
         m_poseStatus = TangoEnums.TangoPoseStatusType.NA;
+    }
+
+    /// <summary>
+    /// This is called when the permission granting process is finished.
+    /// </summary>
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
+    {
+        if (permissionsGranted)
+        {
+            m_tangoApplication.Startup(null);
+
+            // Get camera extrinsics to form final matrix transforms
+            _SetCameraExtrinsics();
+        }
+        else
+        {
+            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
+        }
+    }
+
+    /// <summary>
+    /// This is called when succesfully connected to the Tango service.
+    /// </summary>
+    public void OnTangoServiceConnected()
+    {
+    }
+
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
     }
 
     /// <summary>
@@ -281,26 +314,5 @@ public class TangoARPoseController : MonoBehaviour
         AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
         yield return new WaitForSeconds(2.0f);
         Application.Quit();
-    }
-
-    /// <summary>
-    /// Internal callback when a permissions event happens.
-    /// </summary>
-    /// <param name="permissionsGranted">If set to <c>true</c> permissions granted.</param>
-    private void _OnTangoApplicationPermissionsEvent(bool permissionsGranted)
-    {
-        if (permissionsGranted)
-        {
-            m_tangoApplication.InitApplication();
-            m_tangoApplication.InitProviders(string.Empty);
-            m_tangoApplication.ConnectToService();
-
-            // Get camera extrinsics to form final matrix transforms
-            _SetCameraExtrinsics();
-        }
-        else
-        {
-            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-        }
     }
 }

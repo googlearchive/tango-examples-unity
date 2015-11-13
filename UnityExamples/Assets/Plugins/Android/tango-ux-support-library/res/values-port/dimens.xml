@@ -16,6 +16,8 @@
 -->
 <resources>
 
+    <dimen name="hold_steady_frame_width">61dp</dimen>
+    <dimen name="hold_steady_frame_height">96dp</dimen>
     <dimen name="hold_steady_bubble_level_max_y">30dp</dimen>
     
 </resources>

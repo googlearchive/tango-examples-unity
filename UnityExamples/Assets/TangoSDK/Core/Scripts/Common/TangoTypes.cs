@@ -478,8 +478,9 @@ namespace Tango
         }
     }
 
+    /// DEPRECATED: Use AreaDescription instead.
     /// <summary>
-    /// DEPRECATED: Unity-side representation of a area description ID and its associated metadata.
+    /// Unity-side representation of a area description ID and its associated metadata.
     /// 
     /// Used to avoid too many conversions when needing to access the information.
     /// </summary>
@@ -575,8 +576,9 @@ namespace Tango
         }
     }
 
+    /// DEPRECATED: The AreaDescription class now returns UUIDs as a string.
     /// <summary>
-    /// DEPRECATED: The unique id associated with a single area description.
+    /// The unique id associated with a single area description.
     /// 
     /// Should be 36 characters including dashes and a null terminating character.
     /// </summary>
@@ -587,8 +589,9 @@ namespace Tango
         public IntPtr data;
     }
 
+    /// DEPRECATED: Use AreaDescription[] when working with multiple ADFs.
     /// <summary>
-    /// DEPRECATED: List of all UUIDs on device.
+    /// List of all UUIDs on device.
     /// </summary>
     public class UUID_list
     {
@@ -687,8 +690,9 @@ namespace Tango
         }
     }
     
+    /// DEPRECATED: Use AreaDescription.Metadata instead.
     /// <summary>
-    /// DEPRECATED: UUID Metadata list.
+    /// UUID Metadata list.
     /// </summary>
     public class Metadata
     {

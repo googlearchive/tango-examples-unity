@@ -1,4 +1,6 @@
 int color gray_dark 0x7f040000
+int color status_tick_green 0x7f040007
+int color status_tick_red 0x7f040006
 int color tango_blue 0x7f040004
 int color tango_green 0x7f040003
 int color tango_yellow 0x7f040005
@@ -37,7 +39,7 @@ int id exception_icon 0x7f080008
 int id exception_status 0x7f08000b
 int id exception_title 0x7f080009
 int id frame 0x7f080004
-int id layout_exceptions 0x7f080010
+int id tango_ux_layout 0x7f080010
 int id trace_left_1 0x7f080002
 int id trace_left_2 0x7f080000
 int id trace_right_1 0x7f080003
@@ -46,7 +48,7 @@ int layout component_hold_steady 0x7f030000
 int layout exception_component 0x7f030001
 int layout layout_connection 0x7f030002
 int layout layout_tango_ux 0x7f030003
-int layout tango_ux_exceptions 0x7f030004
+int layout tango_ux_layout 0x7f030004
 int string action_required 0x7f050018
 int string connection_layout_message_still 0x7f050019
 int string connection_layout_message_tight 0x7f05001a
