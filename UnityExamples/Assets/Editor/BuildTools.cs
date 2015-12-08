@@ -17,6 +17,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
+using System.IO;
 using UnityEngine;
 using UnityEditor;
 
@@ -37,13 +38,13 @@ public class BuildTools
     private static BuildUtil.APKSettings examplesAPK = new BuildUtil.APKSettings
     {
         ProjectName = "Unity Examples",
-        Icon = "TangoExamples/Common/Textures/ProjectTango_Logo.png",
+        Icon = "TangoSDK/Examples/Common/Textures/ProjectTango_Logo.png",
         Scenes = new string[]
         {
-            "Scenes/MotionTracking.unity",
-            "Scenes/PointCloud.unity",
-            "Scenes/AreaLearning.unity",
-            "Scenes/AreaDescriptionManagement.unity",
+            "TangoSDK/Examples/Scenes/MotionTracking.unity",
+            "TangoSDK/Examples/Scenes/PointCloud.unity",
+            "TangoSDK/Examples/Scenes/AreaLearning.unity",
+            "TangoSDK/Examples/Scenes/AreaDescriptionManagement.unity",
         },
         BundleIdentifier = "com.google.projecttango.examples"
     };
@@ -51,8 +52,8 @@ public class BuildTools
     private static BuildUtil.APKSettings augmentedRealityAPK = new BuildUtil.APKSettings 
     {
         ProjectName = "Unity Augmented Reality",
-        Icon = "TangoExamples/ExperimentalAugmentedReality/Textures/ar_icon.png",
-        Scenes = new string[] { "Scenes/ExperimentalAugmentedReality.unity" },
+        Icon = "TangoSDK/Examples/AugmentedReality/Textures/ar_icon.png",
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/AugmentedReality.unity" },
         BundleIdentifier = "com.projecttango.experiments.augmentedreality"
     };
 
@@ -60,34 +61,36 @@ public class BuildTools
     {
         ProjectName = "Unity Mesh Builder",
         Icon = null,
-        Scenes = new string[] { "Scenes/ExperimentalMeshBuilder.unity" },
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilder.unity" },
         BundleIdentifier = "com.google.projecttango.meshbuilder"
-    };
-
-    private static BuildUtil.APKSettings persistentStateAPK = new BuildUtil.APKSettings
-    {
-        ProjectName = "Unity Persistent State",
-        Icon = "TangoExamples/Common/Textures/ProjectTango_Logo.png",
-        Scenes = new string[] 
-        { 
-            "Scenes/ExperimentalPersistentState/ExperimentalPersistentState_StartScene.unity",
-            "Scenes/ExperimentalPersistentState/ExperimentalPersistentState_GameScene.unity" 
-        },
-        BundleIdentifier = "com.projecttango.persistentstate",
     };
 
     private static BuildUtil.APKSettings virtualRealityAPK = new BuildUtil.APKSettings
     {
         ProjectName = "Unity VirtualReality",
-        Icon = "TangoExamples/ExperimentalVirtualReality/Textures/icon.png",
-        Scenes = new string[] { "Scenes/ExperimentalVirtualReality.unity" },
+        Icon = "TangoSDK/Examples/ExperimentalVirtualReality/Textures/icon.png",
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalVirtualReality.unity" },
         BundleIdentifier = "com.projecttango.experimental.virtualreality"
     };
 
-    private static BuildUtil.PackageSettings sdkPackage = new BuildUtil.PackageSettings
+    private static BuildUtil.PackageSettings sdkPackageUnity5 = new BuildUtil.PackageSettings
     {
-        PackageName = "TangoSDK",
-        Directories = new string[] { "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK" }
+        PackageName = "TangoSDK_Unity5",
+        Directories = new string[]
+        {
+            "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK/Core", "TangoSDK/Editor", "TangoSDK/Examples",
+            "TangoSDK/TangoSupport", "TangoSDK/TangoUX"
+        }
+    };
+
+    private static BuildUtil.PackageSettings sdkPackageUnity4 = new BuildUtil.PackageSettings
+    {
+        PackageName = "TangoSDK_Unity4",
+        Directories = new string[]
+        {
+            "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK/Core", "TangoSDK/Editor",
+            "TangoSDK/TangoSupport", "TangoSDK/TangoUX"
+        }
     };
     
     /// <summary>
@@ -99,18 +102,27 @@ public class BuildTools
         BuildUtil.BuildAPK(examplesAPK);
         BuildUtil.BuildAPK(augmentedRealityAPK);
         BuildUtil.BuildAPK(meshBuilderAPK);
-        BuildUtil.BuildAPK(persistentStateAPK);
         BuildUtil.BuildAPK(virtualRealityAPK);
-        BuildUtil.BuildPackage(sdkPackage);
+        BuildSdkPackage();
     }
     
     /// <summary>
     /// Function for UI.
     /// </summary>
-    [MenuItem("Tango/Build/SDK Package", false, 21)]
+    [MenuItem("Tango/Build/SDK Packages", false, 21)]
     public static void BuildSdkPackage()
     {
-        BuildUtil.BuildPackage(sdkPackage);
+        // Write out a version file.
+        string filePath = Application.dataPath + TangoSDKAbout.TANGO_VERSION_DATA_PATH;
+        using (BinaryWriter binaryWriter = new BinaryWriter(File.Open(filePath, FileMode.Create)))
+        {
+            binaryWriter.Write(GitHelpers.GetTagInfo());
+            binaryWriter.Write(GitHelpers.GetPrettyGitHash());
+            binaryWriter.Write(GitHelpers.GetRemoteBranchName());
+        }
+
+        BuildUtil.BuildPackage(sdkPackageUnity5);
+        BuildUtil.BuildPackage(sdkPackageUnity4);
     }
     
     /// <summary>
@@ -138,15 +150,6 @@ public class BuildTools
     public static void BuildMeshBuilder()
     {
         BuildUtil.BuildAPK(meshBuilderAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Persistent State")]
-    public static void BuildPersistentState()
-    {
-        BuildUtil.BuildAPK(persistentStateAPK);
     }
     
     /// <summary>

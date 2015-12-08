@@ -28,8 +28,10 @@ namespace Tango
     /// </summary>
     /// <param name="key">Tango cloud event key that happened.</param>
     /// <param name="value">Tango cloud event value that happened.</param>
+    /// @cond PRIVATE
     internal delegate void OnTangoCloudEventAvailableEventHandler(int key, int value);
-    
+
+    /// @endcond
     /// <summary>
     /// Calls back tango cloud event listeners.
     /// </summary>

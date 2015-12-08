@@ -42,11 +42,6 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     public TangoEnums.TangoPoseStatusType m_poseStatus;
 
     /// <summary>
-    /// The TangoApplication being listened to.
-    /// </summary>
-    private TangoApplication m_tangoApplication;
-
-    /// <summary>
     /// The TangoARScreen that is being updated.
     /// </summary>
     private TangoARScreen m_tangoARScreen;
@@ -114,22 +109,12 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void Start()
     {
-        m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_tangoARScreen = GetComponent<TangoARScreen>();
 
-        if (m_tangoApplication != null)
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
         {
-            if (AndroidHelper.IsTangoCorePresent())
-            {
-                // Request Tango permissions
-                m_tangoApplication.Register(this);
-                m_tangoApplication.RequestPermissions();
-            }
-            else
-            {
-                // If no Tango Core is present let's tell the user to install it!
-                StartCoroutine(_InformUserNoTangoCore());
-            }
+            tangoApplication.Register(this);
         }
         else
         {
@@ -142,19 +127,6 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (m_tangoApplication != null)
-            {
-                m_tangoApplication.Shutdown();
-            }
-            
-            // This is a temporary fix for a lifecycle issue where calling
-            // Application.Quit() here, and restarting the application immediately,
-            // results in a hard crash.
-            AndroidHelper.AndroidQuit();
-        }
-
         if (m_tangoARScreen.m_screenUpdateTime != m_poseTimestamp)
         {
             _UpdateTransformation(m_tangoARScreen.m_screenUpdateTime);
@@ -178,17 +150,6 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
     public void OnTangoPermissions(bool permissionsGranted)
     {
-        if (permissionsGranted)
-        {
-            m_tangoApplication.Startup(null);
-
-            // Get camera extrinsics to form final matrix transforms
-            _SetCameraExtrinsics();
-        }
-        else
-        {
-            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-        }
     }
 
     /// <summary>
@@ -196,6 +157,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void OnTangoServiceConnected()
     {
+        _SetCameraExtrinsics();
     }
 
     /// <summary>
@@ -303,16 +265,5 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
         cTuc.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 
         m_dTuc = Matrix4x4.Inverse(imuTd) * imuTc * cTuc;
-    }
-
-    /// <summary>
-    /// Internal callback when no Tango core is present.
-    /// </summary>
-    /// <returns>Coroutine IEnumerator.</returns>
-    private IEnumerator _InformUserNoTangoCore()
-    {
-        AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
-        yield return new WaitForSeconds(2.0f);
-        Application.Quit();
     }
 }

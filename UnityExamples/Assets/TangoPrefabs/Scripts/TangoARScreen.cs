@@ -31,7 +31,7 @@ using Tango;
 /// shader.
 /// </summary>
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
-public class TangoARScreen : MonoBehaviour, ITangoLifecycle
+public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoVideoOverlay
 {   
     /// <summary>
     /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to background-1
@@ -61,27 +61,66 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
     /// Point size of PointCloud data when projected on to image plane.
     /// </summary>
     private const int POINTCLOUD_SPLATTER_UPSAMPLE_SIZE = 30;
-    private TangoApplication m_tangoApplication;
-    private YUVTexture m_textures;
 
+    /// <summary>
+    /// Script that manages the postprocess distortiotn of the camera image.
+    /// </summary>
     private ARCameraPostProcess m_arCameraPostProcess;
+
+    /// <summary>
+    /// U texture coordinate amount that the color camera image is being clipped on each side.
+    ///
+    /// Ranges from 0 (no clipping) to 0.5 (full clipping).
+    /// </summary>
+    private float m_uOffset;
+
+    /// <summary>
+    /// V texture coordinate amount that the color camera image is being clipped on each side.
+    ///
+    /// Ranges from 0 (no clipping) to 0.5 (full clipping).
+    /// </summary>
+    private float m_vOffset;
+
+    /// <summary>
+    /// Converts a normalized Unity viewport position into its corresponding normalized position on the color camera
+    /// image.
+    /// </summary>
+    /// <returns>Normalized position for the color camera.</returns>
+    /// <param name="pos">Normalized position for the 3D viewport.</param>
+    public Vector2 ViewportPointToCameraImagePoint(Vector2 pos)
+    {
+        return new Vector2(Mathf.Lerp(m_uOffset, 1 - m_uOffset, pos.x),
+                           Mathf.Lerp(m_vOffset, 1 - m_vOffset, pos.y));
+    }
+
+    /// <summary>
+    /// Converts a color camera position into its corresponding normalized Unity viewport position.
+    /// image.
+    /// </summary>
+    /// <returns>Normalized position for the color camera.</returns>
+    /// <param name="pos">Normalized position for the 3D viewport.</param>
+    public Vector2 CameraImagePointToViewportPoint(Vector2 pos)
+    {
+        return new Vector2((pos.x - m_uOffset) / (1 - (2 * m_uOffset)),
+                           (pos.y - m_vOffset) / (1 - (2 * m_vOffset)));
+    }
 
     /// <summary>
     /// Initialize the AR Screen.
     /// </summary>
     public void Start()
     {
-        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
         m_arCameraPostProcess = gameObject.GetComponent<ARCameraPostProcess>();
-        if (m_tangoApplication != null)
+        if (tangoApplication != null)
         {
-            m_tangoApplication.Register(this);
+            tangoApplication.Register(this);
 
             // Pass YUV textures to shader for process.
-            m_textures = m_tangoApplication.GetVideoOverlayTextureYUV();
-            m_screenMaterial.SetTexture("_YTex", m_textures.m_videoOverlayTextureY);
-            m_screenMaterial.SetTexture("_UTex", m_textures.m_videoOverlayTextureCb);
-            m_screenMaterial.SetTexture("_VTex", m_textures.m_videoOverlayTextureCr);
+            YUVTexture textures = tangoApplication.GetVideoOverlayTextureYUV();
+            m_screenMaterial.SetTexture("_YTex", textures.m_videoOverlayTextureY);
+            m_screenMaterial.SetTexture("_UTex", textures.m_videoOverlayTextureCb);
+            m_screenMaterial.SetTexture("_VTex", textures.m_videoOverlayTextureCr);
         }
 
         if (m_enableOcclusion) 
@@ -108,17 +147,6 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// Unity update function, we update our texture from here.
-    /// </summary>
-    public void Update()
-    {
-        m_screenUpdateTime = VideoOverlayProvider.RenderLatestFrame(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
-
-        // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL state.
-        GL.InvalidateState();
-    }
-
-    /// <summary>
     /// This is called when the permission granting process is finished.
     /// </summary>
     /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
@@ -137,35 +165,35 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
 
         if (intrinsics.width != 0 && intrinsics.height != 0)
         {
-            m_arCameraPostProcess.SetupIntrinsic(intrinsics);
-            Camera.main.projectionMatrix = ProjectionMatrixForCameraIntrinsics((float)intrinsics.width,
-                                                                               (float)intrinsics.height,
-                                                                               (float)intrinsics.fx,
-                                                                               (float)intrinsics.fy,
-                                                                               (float)intrinsics.cx,
-                                                                               (float)intrinsics.cy,
-                                                                               0.1f,
-                                                                               1000.0f);
+            Camera camera = GetComponent<Camera>();
+            if (camera != null)
+            {
+                // If this script is attached to a camera, then the camera is an Augmented Reality camera.  The color
+                // camera image then must fill the viewport.  That means we must clip the color camera image to make
+                // its ratio the same as the Unity camera.  If we don't do this the color camera image will be
+                // stretched non-uniformly, making a circle into an ellipse.
+                float widthRatio = (float)camera.pixelWidth / (float)intrinsics.width;
+                float heightRatio = (float)camera.pixelHeight / (float)intrinsics.height;
+                if (widthRatio >= heightRatio)
+                {
+                    m_uOffset = 0;
+                    m_vOffset = (1 - (heightRatio / widthRatio)) / 2;
+                }
+                else
+                {
+                    m_uOffset = (1 - (widthRatio / heightRatio)) / 2;
+                    m_vOffset = 0;
+                }
 
-            // Here we are scaling the image plane to make sure the image plane's ratio is set as the
-            // color camera image ratio.
-            // If we don't do this, because we are drawing the texture fullscreen, the image plane will
-            // be set to the screen's ratio.
-            float widthRatio = (float)Screen.width / (float)intrinsics.width;
-            float heightRatio = (float)Screen.height / (float)intrinsics.height;
-            if (widthRatio >= heightRatio)
-            {
-                float normalizedOffset = ((widthRatio / heightRatio) - 1.0f) / 2.0f;
-                _SetScreenVertices(0, normalizedOffset);
-            }
-            else
-            {
-                float normalizedOffset = ((heightRatio / widthRatio) - 1.0f) / 2.0f;
-                _SetScreenVertices(normalizedOffset, 0);
+                m_arCameraPostProcess.SetupIntrinsic(intrinsics);
+                _MeshUpdateForIntrinsics(GetComponent<MeshFilter>().mesh, m_uOffset, m_vOffset);
+                _CameraUpdateForIntrinsics(camera, intrinsics, m_uOffset, m_vOffset);
             }
         }
         else
         {
+            m_uOffset = 0;
+            m_vOffset = 0;
             m_arCameraPostProcess.enabled = false;
         }
     }
@@ -178,21 +206,41 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// Set the screen (video overlay image plane) size and vertices. The image plane is not
-    /// applying any project matrix or view matrix. So it's drawing space is the normalized
-    /// screen space, that is [-1.0f, 1.0f] for both width and height.
+    /// This will be called when a new frame is available from the camera.
+    ///
+    /// The first scan-line of the color image is reserved for metadata instead of image pixels.
     /// </summary>
-    /// <param name="normalizedOffsetX">Horizontal padding to add to the left and right edges.</param>
-    /// <param name="normalizedOffsetY">Vertical padding to add to top and bottom edges.</param> 
-    private void _SetScreenVertices(float normalizedOffsetX, float normalizedOffsetY)
+    /// <param name="cameraId">Camera identifier.</param>
+    public void OnExperimentalTangoImageAvailable(TangoEnums.TangoCameraId cameraId)
+    {
+        if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
+        {
+            m_screenUpdateTime = VideoOverlayProvider.RenderLatestFrame(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+
+            // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL state.
+            GL.InvalidateState();
+        }
+    }
+
+    /// <summary>
+    /// Update a mesh so it can be used for the Video Overlay image plane.
+    ///
+    /// The image plane is drawn without any projection or view matrix transforms, so it must line up exactly with
+    /// normalized screen space.  The texture coordinates of the mesh are adjusted so it properly clips the image
+    /// plane.
+    /// </summary>
+    /// <param name="mesh">Mesh to update.</param> 
+    /// <param name="uOffset">U texture coordinate clipping.</param>
+    /// <param name="vOffset">V texture coordinate clipping.</param>
+    private static void _MeshUpdateForIntrinsics(Mesh mesh, float uOffset, float vOffset)
     {
         // Set the vertices base on the offset, note that the offset is used to compensate
         // the ratio differences between the camera image and device screen.
         Vector3[] verts = new Vector3[4];
-        verts[0] = new Vector3(-1.0f - normalizedOffsetX, -1.0f - normalizedOffsetY, 1.0f);
-        verts[1] = new Vector3(-1.0f - normalizedOffsetX, 1.0f + normalizedOffsetY, 1.0f);
-        verts[2] = new Vector3(1.0f + normalizedOffsetX, 1.0f + normalizedOffsetY, 1.0f);
-        verts[3] = new Vector3(1.0f + normalizedOffsetX, -1.0f - normalizedOffsetY, 1.0f);
+        verts[0] = new Vector3(-1, -1, 1);
+        verts[1] = new Vector3(-1, +1, 1);
+        verts[2] = new Vector3(+1, +1, 1);
+        verts[3] = new Vector3(+1, -1, 1);
 
         // Set indices.
         int[] indices = new int[6];
@@ -205,12 +253,11 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
 
         // Set UVs.
         Vector2[] uvs = new Vector2[4];
-        uvs[0] = new Vector2(0, 0);
-        uvs[1] = new Vector2(0, 1f);
-        uvs[2] = new Vector2(1f, 1f);
-        uvs[3] = new Vector2(1f, 0);
+        uvs[0] = new Vector2(0 + uOffset, 0 + vOffset);
+        uvs[1] = new Vector2(0 + uOffset, 1 - vOffset);
+        uvs[2] = new Vector2(1 - uOffset, 1 - vOffset);
+        uvs[3] = new Vector2(1 - uOffset, 0 + vOffset);
 
-        Mesh mesh = GetComponent<MeshFilter>().mesh;
         mesh.Clear();
         mesh.vertices = verts;
         mesh.triangles = indices;
@@ -221,35 +268,32 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// Compute a projection matrix from window size, camera intrinsics, and clip settings.
+    /// Update a camera so its perspective lines up with the color camera's perspective.
     /// </summary>
-    /// <returns>Projection matrix.</returns>
-    /// <param name="width">The width of the camera image.</param>
-    /// <param name="height">The height of the camera image.</param> 
-    /// <param name="fx">The x-axis focal length of the camera.</param> 
-    /// <param name="fy">The y-axis focal length of the camera.</param> 
-    /// <param name="cx">The x-coordinate principal point in pixels.</param> 
-    /// <param name="cy">The y-coordinate principal point in pixels.</param> 
-    /// <param name="near">The desired near z-clipping plane.</param> 
-    /// <param name="far">The desired far z-clipping plane.</param> 
-    private Matrix4x4 ProjectionMatrixForCameraIntrinsics(float width, float height,
-                                                          float fx, float fy,
-                                                          float cx, float cy,
-                                                          float near, float far)
+    /// <param name="cam">Camera to update.</param>
+    /// <param name="intrinsics">Tango camera intrinsics for the color camera.</param>
+    /// <param name="uOffset">U texture coordinate clipping.</param>
+    /// <param name="vOffset">V texture coordinate clipping.</param>
+    private static void _CameraUpdateForIntrinsics(Camera cam, TangoCameraIntrinsics intrinsics, float uOffset, float vOffset)
     {
-        float xscale = near / fx;
-        float yscale = near / fy;
-        
-        float xoffset = (cx - (width  / 2.0f)) * xscale;
+        float cx = (float)intrinsics.cx;
+        float cy = (float)intrinsics.cy;
+        float width = (float)intrinsics.width;
+        float height = (float)intrinsics.height;
+
+        float xscale = cam.nearClipPlane / (float)intrinsics.fx;
+        float yscale = cam.nearClipPlane / (float)intrinsics.fy;
+
+        float pixelLeft = -cx + (uOffset * width);
+        float pixelRight = width - cx - (uOffset * width);
 
         // OpenGL coordinates has y pointing downwards so we negate this term.
-        float yoffset = -(cy - (height / 2.0f)) * yscale;
-        
-        return Frustum((xscale * -width / 2.0f) - xoffset,
-                       (xscale * +width / 2.0f) - xoffset,
-                       (yscale * -height / 2.0f) - yoffset,
-                       (yscale * +height / 2.0f) - yoffset,
-                       near, far);
+        float pixelBottom = -height + cy + (vOffset * height);
+        float pixelTop = cy - (vOffset * height);
+
+        cam.projectionMatrix = _Frustum(pixelLeft * xscale, pixelRight * xscale,
+                                        pixelBottom * yscale, pixelTop * yscale,
+                                        cam.nearClipPlane, cam.farClipPlane);
     }
 
     /// <summary>
@@ -266,7 +310,7 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle
     /// <param name="zFar">Specify the distances to the far depth clipping planes. Both distances must be positive.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
                                                      Justification = "Matrix visibility is more important.")]
-    private Matrix4x4 Frustum(float left, float right, float bottom, float top, float zNear, float zFar)
+    private static Matrix4x4 _Frustum(float left, float right, float bottom, float top, float zNear, float zFar)
     {
         Matrix4x4 m = new Matrix4x4();
         m.SetRow(0, new Vector4(2.0f * zNear / (right - left), 0.0f,                          (right + left) / (right - left) , 0.0f));

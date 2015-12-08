@@ -6,20 +6,16 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/MotionTracking.unity
+    path: Assets/TangoSDK/Examples/Scenes/MotionTracking.unity
   - enabled: 1
-    path: Assets/Scenes/PointCloud.unity
+    path: Assets/TangoSDK/Examples/Scenes/PointCloud.unity
   - enabled: 1
-    path: Assets/Scenes/AreaLearning.unity
+    path: Assets/TangoSDK/Examples/Scenes/AreaLearning.unity
   - enabled: 1
-    path: Assets/Scenes/AreaDescriptionManagement.unity
+    path: Assets/TangoSDK/Examples/Scenes/AreaDescriptionManagement.unity
   - enabled: 0
-    path: Assets/Scenes/ExperimentalAugmentedReality.unity
+    path: Assets/TangoSDK/Examples/Scenes/AugmentedReality.unity
   - enabled: 0
-    path: Assets/Scenes/ExperimentalMeshBuilder.unity
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilder.unity
   - enabled: 0
-    path: Assets/Scenes/ExperimentalPersistentState/ExperimentalPersistentState_StartScene.unity
-  - enabled: 0
-    path: Assets/Scenes/ExperimentalPersistentState/ExperimentalPersistentState_GameScene.unity
-  - enabled: 0
-    path: Assets/Scenes/ExperimentalVirtualReality.unity
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalVirtualReality.unity
