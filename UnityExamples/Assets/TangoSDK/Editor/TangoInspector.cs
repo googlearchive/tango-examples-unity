@@ -77,12 +77,6 @@ public class TangoInspector : Editor
             tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
                                                                            tangoApplication.m_enableAreaLearning);
 
-            tangoApplication.m_enableCloudADF = EditorGUILayout.Toggle("Cloud ADF", tangoApplication.m_enableCloudADF);
-            if (tangoApplication.m_enableCloudADF)
-            {
-                tangoApplication.m_cloudApiKey = EditorGUILayout.TextField("Cloud API Key", tangoApplication.m_cloudApiKey);
-            }
-
             EditorGUI.indentLevel--;
         }
         EditorGUILayout.Space();

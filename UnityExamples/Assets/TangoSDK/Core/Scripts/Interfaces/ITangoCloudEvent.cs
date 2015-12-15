@@ -23,7 +23,7 @@ using UnityEngine;
 /// <summary>
 /// Cloud Event notification interface.
 /// </summary>
-public interface ITangoCloudEvent
+internal interface ITangoCloudEvent
 {
     /// <summary>
     /// This is called each time a Tango cloud event happens.

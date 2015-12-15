@@ -167,15 +167,14 @@ public partial class AndroidHelper
     /// <summary>
     /// Connects to the TangoCloudService.
     /// </summary>
-    /// <param name="apiKey">API key for making requests to the frontend server.</param>
     /// <returns><c>true</c> if we successfully connect; otherwise, <c>false</c>.</returns>
-    public static bool ConnectCloud(string apiKey)
+    internal static bool ConnectCloud()
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
 
         if (tangoObject != null)
         {
-            return tangoObject.Call<bool>("connectCloud", apiKey);
+            return tangoObject.Call<bool>("connectCloud");
         }
         return false;
     }
@@ -184,7 +183,7 @@ public partial class AndroidHelper
     /// Disconnects from the TangoCloudService.
     /// </summary>
     /// <returns><c>true</c> if we successfully disconnect; otherwise, <c>false</c>.</returns>
-    public static bool DisconnectCloud()
+    internal static bool DisconnectCloud()
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
 
@@ -227,7 +226,6 @@ public partial class AndroidHelper
 
         if (unityActivity != null)
         {
-            int requestCode = 1;
             string[] args = new string[1];
             args[0] = "SOURCE_FILE:" + adfPath;
             unityActivity.Call(LAUNCH_INTENT_SIGNATURE,

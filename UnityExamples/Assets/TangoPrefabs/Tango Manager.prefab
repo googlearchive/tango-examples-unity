@@ -40,13 +40,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f51549b4778944861a78b99341a9c5db, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_allowOutOfDateTangoAPI: 0
   m_enableMotionTracking: 1
   m_enableDepth: 0
   m_enableVideoOverlay: 0
   m_motionTrackingAutoReset: 1
   m_enableAreaLearning: 0
+  m_enableADFLoading: 0
+  m_enableCloudADF: 0
   m_useExperimentalVideoOverlay: 1
-  m_useExperimentalADF: 0
+  m_autoConnectToService: 1
+  m_cloudApiKey: 
 --- !u!114 &11476464
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -60,6 +64,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_enableUXLibrary: 1
   m_drawDefaultUXExceptions: 1
+  m_showConnectionScreen: 1
+  m_holdPosture: 0
 --- !u!1001 &100100000
 Prefab:
   m_ObjectHideFlags: 1

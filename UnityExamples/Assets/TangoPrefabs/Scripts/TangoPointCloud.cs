@@ -365,6 +365,14 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
         Vector2 normalizedPos = cam.ScreenToViewportPoint(pos);
 
+        // If the camera has a TangoARScreen attached, it is not displaying the entire color camera image.  Correct
+        // the normalized coordinates by taking the clipping into account.
+        TangoARScreen arScreen = cam.gameObject.GetComponent<TangoARScreen>();
+        if (arScreen != null)
+        {
+            normalizedPos = arScreen.ViewportPointToCameraImagePoint(normalizedPos);
+        }
+
         int returnValue = TangoSupport.FitPlaneModelNearClick(
             m_points, m_pointsCount, m_pointsTimestamp, m_colorCameraIntrinsics, ref colorCameraTUnityWorld, normalizedPos,
             out planeCenter, out plane);

@@ -29,7 +29,7 @@ using Tango;
 /// This updates the position with deltas, so movement can be done using a
 /// CharacterController, or physics, or anything else that wants deltas.
 /// </summary>
-public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPose
+public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
 {
     /// <summary>
     /// The change in time since the last pose update.
@@ -48,12 +48,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
     /// </summary>
     [HideInInspector]
     public TangoEnums.TangoPoseStatusType m_poseStatus;
-
-    /// <summary>
-    /// If set, the Area Description used for relocalization.
-    /// </summary>
-    [HideInInspector]
-    public AreaDescription m_areaDescription;
 
     /// <summary>
     /// The most recent pose timestamp received.
@@ -93,11 +87,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
     /// If set, this contoller will use the Device with respect Area Description frame pose.
     /// </summary>
     public bool m_useAreaDescriptionPose;
-
-    /// <summary>
-    /// The TangoApplication being listened to.
-    /// </summary>
-    private TangoApplication m_tangoApplication;
 
     /// <summary>
     /// The previous Tango's position.
@@ -233,22 +222,12 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
     /// </summary>
     public void Start()
     {
-        m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_characterController = GetComponent<CharacterController>();
-        
-        if (m_tangoApplication != null)
+
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
         {
-            m_tangoApplication.Register(this);
-            if (AndroidHelper.IsTangoCorePresent())
-            {
-                // Request Tango permissions
-                m_tangoApplication.RequestPermissions();
-            }
-            else
-            {
-                // If no Tango Core is present let's tell the user to install it!
-                StartCoroutine(_InformUserNoTangoCore());
-            }
+            tangoApplication.Register(this);
         }
         else
         {
@@ -256,33 +235,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
         }
 
         SetPose(transform.position, transform.rotation);
-    }
-
-    /// <summary>
-    /// Update is called every frame.
-    /// </summary>
-    public void Update()
-    {
-        #if UNITY_ANDROID && !UNITY_EDITOR
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            if (m_tangoApplication != null)
-            {
-                m_tangoApplication.Shutdown();
-            }
-
-            // This is a temporary fix for a lifecycle issue where calling
-            // Application.Quit() here, and restarting the application immediately,
-            // results in a hard crash.
-            AndroidHelper.AndroidQuit();
-        }
-        #else
-        Vector3 tempPosition = transform.position;
-        Quaternion tempRotation = transform.rotation;
-        PoseProvider.GetMouseEmulation(ref tempPosition, ref tempRotation);
-        transform.rotation = tempRotation;
-        transform.position = tempPosition;
-        #endif
     }
 
     /// <summary>
@@ -370,43 +322,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
     }
 
     /// <summary>
-    /// This is called when the permission granting process is finished.
-    /// </summary>
-    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
-    public void OnTangoPermissions(bool permissionsGranted)
-    {
-        if (permissionsGranted)
-        {
-            if (m_tangoApplication.m_enableADFLoading && m_areaDescription != null)
-            {
-                m_tangoApplication.Startup(m_areaDescription);
-            }
-            else
-            {
-                m_tangoApplication.Startup(null);
-            }
-        }
-        else
-        {
-            AndroidHelper.ShowAndroidToastMessage("Motion Tracking Permissions Needed", true);
-        }
-    }
-    
-    /// <summary>
-    /// This is called when succesfully connected to the Tango service.
-    /// </summary>
-    public void OnTangoServiceConnected()
-    {
-    }
-    
-    /// <summary>
-    /// This is called when disconnected from the Tango service.
-    /// </summary>
-    public void OnTangoServiceDisconnected()
-    {
-    }
-
-    /// <summary>
     /// Set controller's transformation based on received pose.
     /// </summary>
     /// <param name="pose">Received Tango pose data.</param>
@@ -475,16 +390,5 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoLifecycle, ITangoPo
             transform.position = transform.position + deltaPosition;
             transform.rotation = deltaRotation * transform.rotation;
         }
-    }
-
-    /// <summary>
-    /// Internal callback when no Tango core is present.
-    /// </summary>
-    /// <returns>Coroutine IEnumerator.</returns>
-    private IEnumerator _InformUserNoTangoCore()
-    {
-        AndroidHelper.ShowAndroidToastMessage("Please install Tango Core", false);
-        yield return new WaitForSeconds(2.0f);
-        Application.Quit();
     }
 }
