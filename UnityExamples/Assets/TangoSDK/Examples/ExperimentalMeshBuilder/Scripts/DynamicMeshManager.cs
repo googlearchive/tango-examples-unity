@@ -142,14 +142,7 @@ public class DynamicMeshManager : MonoBehaviour
     private float m_meshingStop = 0;
 
     /// <summary>
-    /// Used for initialization.
-    /// </summary>
-    public void Start()
-    {
-    }
-
-    /// <summary>
-    /// Gets the time smoothing parameter.
+    /// Gets or sets the time smoothing parameter.
     /// </summary>
     /// <value>The time smoothing.</value>
     public float TimeSmoothing
@@ -159,7 +152,7 @@ public class DynamicMeshManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets the point insertion time.
+    /// Gets or sets the point insertion time.
     /// </summary>
     /// <value>The insertion time.</value>
     public float InsertionTime
@@ -180,6 +173,7 @@ public class DynamicMeshManager : MonoBehaviour
         {
             return;
         }
+
         m_meshStorage.InsertPoint(p, obs, weight, m_meshingCubePrefab, transform, m_voxelResolution);
         m_insertCount++;
     }
@@ -225,6 +219,7 @@ public class DynamicMeshManager : MonoBehaviour
             {
                 continue;
             }
+
             o.DynamicMeshCube.PrintDebugInfo();
         }
     }
@@ -286,6 +281,7 @@ public class DynamicMeshManager : MonoBehaviour
         {
             m_maximumRemeshingCountPerFrame = 1;
         }
+
         if (m_maximumRemeshingCountPerFrame > 10)
         {
             m_maximumRemeshingCountPerFrame = 10;
@@ -301,6 +297,7 @@ public class DynamicMeshManager : MonoBehaviour
                         m_meshingStop = UnityEngine.Time.realtimeSinceStartup;
                         Debug.Log("Meshing time: " + (m_meshingStop - m_meshingStart)); 
                     }
+
                     break;
                 }
 
@@ -315,10 +312,12 @@ public class DynamicMeshManager : MonoBehaviour
                 m_remeshingTime = (m_frameRateSmoothing * m_remeshingTime) + ((1.0f - m_frameRateSmoothing) * (stop - start));
                 meshUpdateCount++;
             }
+
             if (m_remeshingTime > float.Epsilon)
             {
                 m_maximumRemeshingCountPerFrame = (int)(m_meshingTimeBudgetMS * 0.001f / m_remeshingTime);
             }
+
             UpdateStats();
         }
 
@@ -347,6 +346,7 @@ public class DynamicMeshManager : MonoBehaviour
                     Vector3 max = v.anchor + v.parent.position + voxelSize;
                     DebugDrawing.Box(min, max, Color.green);
                 }
+
                 Debug.DrawLine(m_raycastStart, m_raycastStop, Color.green);
             } 
         }

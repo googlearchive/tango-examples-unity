@@ -25,12 +25,6 @@ using UnityEngine;
 /// </summary>
 public class UxExceptionEventListener : AndroidJavaProxy
 {
-    /// <summary>
-    /// Delegate for UX Exception events.
-    /// </summary>
-    /// <param name="tangoUxEvent">The exception event from Tango.</param>
-    public delegate void OnUxExceptionEventHandler(Tango.UxExceptionEvent tangoUxEvent);
-
     private static UxExceptionEventListener m_instance;
 
     /// <summary>
@@ -39,6 +33,12 @@ public class UxExceptionEventListener : AndroidJavaProxy
     private UxExceptionEventListener() : base("com.google.atap.tango.ux.UxExceptionEventListener")
     {
     }
+
+    /// <summary>
+    /// Delegate for UX Exception events.
+    /// </summary>
+    /// <param name="tangoUxEvent">The exception event from Tango.</param>
+    public delegate void OnUxExceptionEventHandler(Tango.UxExceptionEvent tangoUxEvent);
 
     /// <summary>
     /// Occurs when on ux exception event.
@@ -57,6 +57,7 @@ public class UxExceptionEventListener : AndroidJavaProxy
             {
                 m_instance = new UxExceptionEventListener();
             }
+
             return m_instance;
         }
     }
@@ -64,7 +65,7 @@ public class UxExceptionEventListener : AndroidJavaProxy
     /// <summary>
     /// Registers ux exception events.
     /// </summary>
-    /// <param name="handler">Handler.</param>
+    /// <param name="handler">Event handler.</param>
     public void RegisterOnUxExceptionEventHandler(OnUxExceptionEventHandler handler)
     {
         if (handler != null)
@@ -76,7 +77,7 @@ public class UxExceptionEventListener : AndroidJavaProxy
     /// <summary>
     /// Unregisters the on too few points.
     /// </summary>
-    /// <param name="handler">Handler.</param>
+    /// <param name="handler">Event handler.</param>
     public void UnregisterOnUxExceptionEventHandler(OnUxExceptionEventHandler handler)
     {
         if (handler != null)

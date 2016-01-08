@@ -17,60 +17,21 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Text;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using System.Text;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for the Tango area description interface.
     /// </summary>
     public sealed class AreaDescription
     {
-        /// <summary>
-        /// Easy access to the metadata fields for an Area Description.
-        /// 
-        /// If you want to look at a specific Area Description's metadata, get it with
-        /// <c>AreaDescription.GetMetadata</c> and save it with <c>AreaDescription.SaveMetadata</c>.
-        /// 
-        /// If you want to create a metadata for a not yet saved Area Description, use the default constructor to construct
-        /// an empty metadata and save it after saving the Area Description.
-        /// </summary>
-        public sealed class Metadata
-        {
-            /// <summary>
-            /// The human-readable name for this Area Description.
-            /// 
-            /// Corresponds to the "name" metadata.
-            /// </summary>
-            public string m_name;
-            
-            /// <summary>
-            /// The creation date of this Area Description.
-            /// 
-            /// Corresponds to the "date_ms_since_epoch" metadata.
-            /// </summary>
-            public DateTime m_dateTime;
-            
-            /// <summary>
-            /// The global coordinate system position of this Area Description.
-            /// 
-            /// Corresponds to the X, Y, Z part of the "transformation" metadata.
-            /// </summary>
-            public double[] m_transformationPosition;
-            
-            /// <summary>
-            /// The global coordinate system rotation of this Area Description.
-            /// 
-            /// Corresponds to the QX, QY, QZ, QW part of the "transformation" metadata.
-            /// </summary>
-            public double[] m_transformationRotation;
-        }
-
         /// <summary>
         /// The UUID for this area description.
         /// </summary>
@@ -103,7 +64,7 @@ namespace Tango
         /// 
         /// Private to make sure people use <c>AreaDescription.ForUUID</c>
         /// </summary>
-        /// <param name="uuid">UUID.</param>
+        /// <param name="uuid">UUID string for an Area Description.</param>
         private AreaDescription(string uuid)
         {
             m_uuid = uuid;
@@ -195,6 +156,7 @@ namespace Tango
                 Debug.Log("No file path specified.\n" + Environment.StackTrace);
                 return false;
             }
+
             AndroidHelper.StartImportADFActivity(filePath);
             return true;
         }
@@ -213,6 +175,7 @@ namespace Tango
                 Debug.Log("No file path specified.\n" + Environment.StackTrace);
                 return false;
             }
+
             AndroidHelper.StartExportADFActivity(m_uuid, filePath);
             return true;
         }
@@ -231,6 +194,7 @@ namespace Tango
                 Debug.Log("Could not delete area description.\n" + Environment.StackTrace);
                 return false;
             }
+
             return true;
         }
 
@@ -260,6 +224,7 @@ namespace Tango
             {
                 dateMSSinceEpoch = 0;
             }
+
             newData.m_dateTime = new DateTime(METADATA_EPOCH.Ticks + (dateMSSinceEpoch * DATETIME_TICKS_PER_MS));
 
             double[] tform;
@@ -268,6 +233,7 @@ namespace Tango
                 tform[0] = tform[1] = tform[2] = tform[3] = tform[4] = tform[5] = 0;
                 tform[6] = 1;
             }
+
             newData.m_transformationPosition = new double[3] { tform[0], tform[1], tform[2] };
             newData.m_transformationRotation = new double[4] { tform[3], tform[4], tform[5], tform[6] };
 
@@ -561,6 +527,46 @@ namespace Tango
             }
             
             return value;
+        }
+
+        /// <summary>
+        /// Easy access to the metadata fields for an Area Description.
+        /// 
+        /// If you want to look at a specific Area Description's metadata, get it with
+        /// <c>AreaDescription.GetMetadata</c> and save it with <c>AreaDescription.SaveMetadata</c>.
+        /// 
+        /// If you want to create a metadata for a not yet saved Area Description, use the default constructor to construct
+        /// an empty metadata and save it after saving the Area Description.
+        /// </summary>
+        public sealed class Metadata
+        {
+            /// <summary>
+            /// The human-readable name for this Area Description.
+            /// 
+            /// Corresponds to the "name" metadata.
+            /// </summary>
+            public string m_name;
+
+            /// <summary>
+            /// The creation date of this Area Description.
+            /// 
+            /// Corresponds to the "date_ms_since_epoch" metadata.
+            /// </summary>
+            public DateTime m_dateTime;
+
+            /// <summary>
+            /// The global coordinate system position of this Area Description.
+            /// 
+            /// Corresponds to the X, Y, Z part of the "transformation" metadata.
+            /// </summary>
+            public double[] m_transformationPosition;
+
+            /// <summary>
+            /// The global coordinate system rotation of this Area Description.
+            /// 
+            /// Corresponds to the QX, QY, QZ, QW part of the "transformation" metadata.
+            /// </summary>
+            public double[] m_transformationRotation;
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",

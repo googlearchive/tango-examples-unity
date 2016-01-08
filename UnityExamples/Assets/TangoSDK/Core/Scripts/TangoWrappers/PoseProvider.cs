@@ -17,27 +17,20 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for the Tango pose interface.
     /// </summary>
     public class PoseProvider
     {
-        /// <summary>
-        /// Tango pose C callback function signature.
-        /// </summary>
-        /// <param name="callbackContext">Callback context.</param>
-        /// <param name="pose">Pose data.</param> 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onPoseAvailable(IntPtr callbackContext, [In, Out] TangoPoseData pose);
-        
         private const float MOUSE_LOOK_SENSITIVITY = 100.0f;
         private const float TRANSLATION_SPEED = 2.0f;
         private static readonly string CLASS_NAME = "PoseProvider";
@@ -55,6 +48,14 @@ namespace Tango
         /// </summary>
         private static Vector3 m_emulatedPoseAnglesFromForward;
 #endif
+
+        /// <summary>
+        /// Tango pose C callback function signature.
+        /// </summary>
+        /// <param name="callbackContext">Callback context.</param>
+        /// <param name="pose">Pose data.</param> 
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        internal delegate void TangoService_onPoseAvailable(IntPtr callbackContext, [In, Out] TangoPoseData pose);
 
         /// <summary>
         /// Get a pose at a given timestamp from the base to the target frame.
@@ -109,7 +110,7 @@ namespace Tango
         /// Set the C callback for the Tango pose interface.
         /// </summary>
         /// <param name="framePairs">Passed in to the C API.</param>
-        /// <param name="callback">Callback.</param>
+        /// <param name="callback">Callback method.</param>
         internal static void SetCallback(TangoCoordinateFramePair[] framePairs, TangoService_onPoseAvailable callback)
         {
             int returnValue = PoseProviderAPI.TangoService_connectOnPoseAvailable(framePairs.Length, framePairs, callback);

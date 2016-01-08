@@ -95,7 +95,7 @@ public class VolumetricHashTree
     }
     
     /// <summary>
-    /// Get the DynamicMeshCube that contains the mesh data.
+    /// Gets the DynamicMeshCube that contains the mesh data.
     /// </summary>
     /// <value>The dynamic mesh cube.</value>
     public DynamicMeshCube DynamicMeshCube
@@ -116,6 +116,7 @@ public class VolumetricHashTree
                 yield return n;
             }
         }
+
         yield return this;
         if (m_rightHashTree != null)
         {
@@ -240,10 +241,12 @@ public class VolumetricHashTree
             {
                 continue;
             }
+
             if (result.m_meshPrefab == null)
             {
                 continue;
             }
+
             List<Voxel> voxels = result.m_dynamicMeshCube.RayCastVoxelHitlist(start, stop, dir);
             foreach (Voxel v in voxels)
             {
@@ -265,6 +268,7 @@ public class VolumetricHashTree
         {
             return this;
         }
+
         if (hashKey < m_hashKey)
         {
             if (m_leftHashTree != null)
@@ -279,6 +283,7 @@ public class VolumetricHashTree
                 return m_rightHashTree.Query(hashKey);
             }
         }
+
         return null;
     }
     
@@ -292,6 +297,7 @@ public class VolumetricHashTree
             m_leftHashTree.Clear();
             m_leftHashTree = null;
         }
+
         if (m_rightHashTree != null)
         {
             m_rightHashTree.Clear();
@@ -322,11 +328,13 @@ public class VolumetricHashTree
         {
             m_leftHashTree.ComputeStats(ref vertCount, ref triangleCount, ref nodeCount);
         }
+
         if (m_meshPrefab != null)
         {
             vertCount += m_dynamicMeshCube.Vertices.Count;
             triangleCount += m_dynamicMeshCube.Triangles.Count;
         }
+
         nodeCount++;
         
         if (m_rightHashTree != null)
@@ -344,10 +352,12 @@ public class VolumetricHashTree
         {
             m_leftHashTree.DebugDraw();
         }
+
         if (m_dynamicMeshCube != null)
         {
             m_dynamicMeshCube.DebugDrawNormals();
         }
+
         if (m_rightHashTree != null)
         {
             m_rightHashTree.DebugDraw();
@@ -373,6 +383,7 @@ public class VolumetricHashTree
         {
             Debug.LogError("Game Object does not have the dynamic mesh component");
         }
+
         m_dynamicMeshCube.SetProperties(voxelResolution);
         m_dynamicMeshCube.Key = hashkey;
     }
@@ -395,11 +406,13 @@ public class VolumetricHashTree
             // x is negative, but opposite sign of y
             x = x - m_maximumVolumeIndexDimension;
         }
+
         if (x < -flipLimit)
         {
             // x is positive, but opposite sign of y
             x = m_maximumVolumeIndexDimension + x;
         }
+
         temp -= x;
         temp /= m_maximumVolumeIndexDimension;
         
@@ -409,6 +422,7 @@ public class VolumetricHashTree
             // y is negative, but opposite sign of z
             y = y - m_maximumVolumeIndexDimension;
         }
+
         if (y < -flipLimit)
         {
             // y is positive, but opposite sign of z
@@ -443,6 +457,7 @@ public class VolumetricHashTree
             {
                 m_dynamicMeshCube = m_meshPrefab.GetComponent<DynamicMeshCube>();
             }
+
             if (m_meshPrefab == null)
             {
                 Debug.Log("Error: cannot find DynamicMeshVolume");
@@ -474,11 +489,13 @@ public class VolumetricHashTree
                 int neighborHashKey = hashkey - 1;
                 result = m_rootHashTree.InsertPoint(neighborHashKey, p, obs, weight, prefab, parent, voxelResolution);
             }
+
             if (m_volumeIndex[1] == 0)
             {
                 int neighborHashKey = hashkey - m_maximumVolumeIndexDimension;
                 result = m_rootHashTree.InsertPoint(neighborHashKey, p, obs, weight, prefab, parent, voxelResolution);
             }
+
             if (m_volumeIndex[2] == 0)
             {
                 int neighborHashKey = hashkey - (m_maximumVolumeIndexDimension * m_maximumVolumeIndexDimension);
@@ -494,6 +511,7 @@ public class VolumetricHashTree
             {
                 m_leftHashTree = new VolumetricHashTree(m_rootHashTree, hashkey);
             }
+
             return m_leftHashTree.InsertPoint(hashkey, p, obs, weight, prefab, parent, voxelResolution);
         }
         else
@@ -502,6 +520,7 @@ public class VolumetricHashTree
             {
                 m_rightHashTree = new VolumetricHashTree(m_rootHashTree, hashkey);
             }
+
             return m_rightHashTree.InsertPoint(hashkey, p, obs, weight, prefab, parent, voxelResolution);
         }
     }

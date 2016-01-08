@@ -18,8 +18,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// FPS counter.
@@ -168,6 +168,7 @@ public class PointCloudGUIController : MonoBehaviour
             statusString = "N/A";
             break;
         }
+
         return statusString;
     }
     

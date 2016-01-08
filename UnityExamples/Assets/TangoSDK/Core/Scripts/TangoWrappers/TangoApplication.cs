@@ -17,15 +17,16 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Runtime.InteropServices;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.IO;
+    using System.Linq;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for permission callbacks.
     /// </summary>
@@ -56,20 +57,7 @@ namespace Tango
     /// Note: To connect to the Tango Service, you should call InitApplication after properly registering everything.
     /// </summary>
     public class TangoApplication : MonoBehaviour
-    {   
-        /// <summary>
-        /// Permission types used by Tango applications.
-        /// </summary>
-        [Flags]
-        private enum PermissionsTypes
-        {
-            // All entries must be a power of two for
-            // use in a bit field as flags.
-            NONE = 0,
-            MOTION_TRACKING = 0x1,
-            AREA_LEARNING = 0x2,
-        }
-
+    {
         public bool m_allowOutOfDateTangoAPI = false;
         public bool m_enableMotionTracking = true;
         public bool m_enableDepth = true;
@@ -85,21 +73,6 @@ namespace Tango
         private const string CLASS_NAME = "TangoApplication";
         private const int MINIMUM_API_VERSION = 6804;
         private static string m_tangoServiceVersion = string.Empty;
-
-        /// <summary>
-        /// Occurs when permission event.
-        /// </summary>
-        private event PermissionsEvent PermissionEvent;
-
-        /// <summary>
-        /// Occurs when on tango connect.
-        /// </summary>
-        private event OnTangoConnectEventHandler OnTangoConnect;
-
-        /// <summary>
-        /// Occurs when on tango disconnect.
-        /// </summary>
-        private event OnTangoDisconnectEventHandler OnTangoDisconnect;
 
         /// <summary>
         /// If RequestPermissions() has been called automatically.
@@ -124,6 +97,52 @@ namespace Tango
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
         private TangoConfig m_tangoRuntimeConfig;
+
+        /// <summary>
+        /// Occurs when permission event.
+        /// </summary>
+        private event PermissionsEvent PermissionEvent;
+
+        /// <summary>
+        /// Occurs when on tango connect.
+        /// </summary>
+        private event OnTangoConnectEventHandler OnTangoConnect;
+
+        /// <summary>
+        /// Occurs when on tango disconnect.
+        /// </summary>
+        private event OnTangoDisconnectEventHandler OnTangoDisconnect;
+
+        /// <summary>
+        /// Permission types used by Tango applications.
+        /// </summary>
+        [Flags]
+        private enum PermissionsTypes
+        {
+            // All entries must be a power of two for
+            // use in a bit field as flags.
+            NONE = 0,
+            MOTION_TRACKING = 0x1,
+            AREA_LEARNING = 0x2,
+        }
+
+        /// <summary>
+        /// Gets the Tango config.  Useful for debugging.
+        /// </summary>
+        /// <value>The config.</value>
+        internal TangoConfig Config
+        {
+            get { return m_tangoConfig; }
+        }
+
+        /// <summary>
+        /// Gets the current Tango runtime config.  Useful for debugging.
+        /// </summary>
+        /// <value>The current runtime config.</value>
+        internal TangoConfig RuntimeConfig
+        {
+            get { return m_tangoRuntimeConfig; }
+        }
 
         /// <summary>
         /// Get the Tango service version name.
@@ -474,24 +493,6 @@ namespace Tango
         }
 
         /// <summary>
-        /// Get the Tango config.  Useful for debugging.
-        /// </summary>
-        /// <value>The config.</value>
-        internal TangoConfig Config
-        {
-            get { return m_tangoConfig; }
-        }
-
-        /// <summary>
-        /// Get the current Tango runtime config.  Useful for debugging.
-        /// </summary>
-        /// <value>The current runtime config.</value>
-        internal TangoConfig RuntimeConfig
-        {
-            get { return m_tangoRuntimeConfig; }
-        }
-
-        /// <summary>
         /// Gets the get tango API version code.
         /// </summary>
         /// <returns>The get tango API version code.</returns>
@@ -505,7 +506,7 @@ namespace Tango
         /// 
         /// See TangoApplication.Register for more details.
         /// </summary>
-        /// <param name="handler">Handler.</param>
+        /// <param name="handler">Callback handler.</param>
         private void _RegisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
         {
             if (m_poseListener != null)
@@ -1044,6 +1045,7 @@ namespace Tango
                 m_shouldReconnectService = true;
                 _SuspendTangoServices();
             }
+
             Debug.Log("androidOnPause done");
         }
 
@@ -1058,6 +1060,7 @@ namespace Tango
                 m_shouldReconnectService = false;
                 _ResumeTangoServices();
             }
+
             Debug.Log("androidOnResume done");
         }
 
@@ -1066,7 +1069,7 @@ namespace Tango
         /// </summary>
         /// <param name="requestCode">Request code.</param>
         /// <param name="resultCode">Result code.</param>
-        /// <param name="data">Data.</param>
+        /// <param name="data">Intent data.</param>
         private void _androidOnActivityResult(int requestCode, int resultCode, AndroidJavaObject data)
         {
             Debug.Log("Activity returned result code : " + resultCode);
@@ -1083,8 +1086,10 @@ namespace Tango
                     {
                         _PermissionWasDenied();
                     }
+
                     break;
                 }
+
                 case Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE:
                 {
                     if (resultCode == (int)Common.AndroidResult.SUCCESS)
@@ -1095,13 +1100,16 @@ namespace Tango
                     {
                         _PermissionWasDenied();
                     }
+
                     break;
                 }
+
                 default:
                 {
                     break;
                 }
             }
+
             Debug.Log("Activity returned result end");
         }
 
@@ -1164,7 +1172,7 @@ namespace Tango
         /// <summary>
         /// Flip a permission bit and check to see if all permissions were accepted.
         /// </summary>
-        /// <param name="permission">Permission.</param>
+        /// <param name="permission">Permission bit to flip.</param>
         private void _FlipBitAndCheckPermissions(PermissionsTypes permission)
         {
             m_requiredPermissions ^= permission;
@@ -1264,10 +1272,12 @@ namespace Tango
                 {
                     PermissionEvent(m_permissionsSuccessful);
                 }
+
                 if (m_permissionsSuccessful && m_autoConnectToService)
                 {
                     Startup(null);
                 }
+
                 m_sendPermissions = false;
             }
 
@@ -1280,6 +1290,7 @@ namespace Tango
             {
                 m_tangoEventListener.SendIfTangoEventAvailable();
             }
+
             if (m_tangoCloudEventListener != null)
             {
                 m_tangoCloudEventListener.SendIfTangoCloudEventAvailable();
@@ -1314,6 +1325,7 @@ namespace Tango
                 m_tangoConfig.Dispose();
                 m_tangoConfig = null;
             }
+
             if (m_tangoRuntimeConfig != null)
             {
                 m_tangoRuntimeConfig.Dispose();

@@ -16,10 +16,10 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
 using System;
-using UnityEngine;
+using System.Collections;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// This is a basic movement controller based on
@@ -122,7 +122,7 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     /// Handle the callback sent by the Tango Service
     /// when a new pose is sampled.
     /// </summary>
-    /// <param name="pose">Pose.</param>
+    /// <param name="pose">Pose from Tango.</param>
     public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
     {
         // Get out of here if the pose is null
@@ -154,6 +154,7 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
                 {
                     m_frameCount = 0;
                 }
+
                 m_frameCount++;
 
                 // Compute delta frame timestamp.

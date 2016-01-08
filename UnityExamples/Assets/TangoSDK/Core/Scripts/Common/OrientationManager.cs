@@ -17,11 +17,12 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
-using UnityEngine;
 
 namespace Tango
 {
+    using System.Collections;
+    using UnityEngine;
+
     /// <summary>
     /// Manages the orientation of the screen.
     /// </summary>
@@ -73,6 +74,7 @@ namespace Tango
             {
                 transformation = Quaternion.AngleAxis(-90f, Vector3.forward);
             }
+
             return transformation;
         }
     }

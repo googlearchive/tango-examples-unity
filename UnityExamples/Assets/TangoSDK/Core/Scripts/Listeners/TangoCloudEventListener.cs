@@ -17,12 +17,13 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections.Generic;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for Tango cloud events.
     /// </summary>
@@ -57,8 +58,10 @@ namespace Tango
                     {
                         m_onTangoCloudEventAvailable(cloudEvent.Key, cloudEvent.Value);
                     }
+
                     m_events.Clear();
                 }
+
                 m_isDirty = false;
             }
         }

@@ -17,26 +17,30 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using UnityEngine;
-using Tango;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Collections.Generic;
+    using System.Runtime.InteropServices;
+    using Tango;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for the Tango video overlay interface.
     /// </summary>
     public class VideoOverlayProvider
     {
+        private static readonly string CLASS_NAME = "VideoOverlayProvider";
+        private static IntPtr callbackContext = IntPtr.Zero;
+
         /// <summary>
         /// Tango video overlay C callback function signature.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="cameraId">Camera ID.</param>
-        /// <param name="image">Image.</param> 
+        /// <param name="image">Image buffer.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         internal delegate void TangoService_onImageAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId, [In, Out] TangoImageBuffer image);
 
@@ -47,10 +51,7 @@ namespace Tango
         /// <param name="cameraId">Camera ID.</param>
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
         internal delegate void TangoService_onUnityFrameAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId);
-        
-        private static readonly string CLASS_NAME = "VideoOverlayProvider";
-        private static IntPtr callbackContext = IntPtr.Zero;
-        
+
         /// <summary>
         /// Connect a Texture ID to a camera; the camera is selected by specifying a TangoCameraId.
         /// 
@@ -137,7 +138,7 @@ namespace Tango
         /// supported.
         /// </param>
         /// <param name="textures">The texture IDs to use for the Y, Cb, and Cr planes.</param>
-        /// <param name="onUnityFrameAvailable">Callback.</param>
+        /// <param name="onUnityFrameAvailable">Callback method.</param>
         internal static void ExperimentalConnectTexture(TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onUnityFrameAvailable onUnityFrameAvailable)
         {
             int returnValue = VideoOverlayAPI.TangoService_Experimental_connectTextureIdUnity(cameraId, 
@@ -287,7 +288,7 @@ namespace Tango
         /// <param name="yPlaneHeight">Y plane height.</param>
         /// <param name="uvPlaneWidth">UV plane width.</param>
         /// <param name="uvPlaneHeight">UV plane height.</param>
-        /// <param name="format">Format.</param>
+        /// <param name="format">Texture format.</param>
         /// <param name="mipmap">If set to <c>true</c> mipmap.</param>
         public YUVTexture(int yPlaneWidth, int yPlaneHeight,
                           int uvPlaneWidth, int uvPlaneHeight,

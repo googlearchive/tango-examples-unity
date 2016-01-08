@@ -6,5 +6,5 @@
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="TypographyDashes">
-  <string name="ux_library_version">1.24:2015.10.16-zeno-platform-freeze-63-g251e1e46:6622:unstable</string>
+  <string name="ux_library_version">1.29:2015.11.28-capella-platform-freeze-1113-g299f679d:7334:unstable</string>
 </resources>

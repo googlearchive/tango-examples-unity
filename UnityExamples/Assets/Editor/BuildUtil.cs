@@ -20,34 +20,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 /// <summary>
 /// Build utilities for building packages and apks.  Shareable across all projects.
 /// </summary>
 public class BuildUtil
 {
-    /// <summary>
-    /// Defines all the APK-specific configs we have.
-    /// </summary>
-    public class APKSettings
-    {
-        public string ProjectName;
-        public string Icon;
-        public string[] Scenes;
-        public string BundleIdentifier;
-    }
-
-    /// <summary>
-    /// Defines all the UnityPackage-specific configs we have.
-    /// </summary>
-    public class PackageSettings
-    {
-        public string PackageName;
-        public string[] Directories;
-    }
-
     /// <summary>
     /// Where to put built APKs.
     /// </summary>
@@ -114,6 +94,7 @@ public class BuildUtil
         {
             scenesUnityPath[it] = ASSET_DIRECTORY_W_SLASH + settings.Scenes[it];
         }
+
         BuildPipeline.BuildPlayer(scenesUnityPath, BUILD_APK_DIRECTORY_W_SLASH + settings.ProjectName + ".apk", 
                                   BuildTarget.Android, BuildOptions.None);
 
@@ -146,6 +127,7 @@ public class BuildUtil
         {
             dirUnityPath[it] = ASSET_DIRECTORY_W_SLASH + settings.Directories[it];
         }
+
         AssetDatabase.ExportPackage(dirUnityPath, 
                                     BUILD_PACKAGE_DIRECTORY_W_SLASH + settings.PackageName + ".unitypackage", 
                                     ExportPackageOptions.Recurse);
@@ -194,5 +176,25 @@ public class BuildUtil
             Debug.Log(e.ToString());
             return null;
         }
+    }
+
+    /// <summary>
+    /// Defines all the APK-specific configs we have.
+    /// </summary>
+    public class APKSettings
+    {
+        public string ProjectName;
+        public string Icon;
+        public string[] Scenes;
+        public string BundleIdentifier;
+    }
+
+    /// <summary>
+    /// Defines all the UnityPackage-specific configs we have.
+    /// </summary>
+    public class PackageSettings
+    {
+        public string PackageName;
+        public string[] Directories;
     }
 }

@@ -43,6 +43,7 @@ public class BallThrower : MonoBehaviour
             ballArray[i].SetActive(false);
             ballArray[i].transform.parent = transform;
         }
+
         currentBallID = 0;
     }
     

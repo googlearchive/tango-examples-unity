@@ -20,9 +20,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
+using Tango;
 using UnityEngine;
 using UnityEngine.UI;
-using Tango;
 
 /// <summary>
 /// Class for all the UI interaction in the AreaDescriptionManagement sample.
@@ -186,6 +186,20 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         else
         {
             Debug.Log("No Tango Manager found in scene.");
+        }
+    }
+
+    /// <summary>
+    /// Applicaiton onPause / onResume callback.
+    /// </summary>
+    /// <param name="pauseStatus"><c>true</c> if the application about to pause, otherwise <c>false</c>.</param>
+    public void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus && !m_managementRoot.activeSelf)
+        {
+            // When application is backgrounded, we reload the level because the Tango Service is disconected. All
+            // learned area and placed marker should be discarded as they are not saved.
+            Application.LoadLevel(Application.loadedLevel);
         }
     }
 

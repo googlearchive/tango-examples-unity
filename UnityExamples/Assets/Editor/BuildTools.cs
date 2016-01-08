@@ -18,8 +18,8 @@
 //-----------------------------------------------------------------------
 using System.Collections;
 using System.IO;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 /// <summary>
 /// Build scripts for this specific project.  Uses BuildUtil.cs, which should be sharable across

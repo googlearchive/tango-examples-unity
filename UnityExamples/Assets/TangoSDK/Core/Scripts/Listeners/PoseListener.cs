@@ -17,12 +17,13 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections.Generic;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections.Generic;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for Tango pose events.
     /// </summary>
@@ -93,11 +94,13 @@ namespace Tango
                         m_onTangoPoseAvailable(m_motionTrackingData);
                         m_isMotionTrackingPoseAvailable = false;
                     }
+
                     if (m_isAreaLearningPoseAvailable)
                     {
                         m_onTangoPoseAvailable(m_areaLearningData);
                         m_isAreaLearningPoseAvailable = false;
                     }
+
                     if (m_isRelocalizaitonPoseAvailable)
                     {
                         m_onTangoPoseAvailable(m_relocalizationData);
@@ -148,7 +151,7 @@ namespace Tango
         /// Handle the callback sent by the Tango Service when a new pose is sampled.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
-        /// <param name="pose">Pose.</param>
+        /// <param name="pose">The pose data returned from Tango.</param>
         private void _OnPoseAvailable(IntPtr callbackContext, TangoPoseData pose)
         {
             if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&

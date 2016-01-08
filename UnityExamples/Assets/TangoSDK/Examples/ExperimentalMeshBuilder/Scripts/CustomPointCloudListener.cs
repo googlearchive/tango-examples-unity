@@ -22,8 +22,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// Manages points cloud data either from the API, playback file, synthetic room, or test generation.
@@ -354,6 +354,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             writer.Write(depthFrame.m_points[(3 * i) + 1]);
             writer.Write(depthFrame.m_points[(3 * i) + 2]);
         }
+
         writer.Flush();
     }
 
@@ -384,6 +385,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             m_debugText = "Failed to read depth";
             return -1;
         }
+
         depthFrame.m_timestamp = double.Parse(reader.ReadString());
         depthFrame.m_pointCount = int.Parse(reader.ReadString());
         if (depthFrame.m_pointCount > depthFrame.m_points.Length)
@@ -428,6 +430,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
                 m_currTangoDepth.m_points[(3 * i) + 1] = tangoDepth.m_points[(i * 3) + 1];
                 m_currTangoDepth.m_points[(3 * i) + 2] = tangoDepth.m_points[(i * 3) + 2];
             }
+
             m_currTangoDepth.m_timestamp = tangoDepth.m_timestamp;
             m_currTangoDepth.m_pointCount = tangoDepth.m_pointCount;
             
@@ -440,6 +443,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             
             m_isDirty = true;
         }
+
         return;
     }
 
@@ -455,6 +459,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
             m_fileWriter.Close();
             m_fileWriter = null;
         }
+
         m_fileWriter = new BinaryWriter(File.Open(Application.persistentDataPath + "/" + filename, FileMode.Create));
         m_debugText = "Saving to: " + filename + " " + m_fileWriter.ToString();
     }
@@ -552,6 +557,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
                         m_meshManager.InsertPoint(hitInfo.point, ray.direction, 1.0f / (hitInfo.distance + 1));
                     }
                 }
+
                 m_meshManager.QueueDirtyMeshesForRegeneration();
                 float stop = Time.realtimeSinceStartup;
                 m_meshManager.InsertionTime = (m_meshManager.InsertionTime * m_meshManager.TimeSmoothing) + ((1.0f - m_meshManager.TimeSmoothing) * (stop - start));
@@ -622,6 +628,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         {
             m_cubes[i].SetActive(false);
         }
+
         m_cubeIndex = 0;
     }
 
@@ -694,6 +701,7 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         {
             buttonName = "Resume";
         }
+
         if (GUI.Button(new Rect(Screen.width - 160, 220, 140, 80), buttonName))
         {
             m_pause = !m_pause;

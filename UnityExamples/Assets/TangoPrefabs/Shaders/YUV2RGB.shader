@@ -58,7 +58,7 @@ SubShader
         uniform float _K2;
 
         // Compute a modulo b.
-        float mod(float x, float y)
+        float custom_mod(float x, float y)
         {
             return x - y * floor(x / y);
         }
@@ -94,7 +94,7 @@ SubShader
             float texel_x = undistored_x * _TexWidth;
 
             // Compute the Y value.
-            int packed_offset = int(mod(texel_x, 4.0));
+            int packed_offset = int(custom_mod(texel_x, 4.0));
             
             vec4 packed_y = texture2D(_YTex, vec2(undistored_x, (1.0 - undistored_y)));
             if (packed_offset == 0)

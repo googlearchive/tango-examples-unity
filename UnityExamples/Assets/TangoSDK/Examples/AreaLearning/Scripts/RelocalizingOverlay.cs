@@ -18,8 +18,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// The image overlay displayed during the relocalization process.

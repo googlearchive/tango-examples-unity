@@ -18,8 +18,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 
 /// <summary>
 /// Tango developer tools menu.

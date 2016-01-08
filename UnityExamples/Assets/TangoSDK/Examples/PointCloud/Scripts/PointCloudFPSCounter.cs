@@ -16,8 +16,8 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// FPS counter.

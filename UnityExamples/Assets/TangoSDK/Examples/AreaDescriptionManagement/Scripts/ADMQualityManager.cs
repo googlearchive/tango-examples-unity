@@ -156,7 +156,7 @@ public class ADMQualityManager : MonoBehaviour
     /// <summary>
     /// Update the visuals for a cell.
     /// </summary>
-    /// <param name="cell">Cell.</param>
+    /// <param name="cell">Cell to update.</param>
     private static void _UpdateVisuals(QualityCell cell)
     {
         bool anyAreTrue = false;
@@ -237,12 +237,14 @@ public class ADMQualityManager : MonoBehaviour
                     m_cellsOrigin.x - CELL_SIZE, 0, m_cellsOrigin.y + (it * CELL_SIZE));
                 _UpdateVisuals(cell);
             }
+
             m_cellQualities.Insert(0, toInsert);
 
             ++curSizeX;
             ++x;
             m_cellsOrigin.x -= CELL_SIZE;
         }
+
         while (x >= curSizeX)
         {
             List<QualityCell> toInsert = new List<QualityCell>();
@@ -256,6 +258,7 @@ public class ADMQualityManager : MonoBehaviour
                     m_cellsOrigin.x + (curSizeX * CELL_SIZE), 0, m_cellsOrigin.y + (it * CELL_SIZE));
                 _UpdateVisuals(cell);
             }
+
             m_cellQualities.Add(toInsert);
             
             ++curSizeX;
@@ -279,6 +282,7 @@ public class ADMQualityManager : MonoBehaviour
             ++z;
             m_cellsOrigin.y -= CELL_SIZE;
         }
+
         while (z >= curSizeY)
         {
             for (int it = 0; it < curSizeX; ++it)

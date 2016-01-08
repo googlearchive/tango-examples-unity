@@ -18,8 +18,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// Script that displays a scene switching UI.

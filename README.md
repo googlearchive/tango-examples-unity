@@ -3,36 +3,44 @@ Project Tango UnitySDK Examples
 Copyright (C) 2015 Google Inc.
 
 <h2>Useful Websites</h2>
+
 SDK Download - https://developers.google.com/project-tango/downloads
 
 Developer Website - https://developers.google.com/project-tango/apis/unity
 
 <h2>Contents</h2>
 
-These are the Project Tango UnitySDK Examples compilable in Unity 5 and above:
-* **Motion Tracking Example** - This example shows how to use our motion tracking APIs.
+This contains the Project Tango UnitySDK examples and tutorial projects for Unity 5 and above.
 
-* **Point Cloud Example** - This example shows how to use the depth APIs, and use the pose data to transform the point cloud into world coordinates.
+<h2>UnityExamples</h2>
+This project contains examples for Unity 5 and above.  Each example is in its own scene:
+* **MotionTracking** - How to use the motion tracking APIs.
 
-* **Area Description Example** - This example shows how to use the Area Description File (ADF) APIs. 
+* **PointCloud** - How to use the depth APIs and use the pose data to transform the point cloud into world coordinates.
 
-* **Persistent State Demo(Experimental)** - The persistent state demo shows how to store/load data along with a specific Area Description File, to create a virtual real time strategy game/experience.
+* **AreaLearning** - How to use the Area Description motion APIs and place objects at specific spots in the area description. 
+
+* **AreaDescriptionManagement** - How to use the Area Description management APIs and create a new area description.
+
+* **AugmentedReality** - How to create an augmented reality experience using the video camera overlay APIs and motion tracking APIs.
  
-* **Mesh Builder(Experimental)** - The mesh build demo shows how to build a mesh using both motion tracking and depth API.
- 
-* **Augmented Reality Example(Experimental)** - The augmented reality example shows how to use the video camera overlay and motion tracking data to create a augmented reality experience.
+* **MeshBuilder(Experimental)** - How to build a mesh using the motion tracking APIs and depth APIs.
+
+* **VirtualReality(Experimental)** - How to use create a stereoscopic virtual reality experience using the motion tracking APIs.
+
+<h2>MotionTrackingTutorialStart</h2>
+This project contains a starting point for the motion tracking tutorial on the Project Tango developer website.  
 
 <h2>Project Layout</h2>
 
-The example project has the following folders:
-* **Editor/Tango/** - Tango-specific Unity3D editor integration
+Projects commonly have the following folders:
 * **Google-Unity/** - General Android lifecycle management
 * **Plugins/Android/** - General Android and Tango-specific libraries
-* **Scenes/** - All the Tango example scenes
 * **Standard Assets/** - Unity packages we are using
-* **TangoExamples/** - One subfolder here per example
 * **TangoPrefabs/** - Common Tango prefabs, like a simple camera
 * **TangoSDK/** - Unity3D interface to the Tango libraries
+* **TangoSDK/Examples** - One subfolder here per example
+* **TangoSDK/Examples/Scenes/** - All the Tango example scenes
 
 <h2>Support</h2>
 

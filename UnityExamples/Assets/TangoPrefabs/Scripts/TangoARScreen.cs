@@ -18,8 +18,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// TangoARScreen takes the YUV image from the API, resize the image plane and passes
@@ -34,8 +34,8 @@ using Tango;
 public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoVideoOverlay
 {   
     /// <summary>
-    /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to background-1
-    /// so that PointCloud data gets written to Z buffer for Depth test with virtual
+    /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to 
+    /// background-1 so that PointCloud data gets written to Z buffer for Depth test with virtual
     /// objects in scene. Note 1: This is a very rudimentary way of doing occlusion and limited by the capabilities of
     /// depth camera. Note 2: To enable occlusion TangoPointCloud prefab must be present in the scene as well.
     /// </summary>
@@ -162,7 +162,6 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
         // Set up the size of ARScreen based on camera intrinsics.
         TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
         VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
-
         if (intrinsics.width != 0 && intrinsics.height != 0)
         {
             Camera camera = GetComponent<Camera>();
@@ -274,7 +273,8 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// <param name="intrinsics">Tango camera intrinsics for the color camera.</param>
     /// <param name="uOffset">U texture coordinate clipping.</param>
     /// <param name="vOffset">V texture coordinate clipping.</param>
-    private static void _CameraUpdateForIntrinsics(Camera cam, TangoCameraIntrinsics intrinsics, float uOffset, float vOffset)
+    private static void _CameraUpdateForIntrinsics(Camera cam, TangoCameraIntrinsics intrinsics, float uOffset,
+                                                   float vOffset)
     {
         float cx = (float)intrinsics.cx;
         float cy = (float)intrinsics.cy;

@@ -18,9 +18,9 @@
 // </copyright>
 //-----------------------------------------------------------------------
 using System.Collections;
+using Tango;
 using UnityEditor;
 using UnityEngine;
-using Tango;
 
 /// <summary>
 /// Custom editor for the TangoApplication.
@@ -79,6 +79,7 @@ public class TangoInspector : Editor
 
             EditorGUI.indentLevel--;
         }
+
         EditorGUILayout.Space();
     }
 
@@ -107,6 +108,7 @@ public class TangoInspector : Editor
                                                                                     tangoApplication.m_useExperimentalVideoOverlay);
             EditorGUI.indentLevel--;
         }
+
         EditorGUILayout.Space();
     }
 

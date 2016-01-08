@@ -25,22 +25,6 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper
 {
-    /// <summary>
-    /// Holds the current and default orientation of the device.
-    /// </summary>
-    public struct TangoDeviceOrientation
-    {
-        /// <summary>
-        /// The default orientation of the device.  This is the "natural" way to hold this device.
-        /// </summary>
-        public DeviceOrientation defaultRotation;
-
-        /// <summary>
-        /// The current orientation of the device.
-        /// </summary>
-        public DeviceOrientation currentRotation;
-    }
-
     private const string PERMISSION_REQUEST_ACTIVITY = "com.google.atap.tango.RequestPermissionActivity";
 
     private const string TANGO_APPLICATION_ID = "com.projecttango.tango";
@@ -176,6 +160,7 @@ public partial class AndroidHelper
         {
             return tangoObject.Call<bool>("connectCloud");
         }
+
         return false;
     }
 
@@ -191,6 +176,7 @@ public partial class AndroidHelper
         {
             return tangoObject.Call<bool>("disconnectCloud");
         }
+
         return false;
     }
 
@@ -234,5 +220,21 @@ public partial class AndroidHelper
                                args,
                                Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE);
         }
+    }
+
+    /// <summary>
+    /// Holds the current and default orientation of the device.
+    /// </summary>
+    public struct TangoDeviceOrientation
+    {
+        /// <summary>
+        /// The default orientation of the device.  This is the "natural" way to hold this device.
+        /// </summary>
+        public DeviceOrientation defaultRotation;
+
+        /// <summary>
+        /// The current orientation of the device.
+        /// </summary>
+        public DeviceOrientation currentRotation;
     }
 }

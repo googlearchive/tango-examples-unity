@@ -17,12 +17,13 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for the Tango events interface.
     /// </summary>
@@ -39,7 +40,7 @@ namespace Tango
         /// <summary>
         /// Attach an onTangoEvent callback. The callback is called each time a Tango event happens.
         /// </summary>
-        /// <param name="callback">Callback.</param>
+        /// <param name="callback">Callback method.</param>
         internal static void SetCallback(TangoService_onEventAvailable callback)
         {
             int returnValue = EventsAPI.TangoService_connectOnTangoEvent(callback);
