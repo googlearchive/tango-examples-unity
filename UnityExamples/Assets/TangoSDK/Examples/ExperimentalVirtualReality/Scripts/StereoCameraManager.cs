@@ -74,6 +74,7 @@ public class StereoCameraManager : MonoBehaviour
             // needed to clear the frame buffers
             SetupCameras(false);
         } 
+
         if (frameCount == 11)
         {
             SetupCameras(enableStereo);

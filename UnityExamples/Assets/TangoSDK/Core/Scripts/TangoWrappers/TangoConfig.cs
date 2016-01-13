@@ -17,52 +17,21 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Text;
-using System.Runtime.InteropServices;
-using Tango;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Runtime.InteropServices;
+    using System.Text;
+    using Tango;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for Tango Configuration Parameters.
     /// </summary>
     internal sealed class TangoConfig : IDisposable
     {
-        #region Attributes
-        /// <summary>
-        /// Key/Value pairs supported by the Tango Service.
-        /// </summary>
-        internal struct Keys
-        {
-            // Motion Tracking
-            public static readonly string ENABLE_MOTION_TRACKING_BOOL = "config_enable_motion_tracking";
-            public static readonly string ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL = "config_enable_auto_recovery";
-            public static readonly string ENABLE_LOW_LATENCY_IMU_INTEGRATION = "config_enable_low_latency_imu_integration";
-            
-            // Area Learning
-            public static readonly string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
-            public static readonly string LOAD_AREA_DESCRIPTION_UUID_STRING = "config_load_area_description_UUID";
-            
-            // Depth Perception
-            public static readonly string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
-            
-            // Video overlay
-            public static readonly string EXPERIMENTAL_Y_TEXTURE_HEIGHT = "experimental_color_y_tex_data_height";
-            public static readonly string EXPERIMENTAL_Y_TEXTURE_WIDTH = "experimental_color_y_tex_data_width";
-            public static readonly string EXPERIMENTAL_UV_TEXTURE_HEIGHT = "experimental_color_uv_tex_data_height";
-            public static readonly string EXPERIMENTAL_UV_TEXTURE_WIDTH = "experimental_color_uv_tex_data_width";
-            
-            // Utility
-            public static readonly string ENABLE_DATASET_RECORDING = "config_enable_dataset_recording";
-            public static readonly string GET_TANGO_SERVICE_VERSION_STRING = "tango_service_library_version";
-
-            // Runtime configs
-            public static readonly string RUNTIME_DEPTH_FRAMERATE = "config_runtime_depth_framerate";
-        }
-
         private const string m_FailedConversionFormat = "Failed to convert object to generic type : {0}. Reverting to default.";
         private const string m_ErrorLogFormat = "{0}.{1}() Was unable to set key: {2} with value: {3}";
         private const string m_ConfigErrorFormat = "{0}.{1}() Invalid TangoConfig, make sure Tango Config is initialized properly.";
@@ -73,35 +42,6 @@ namespace Tango
         /// Pointer to the TangoConfig.
         /// </summary>
         private IntPtr m_configHandle;
-
-        /// <summary>
-        /// Delegate for internal API call that sets a config option.
-        /// 
-        /// This matches the signature of TangoConfig_setBool, TangoConfig_setDouble, etc. 
-        /// </summary>
-        /// <param name="configHandle">TangoConfig handle.</param>
-        /// <param name="key">Key we want to modify.</param>
-        /// <param name="val">Value to set, of the correct type.</param>
-        /// <returns>
-        /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
-        /// not be set.
-        /// </returns>
-        private delegate int ConfigAPISetter<T>(IntPtr configHandle, string key, T val);
-
-        /// <summary>
-        /// Delegate for internal API call that gets a config option.
-        /// 
-        /// This matches the signature of TangoConfig_getBool, TangoConfig_getDouble, etc. 
-        /// </summary>
-        /// <param name="configHandle">TangoConfig handle.</param>
-        /// <param name="key">Key we want to get.</param>
-        /// <param name="val">Upon success, the value of for key.</param>
-        /// <returns>
-        /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
-        /// not be set.
-        /// </returns>
-        private delegate int ConfigAPIGetter<T>(IntPtr configHandle, string key, ref T val);
-        #endregion
 
         /// <summary>
         /// Create a new TangoConfig.
@@ -119,6 +59,36 @@ namespace Tango
         {
             m_configHandle = TangoConfigAPI.TangoService_getConfig(configType);
         }
+
+        /// <summary>
+        /// Delegate for internal API call that sets a config option.
+        /// 
+        /// This matches the signature of TangoConfig_setBool, TangoConfig_setDouble, etc. 
+        /// </summary>
+        /// <typeparam name="T">Type of the value being set.</typeparam>
+        /// <param name="configHandle">TangoConfig handle.</param>
+        /// <param name="key">Key we want to modify.</param>
+        /// <param name="val">Value to set, of the correct type.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
+        /// not be set.
+        /// </returns>
+        private delegate int ConfigAPISetter<T>(IntPtr configHandle, string key, T val);
+
+        /// <summary>
+        /// Delegate for internal API call that gets a config option.
+        /// 
+        /// This matches the signature of TangoConfig_getBool, TangoConfig_getDouble, etc. 
+        /// </summary>
+        /// <typeparam name="T">Type of the value being retrieved.</typeparam>
+        /// <param name="configHandle">TangoConfig handle.</param>
+        /// <param name="key">Key we want to get.</param>
+        /// <param name="val">Upon success, the value of for key.</param>
+        /// <returns>
+        /// Returns TANGO_SUCCESS on success or TANGO_INVALID if config or key is NULL, or key is not found or could
+        /// not be set.
+        /// </returns>
+        private delegate int ConfigAPIGetter<T>(IntPtr configHandle, string key, ref T val);
 
         /// <summary>
         /// Releases all resource used by the <see cref="Tango.TangoConfig"/> object.
@@ -294,6 +264,7 @@ namespace Tango
             {
                 Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
             }
+
             return wasSuccess;
         }
 
@@ -332,6 +303,7 @@ namespace Tango
             {
                 Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key, value));
             }
+
             return wasSuccess;
         }
 
@@ -358,7 +330,39 @@ namespace Tango
             {
                 Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
             }
+
             return wasSuccess;
+        }
+
+        /// <summary>
+        /// Key/Value pairs supported by the Tango Service.
+        /// </summary>
+        internal struct Keys
+        {
+            // Motion Tracking
+            public static readonly string ENABLE_MOTION_TRACKING_BOOL = "config_enable_motion_tracking";
+            public static readonly string ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL = "config_enable_auto_recovery";
+            public static readonly string ENABLE_LOW_LATENCY_IMU_INTEGRATION = "config_enable_low_latency_imu_integration";
+
+            // Area Learning
+            public static readonly string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
+            public static readonly string LOAD_AREA_DESCRIPTION_UUID_STRING = "config_load_area_description_UUID";
+
+            // Depth Perception
+            public static readonly string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
+
+            // Video overlay
+            public static readonly string EXPERIMENTAL_Y_TEXTURE_HEIGHT = "experimental_color_y_tex_data_height";
+            public static readonly string EXPERIMENTAL_Y_TEXTURE_WIDTH = "experimental_color_y_tex_data_width";
+            public static readonly string EXPERIMENTAL_UV_TEXTURE_HEIGHT = "experimental_color_uv_tex_data_height";
+            public static readonly string EXPERIMENTAL_UV_TEXTURE_WIDTH = "experimental_color_uv_tex_data_width";
+
+            // Utility
+            public static readonly string ENABLE_DATASET_RECORDING = "config_enable_dataset_recording";
+            public static readonly string GET_TANGO_SERVICE_VERSION_STRING = "tango_service_library_version";
+
+            // Runtime configs
+            public static readonly string RUNTIME_DEPTH_FRAMERATE = "config_runtime_depth_framerate";
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",

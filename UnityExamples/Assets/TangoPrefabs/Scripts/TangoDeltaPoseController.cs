@@ -19,8 +19,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// This is a more advanced movement controller based on the poses returned
@@ -105,7 +105,30 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     private Quaternion m_prevTangoRotation;
 
     /// <summary>
-    /// If the clutch is active.
+    /// Internal data about the clutch.
+    /// </summary>
+    private bool m_clutchActive;
+
+    /// <summary>
+    /// Internal CharacterController used for motion.
+    /// </summary>
+    private CharacterController m_characterController;
+
+    /// <summary>
+    /// Matrix that transforms from the Unity Camera to the Unity World.
+    /// 
+    /// Needed to calculate offsets.
+    /// </summary>
+    private Matrix4x4 m_uwTuc;
+
+    /// <summary>
+    /// Matrix that transforms the Unity World taking into account offsets from calls
+    /// to <c>SetPose</c>.
+    /// </summary>
+    private Matrix4x4 m_uwOffsetTuw;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the clutch is active.
     /// 
     /// When the clutch is active, the Tango device can be moved and rotated
     /// without the controller actually moving.
@@ -124,56 +147,10 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
             {
                 SetPose(transform.position, transform.rotation);
             }
+
             m_clutchActive = value;
         }
     }
-
-    /// <summary>
-    /// Internal data about the clutch.
-    /// </summary>
-    private bool m_clutchActive;
-
-    /// <summary>
-    /// Internal CharacterController used for motion.
-    /// </summary>
-    private CharacterController m_characterController;
-
-    // We use couple of matrix transformation to convert the pose from Tango coordinate
-    // frame to Unity coordinate frame.
-    // The full equation is:
-    //     Matrix4x4 uwTuc = uwTss * ssTd * dTuc;
-    //
-    // uwTuc: Unity camera with respect to Unity world, this is the desired matrix.
-    // uwTss: Constant matrix converting start of service frame to Unity world frame.
-    // ssTd: Device frame with repect to start of service frame, this matrix denotes the 
-    //       pose transform we get from pose callback.
-    // dTuc: Constant matrix converting Unity world frame frame to device frame.
-    //
-    // Please see the coordinate system section online for more information:
-    //     https://developers.google.com/project-tango/overview/coordinate-systems
-
-    /// <summary>
-    /// Matrix that transforms from Start of Service to the Unity World.
-    /// </summary>
-    private Matrix4x4 m_uwTss;
-
-    /// <summary>
-    /// Matrix that transforms from the Unity Camera to Device.
-    /// </summary>
-    private Matrix4x4 m_dTuc;
-
-    /// <summary>
-    /// Matrix that transforms from the Unity Camera to the Unity World.
-    /// 
-    /// Needed to calculate offsets.
-    /// </summary>
-    private Matrix4x4 m_uwTuc;
-
-    /// <summary>
-    /// Matrix that transforms the Unity World taking into account offsets from calls
-    /// to <c>SetPose</c>.
-    /// </summary>
-    private Matrix4x4 m_uwOffsetTuw;
 
     /// <summary>
     /// Gets the unity world offset which can be then multiplied to any transform to apply this offset.
@@ -192,20 +169,6 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     /// </summary>
     public void Awake()
     {
-        // Constant matrix converting start of service frame to Unity world frame.
-        m_uwTss = new Matrix4x4();
-        m_uwTss.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
-        m_uwTss.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-
-        // Constant matrix converting Unity world frame frame to device frame.
-        m_dTuc = new Matrix4x4();
-        m_dTuc.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_dTuc.SetColumn(1, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_dTuc.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
-        m_dTuc.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-
         m_poseDeltaTime = -1.0f;
         m_poseTimestamp = -1.0f;
         m_poseCount = -1;
@@ -334,21 +297,13 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
         // The callback pose is for device with respect to start of service pose.
         if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
-            // Construct matrix for the start of service with respect to device from the pose.
-            Vector3 posePosition = new Vector3((float)pose.translation[0],
-                                               (float)pose.translation[1],
-                                               (float)pose.translation[2]);
-            Quaternion poseRotation = new Quaternion((float)pose.orientation[0],
-                                                     (float)pose.orientation[1],
-                                                     (float)pose.orientation[2],
-                                                     (float)pose.orientation[3]);
-            Matrix4x4 ssTd = Matrix4x4.TRS(posePosition, poseRotation, Vector3.one);
+            Vector3 position;
+            Quaternion rotation;
+            TangoSupport.TangoPoseToWorldTransform(pose, out position, out rotation);
 
-            // Calculate matrix for the camera in the Unity world, taking into account offsets.
-            m_uwTuc = m_uwTss * ssTd * m_dTuc;
+            m_uwTuc = Matrix4x4.TRS(position, rotation, Vector3.one);
             Matrix4x4 uwOffsetTuc = m_uwOffsetTuw * m_uwTuc;
 
-            // Extract final position, rotation.
             m_tangoPosition = uwOffsetTuc.GetColumn(3);
             m_tangoRotation = Quaternion.LookRotation(uwOffsetTuc.GetColumn(2), uwOffsetTuc.GetColumn(1));
 
@@ -357,12 +312,14 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
             {
                 m_poseCount = 0;
             }
+
             m_poseCount++;
 
             // Other pose data -- Pose delta time.
             m_poseDeltaTime = (float)pose.timestamp - m_poseTimestamp;
             m_poseTimestamp = (float)pose.timestamp;
         }
+
         m_poseStatus = pose.status_code;
 
         if (m_clutchActive)

@@ -49,10 +49,10 @@ public partial class AndroidHelper
     /// <summary>
     /// Parses the tango event.
     /// </summary>
-    /// <param name="timestamp">Timestamp.</param>
+    /// <param name="timestamp">Timestamp of the event.</param>
     /// <param name="eventType">Event type.</param>
-    /// <param name="key">Key.</param>
-    /// <param name="value">Value.</param>
+    /// <param name="key">Event key.</param>
+    /// <param name="value">Event value.</param>
     public static void ParseTangoEvent(double timestamp, int eventType, string key, string value)
     {
         AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();

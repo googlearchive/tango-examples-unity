@@ -17,13 +17,14 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
-using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for Tango image events.
     /// </summary>
@@ -47,6 +48,11 @@ namespace Tango
         private VideoOverlayProvider.TangoService_onImageAvailable m_onImageAvailable;
         private VideoOverlayProvider.TangoService_onUnityFrameAvailable m_onUnityFrameAvailable;
 
+        private TangoEnums.TangoCameraId m_previousCameraId;
+        private TangoUnityImageData m_previousImageBuffer;
+        private bool m_shouldSendEvent = false;
+        private bool m_usingExperimentalOverlay = false;
+
         /// <summary>
         /// Called when a new Tango image is available.
         /// </summary>
@@ -56,11 +62,6 @@ namespace Tango
         /// Called when a new Tange image is available (experimental version).
         /// </summary>
         private event OnExperimentalTangoImageAvailableEventHandler OnExperimentalTangoImageAvailable;
-
-        private TangoEnums.TangoCameraId m_previousCameraId;
-        private TangoUnityImageData m_previousImageBuffer;
-        private bool m_shouldSendEvent = false;
-        private bool m_usingExperimentalOverlay = false;
 
         /// <summary>
         /// Register to get Tango image events.

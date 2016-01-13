@@ -25,16 +25,6 @@ using UnityEngine;
 /// </summary>
 public class TangoGestureCamera : MonoBehaviour
 {
-    /// <summary>
-    /// Camera type enum.
-    /// </summary>
-    public enum CameraType
-    {
-        FIRST_PERSON = 0x1,
-        THIRD_PERSON = 0x2,
-        TOP_DOWN = 0x4
-    }
-    
     // UI fields.
     public const float UI_BUTTON_SIZE_X = 125.0f;
     public const float UI_BUTTON_SIZE_Y = 65.0f;
@@ -72,7 +62,17 @@ public class TangoGestureCamera : MonoBehaviour
     
     private Vector2 topDownStartPos = Vector2.zero;
     private Vector3 thirdPersonCamStartOffset;
-    
+
+    /// <summary>
+    /// Camera type enum.
+    /// </summary>
+    public enum CameraType
+    {
+        FIRST_PERSON = 0x1,
+        THIRD_PERSON = 0x2,
+        TOP_DOWN = 0x4
+    }
+
     /// <summary>
     /// Enabled based on camera type.
     /// </summary>
@@ -87,6 +87,7 @@ public class TangoGestureCamera : MonoBehaviour
                 transform.rotation = m_targetFollowingObject.transform.rotation;
                 break;
             }
+
             case CameraType.THIRD_PERSON:
             {
                 startThirdPersonRotationX = 45.0f;
@@ -105,12 +106,14 @@ public class TangoGestureCamera : MonoBehaviour
                 transform.LookAt(m_targetFollowingObject.transform.position);
                 break;
             }
+
             case CameraType.TOP_DOWN:
             {
                 m_topDownCamOffset = new Vector3(0.0f, 7.0f, 0.0f);
                 break;
             }
         }
+
         m_currentCamera = cameraType;
     }
     
@@ -142,6 +145,7 @@ public class TangoGestureCamera : MonoBehaviour
                 startThirdPersonRotationX = curThirdPersonRotationX;
                 startThirdPersonRotationY = curThirdPersonRotationY;
             }
+
             if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
             {
                 Vector2 offset = Input.touches[0].deltaPosition;
@@ -156,6 +160,7 @@ public class TangoGestureCamera : MonoBehaviour
                 touchStartDist = Mathf.Abs(Input.GetTouch(0).position.x - Input.GetTouch(1).position.x) +
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);
             }
+
             if (Input.touchCount == 2
                 && (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
                 && GUIUtility.hotControl == 0)
@@ -182,6 +187,7 @@ public class TangoGestureCamera : MonoBehaviour
                 topDownStartPos = new Vector2(m_topDownCamOffset.x, 
                                               m_topDownCamOffset.z);
             }
+
             if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Moved && GUIUtility.hotControl == 0)
             {
                 Vector2 offset = Input.GetTouch(0).position - touchStartPoint;
@@ -197,6 +203,7 @@ public class TangoGestureCamera : MonoBehaviour
                     Mathf.Abs(Input.GetTouch(0).position.y - Input.GetTouch(1).position.y);
                 topDownStartY = m_topDownCamOffset.y;
             }
+
             if (Input.touchCount == 2
                 && (Input.GetTouch(0).phase == TouchPhase.Moved || Input.GetTouch(1).phase == TouchPhase.Moved)
                 && GUIUtility.hotControl == 0)
@@ -210,6 +217,7 @@ public class TangoGestureCamera : MonoBehaviour
                 
                 m_topDownCamOffset = newPos;
             }
+
             if (Input.touchCount == 2 && (Input.GetTouch(0).phase == TouchPhase.Ended || Input.GetTouch(1).phase == TouchPhase.Ended))
             {
                 if (Input.GetTouch(0).phase == TouchPhase.Ended)
@@ -218,6 +226,7 @@ public class TangoGestureCamera : MonoBehaviour
                     topDownStartPos = new Vector2(m_topDownCamOffset.x,
                                                   m_topDownCamOffset.z);
                 }
+
                 if (Input.GetTouch(1).phase == TouchPhase.Ended)
                 {
                     touchStartPoint = Input.GetTouch(0).position;
@@ -225,6 +234,7 @@ public class TangoGestureCamera : MonoBehaviour
                                                   m_topDownCamOffset.z);
                 }
             }
+
             transform.rotation = Quaternion.Euler(new Vector3(90.0f, 0.0f, 0.0f));
             transform.position = m_targetFollowingObject.transform.position + m_topDownCamOffset;
         }
@@ -247,6 +257,7 @@ public class TangoGestureCamera : MonoBehaviour
         {
             EnableCamera(CameraType.FIRST_PERSON);
         }
+
         if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
                                 Screen.height - ((UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y) * 2),
                                 UI_BUTTON_SIZE_X, 
@@ -254,6 +265,7 @@ public class TangoGestureCamera : MonoBehaviour
         {
             EnableCamera(CameraType.THIRD_PERSON);
         }
+
         if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
                                 Screen.height - (UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y),
                                 UI_BUTTON_SIZE_X, 

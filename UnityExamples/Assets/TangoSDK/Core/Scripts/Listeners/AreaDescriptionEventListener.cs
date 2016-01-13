@@ -17,12 +17,13 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for Tango Area Description import events.
     /// 
@@ -43,16 +44,6 @@ namespace Tango
     /// </summary>
     internal class AreaDescriptionEventListener
     {
-        /// <summary>
-        /// Called when import ADF file is finished.
-        /// </summary>
-        private event OnAreaDescriptionImportEventHandler OnTangoAreaDescriptionImported;
-
-        /// <summary>
-        /// Called when export ADF file is finished.
-        /// </summary>
-        private event OnAreaDescriptionExportEventHandler OnTangoAreaDescriptionExported;
-        
         private bool m_isImportFinished = false;
         private bool m_isExportFinished = false;
         private System.Object m_lockObject = new System.Object();
@@ -70,6 +61,16 @@ namespace Tango
         }
 
         /// <summary>
+        /// Called when import ADF file is finished.
+        /// </summary>
+        private event OnAreaDescriptionImportEventHandler OnTangoAreaDescriptionImported;
+
+        /// <summary>
+        /// Called when export ADF file is finished.
+        /// </summary>
+        private event OnAreaDescriptionExportEventHandler OnTangoAreaDescriptionExported;
+
+        /// <summary>
         /// Raise a Tango Area Description event if there is new data.
         /// </summary>
         internal void SendEventIfAvailable()
@@ -84,6 +85,7 @@ namespace Tango
                         m_isImportFinished = false;
                         m_eventString = string.Empty;
                     }
+
                     if (m_isExportFinished)
                     {
                         OnTangoAreaDescriptionExported(m_isSuccessful);
@@ -105,6 +107,7 @@ namespace Tango
             {
                 OnTangoAreaDescriptionExported += exportHandler;
             }
+
             if (importHandler != null)
             {
                 OnTangoAreaDescriptionImported += importHandler;
@@ -123,6 +126,7 @@ namespace Tango
             {
                 OnTangoAreaDescriptionExported -= exportHandler;
             }
+
             if (importHandler != null)
             {
                 OnTangoAreaDescriptionImported -= importHandler;
@@ -146,6 +150,7 @@ namespace Tango
                     m_eventString = data.Call<string>("getStringExtra", "DESTINATION_UUID");
                 }
             }
+
             if (requestCode == Tango.Common.TANGO_ADF_EXPORT_REQUEST_CODE)
             {
                 lock (m_lockObject)

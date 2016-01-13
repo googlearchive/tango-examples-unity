@@ -98,10 +98,12 @@ public class PopupManager : MonoBehaviour
             {
                 return;
             }
+
             if (renderChart != null)
             {
                 renderChart.AddData(10 * dt);
             }
+
             updateFPS = (updateFPS * fpsSmoothing) + ((1.0f - fpsSmoothing) / dt);
         }
     }
@@ -126,10 +128,12 @@ public class PopupManager : MonoBehaviour
         {
             return;
         }
+
         if (apiChart != null)
         {
             apiChart.AddData(10 * dt);
         }
+
         apiFPS = (apiFPS * fpsSmoothing) + ((1.0f - fpsSmoothing) / dt);
     }
 

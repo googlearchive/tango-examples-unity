@@ -19,8 +19,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// This is a movement controller based on the poses returned from the Tango service, using the correct timing needed
@@ -29,6 +29,11 @@ using Tango;
 [RequireComponent(typeof(TangoARScreen))]
 public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
 {
+    /// <summary>
+    /// If set, this contoller will use the Device with respect Area Description frame pose.
+    /// </summary>
+    public bool m_useAreaDescriptionPose = false;
+
     /// <summary>
     /// Total number of poses ever applied by this controller.
     /// </summary>
@@ -42,24 +47,28 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     public TangoEnums.TangoPoseStatusType m_poseStatus;
 
     /// <summary>
-    /// The TangoARScreen that is being updated.
-    /// </summary>
-    private TangoARScreen m_tangoARScreen;
-
-    /// <summary>
     /// The most recent pose timestamp applied.
     /// </summary>
-    private double m_poseTimestamp;
+    [HideInInspector]
+    public double m_poseTimestamp;
 
     /// <summary>
     /// The most recent Tango rotation.
     /// </summary>
-    private Vector3 m_tangoPosition;
+    [HideInInspector]
+    public Vector3 m_tangoPosition;
 
     /// <summary>
     /// The most recent Tango position.
     /// </summary>
-    private Quaternion m_tangoRotation;
+    [HideInInspector]
+    public Quaternion m_tangoRotation;
+
+    /// <summary>
+    /// Matrix that transforms from the Unity Camera to Device.
+    /// </summary>
+    [HideInInspector]
+    public Matrix4x4 m_dTuc;
 
     // We use couple of matrix transformation to convert the pose from Tango coordinate
     // frame to Unity coordinate frame.
@@ -78,12 +87,13 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// <summary>
     /// Matrix that transforms from Start of Service to the Unity World.
     /// </summary>
-    private Matrix4x4 m_uwTss;
+    [HideInInspector]
+    public Matrix4x4 m_uwTss;
 
     /// <summary>
-    /// Matrix that transforms from the Unity Camera to Device.
+    /// The TangoARScreen that is being updated.
     /// </summary>
-    private Matrix4x4 m_dTuc;
+    private TangoARScreen m_tangoARScreen;
 
     /// <summary>
     /// Awake is called when the script instance is being loaded.
@@ -175,8 +185,17 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     {
         TangoPoseData pose = new TangoPoseData();
         TangoCoordinateFramePair pair;
-        pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
-        pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        if (!m_useAreaDescriptionPose)
+        {
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        }
+        else
+        {
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        }
+
         PoseProvider.GetPoseAtTime(pose, timestamp, pair);
 
         // The callback pose is for device with respect to start of service pose.
@@ -204,11 +223,13 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
             {
                 m_poseCount = 0;
             }
+
             m_poseCount++;
             
             // Other pose data -- Pose time.
             m_poseTimestamp = timestamp;
         }
+
         m_poseStatus = pose.status_code;
         
         // Apply final position and rotation.

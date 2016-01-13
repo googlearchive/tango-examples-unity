@@ -17,11 +17,12 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
-using UnityEngine;
 
 namespace Tango
 {
+    using System.Collections;
+    using UnityEngine;
+
     /// <summary>
     /// Enumerations used by TangoUx.
     /// </summary>

@@ -62,6 +62,24 @@ public class VoxelHashTree
     }
 
     /// <summary>
+    /// Gets the voxel at this node.
+    /// </summary>
+    /// <value>The voxel.</value>
+    public Voxel Voxel
+    {
+        get { return m_voxel; }
+    }
+
+    /// <summary>
+    /// Gets the hashkey of this node.
+    /// </summary>
+    /// <value>The key.</value>
+    public int Key
+    {
+        get { return m_hashKey; }
+    }
+
+    /// <summary>
     /// Clear the tree and subtrees.
     /// </summary>
     public void Clear()
@@ -75,6 +93,7 @@ public class VoxelHashTree
             m_leftHashTree.Clear();
             m_leftHashTree = null;
         }
+
         if (m_rightHashTree != null)
         {
             m_rightHashTree.Clear();
@@ -82,24 +101,6 @@ public class VoxelHashTree
         }
     }
 
-    /// <summary>
-    /// Gets the voxel at this node.
-    /// </summary>
-    /// <value>The voxel.</value>
-    public Voxel Voxel
-    {
-        get { return m_voxel; }
-    }
-    
-    /// <summary>
-    /// Gets the hashkey of this node.
-    /// </summary>
-    /// <value>The key.</value>
-    public int Key
-    {
-        get { return m_hashKey; }
-    }
-    
     /// <summary>
     /// Allows iterating through all nodes in the tree.
     /// </summary>
@@ -113,6 +114,7 @@ public class VoxelHashTree
                 yield return n;
             }
         }
+
         yield return this;
         if (m_rightHashTree != null)
         {
@@ -142,7 +144,7 @@ public class VoxelHashTree
     /// <summary>
     /// Delete this node from tree.
     /// </summary>
-    /// <returns>True.</returns>
+    /// <returns>If it found a node to delete.  Because this deletes this node, this will always return true.</returns>
     public bool Delete()
     {
         return Delete(m_hashKey);
@@ -151,7 +153,7 @@ public class VoxelHashTree
     /// <summary>
     /// Delete node with specific haskey from tree.
     /// </summary>
-    /// <param name="hashkey">Hashkey.</param>
+    /// <param name="hashkey">Hashkey to delete.</param>
     /// <returns>If it found a node to delete.</returns>
     public bool Delete(int hashkey)
     {
@@ -179,6 +181,7 @@ public class VoxelHashTree
                 // depends on GC to remove this?
                 m_parentHashTree.m_rightHashTree = (m_leftHashTree != null) ? m_leftHashTree : m_rightHashTree;
             }
+
             return true;
         }
         
@@ -188,6 +191,7 @@ public class VoxelHashTree
             {
                 return false;
             }
+
             return m_leftHashTree.Delete(hashkey);
         }
         else
@@ -196,6 +200,7 @@ public class VoxelHashTree
             {
                 return false;
             }
+
             return m_rightHashTree.Delete(hashkey);
         }
     }
@@ -213,11 +218,13 @@ public class VoxelHashTree
             this.m_voxel = voxel;
             return;
         }
+
         if (m_hashKey == hashkey)
         {
             this.m_voxel = voxel;
             return;
         }
+
         if (hashkey < m_hashKey)
         {
             if (m_leftHashTree == null)
@@ -225,6 +232,7 @@ public class VoxelHashTree
                 m_leftHashTree = new VoxelHashTree();
                 m_leftHashTree.m_parentHashTree = this;
             }
+
             m_leftHashTree.Insert(voxel, hashkey);
         }
         else
@@ -234,6 +242,7 @@ public class VoxelHashTree
                 m_rightHashTree = new VoxelHashTree();
                 m_rightHashTree.m_parentHashTree = this;
             }
+
             m_rightHashTree.Insert(voxel, hashkey);
         }
     }
@@ -249,6 +258,7 @@ public class VoxelHashTree
         {
             return m_voxel;
         }
+
         if (hashkey < m_hashKey)
         {
             if (m_leftHashTree == null)

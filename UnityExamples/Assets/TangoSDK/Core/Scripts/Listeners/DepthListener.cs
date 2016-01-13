@@ -17,12 +17,13 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// Delegate for Tango depth events.
     /// </summary>
@@ -37,15 +38,15 @@ namespace Tango
     {
         private Tango.DepthProvider.TangoService_onDepthAvailable m_onDepthAvailableCallback;
 
-        /// <summary>
-        /// Called when a new Tango depth is available.
-        /// </summary>
-        private event OnTangoDepthAvailableEventHandler OnTangoDepthAvailable;
-
         private bool m_isDirty = false;
         private TangoUnityDepth m_tangoDepth;
         private System.Object m_lockObject = new System.Object();
         private float[] m_depthPoints;
+
+        /// <summary>
+        /// Called when a new Tango depth is available.
+        /// </summary>
+        private event OnTangoDepthAvailableEventHandler OnTangoDepthAvailable;
 
         /// <summary>
         /// Register to get Tango depth callbacks.
@@ -71,6 +72,7 @@ namespace Tango
                 {
                     OnTangoDepthAvailable(m_tangoDepth);
                 }
+
                 m_isDirty = false;
             }
         }
@@ -103,7 +105,7 @@ namespace Tango
         /// Callback that gets called when depth is available from the Tango Service.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
-        /// <param name="xyzij">Xyzij.</param>
+        /// <param name="xyzij">The depth data returned from Tango.</param>
         private void _OnDepthAvailable(IntPtr callbackContext, TangoXYZij xyzij)
         {
             // Fill in the data to draw the point cloud.

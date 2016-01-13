@@ -40,6 +40,7 @@
     
     <string name="service_updated_title">Incompatible version.</string>
     <string name="service_updated_description">Update to the latest Project Tango Core.</string>
+    <string name="service_updated_linkify">Project Tango Core</string>
 
     <string name="lying_on_surface_title">Camera blocked.</string>
     <string name="lying_on_surface_description">Pick up the device to continue.</string>

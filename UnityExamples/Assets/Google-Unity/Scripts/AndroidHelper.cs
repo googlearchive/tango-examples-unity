@@ -31,6 +31,12 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper : MonoBehaviour
 {
+#pragma warning disable 414
+    private static AndroidJavaObject m_unityActivity = null;
+#pragma warning restore 414
+
+    private static AndroidLifecycleCallbacks m_callbacks;
+
     /// <summary>
     /// The display time length of Android Toast.
     /// </summary>
@@ -39,12 +45,6 @@ public partial class AndroidHelper : MonoBehaviour
         SHORT = 0x00000000,
         LONG = 0x00000001
     }
-
-#pragma warning disable 414
-    private static AndroidJavaObject m_unityActivity = null;
-#pragma warning restore 414
-
-    private static AndroidLifecycleCallbacks m_callbacks;
 
     /// <summary>
     /// Registers for the Android pause event.
@@ -114,6 +114,7 @@ public partial class AndroidHelper : MonoBehaviour
                 m_unityActivity = null;
             }
         }
+
         return m_unityActivity;
         #else
         return null;
@@ -206,7 +207,7 @@ public partial class AndroidHelper : MonoBehaviour
     /// <summary>
     /// Used for performance logging from the Android side.
     /// </summary>
-    /// <param name="message">Message.</param>
+    /// <param name="message">Message string to log.</param>
     public static void PerformanceLog(string message)
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
@@ -305,7 +306,7 @@ public partial class AndroidHelper : MonoBehaviour
     /// <summary>
     /// Shows the android toast message.
     /// </summary>
-    /// <param name="message">Message.</param>
+    /// <param name="message">Message string to show in the toast.</param>
     /// <param name="callFinish">If set to <c>true</c> call finish on the unity activity.</param>
     public static void ShowAndroidToastMessage(string message, bool callFinish)
     {
@@ -320,7 +321,7 @@ public partial class AndroidHelper : MonoBehaviour
     /// <summary>
     /// Shows the android toast message.
     /// </summary>
-    /// <param name="message">Message.</param>
+    /// <param name="message">Message string to show in the toast.</param>
     public static void ShowAndroidToastMessage(string message)
     {
         _ShowAndroidToastMessage(message, ToastLength.LONG);
@@ -329,7 +330,7 @@ public partial class AndroidHelper : MonoBehaviour
     /// <summary>
     /// Shows the android toast message.
     /// </summary>
-    /// <param name="message">Message.</param>
+    /// <param name="message">Message string to show in the toast.</param>
     /// <param name="length">Toast message time length.</param>
     public static void ShowAndroidToastMessage(string message, ToastLength length)
     {
@@ -377,7 +378,7 @@ public partial class AndroidHelper : MonoBehaviour
     /// <summary>
     /// Shows the android toast message.
     /// </summary>
-    /// <param name="message">Message.</param>
+    /// <param name="message">Message string to show in the toast.</param>
     /// <param name="length">Toast message time length.</param>
     private static void _ShowAndroidToastMessage(string message, ToastLength length)
     {

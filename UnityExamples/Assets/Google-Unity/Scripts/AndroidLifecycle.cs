@@ -39,7 +39,7 @@ public delegate void OnResumeEventHandler();
 /// </summary>
 /// <param name="requestCode">Request code.</param>
 /// <param name="resultCode">Result code.</param>
-/// <param name="data">Data.</param>
+/// <param name="data">Intent data.</param>
 public delegate void OnActivityResultEventHandler(int requestCode, int resultCode, AndroidJavaObject data);
 
 /// <summary>
@@ -176,7 +176,7 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     /// </summary>
     /// <param name="requestCode">Request code.</param>
     /// <param name="resultCode">Result code.</param>
-    /// <param name="data">Data.</param>
+    /// <param name="data">Intent data.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
                                                      "SA1300:ElementMustBeginWithUpperCaseLetter",
                                                      Justification = "Android API.")]

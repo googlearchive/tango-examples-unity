@@ -20,8 +20,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using Tango;
+using UnityEngine;
 
 /// <summary>
 /// GUI controller controls all the debug overlay to show the data for poses.
@@ -351,6 +351,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
             statusString = "N/A";
             break;
         }
+
         return statusString;
     }
 
@@ -476,6 +477,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
                 touchEffectRectTransform.anchorMin = touchEffectRectTransform.anchorMax = normalizedPosition;
             }
         }
+
         if (Input.touchCount == 2)
         {
             // Two taps -- toggle debug text
@@ -512,6 +514,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
         {
             yield return null;
         }
+
         m_tangoApplication.SetDepthCameraRate(TangoEnums.TangoDepthCameraRate.DISABLED);
 
         // Find the plane.
@@ -537,6 +540,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
             // floating point error in it.
             forward = Vector3.Cross(up, cam.transform.right);
         }
+
         Instantiate(m_prefabMarker, planeCenter, Quaternion.LookRotation(forward, up));
         m_selectedMarker = null;
     }

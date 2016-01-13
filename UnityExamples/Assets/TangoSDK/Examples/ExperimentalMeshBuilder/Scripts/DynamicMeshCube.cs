@@ -155,7 +155,7 @@ public class DynamicMeshCube : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets regeneration state.
+    /// Gets a value indicating whether this instance is regenerating.
     /// </summary>
     /// <value><c>true</c> if this instance is regenerating; otherwise, <c>false</c>.</value>
     public bool IsRegenerating
@@ -164,29 +164,13 @@ public class DynamicMeshCube : MonoBehaviour
     }
 
     /// <summary>
-    /// Gets hashkey of this meshing cube.
+    /// Gets or sets the hashkey of this meshing cube.
     /// </summary>
     /// <value>The key.</value>
     public int Key
     {
         get { return m_hashKey; }
         set { m_hashKey = value; }
-    }
-
-    /// <summary>
-    /// Prints Debug Info for this meshing cube.
-    /// </summary>
-    public void PrintDebugInfo()
-    {
-        string info = string.Empty;
-        info += "Mesh Volume Key: " + m_hashKey + "\n";
-        info += "Root Voxel Key: " + voxelStorage.Key + "\n";
-
-        foreach (VoxelHashTree t in voxelStorage.GetEnumerable()) 
-        {
-            info += "  " + t.Key + "\n";
-        }
-        Debug.Log(info);
     }
 
     /// <summary>
@@ -205,6 +189,32 @@ public class DynamicMeshCube : MonoBehaviour
             m_voxelSize = value;
             m_epsilon = m_voxelSize / 100.0f;
         }
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether this instance is dirty.
+    /// </summary>
+    /// <value><c>true</c> if this instance is dirty; otherwise, <c>false</c>.</value>
+    public bool IsDirty
+    {
+        get { return isDirty; }
+    }
+
+    /// <summary>
+    /// Prints Debug Info for this meshing cube.
+    /// </summary>
+    public void PrintDebugInfo()
+    {
+        string info = string.Empty;
+        info += "Mesh Volume Key: " + m_hashKey + "\n";
+        info += "Root Voxel Key: " + voxelStorage.Key + "\n";
+
+        foreach (VoxelHashTree t in voxelStorage.GetEnumerable()) 
+        {
+            info += "  " + t.Key + "\n";
+        }
+
+        Debug.Log(info);
     }
 
     /// <summary>
@@ -233,6 +243,7 @@ public class DynamicMeshCube : MonoBehaviour
             m_meshFilter.mesh = new Mesh();
             mesh = m_meshFilter.sharedMesh;
         }
+
         if (mesh == null) 
         {
             Debug.LogError("Could not get or create Mesh");
@@ -250,15 +261,6 @@ public class DynamicMeshCube : MonoBehaviour
         VoxelSize = transform.localScale.x / voxelResolution;
         m_minimumVoxelChangeForDirty = VoxelSize * m_minimumVoxelPercentageChangeForDirty;
         Clear();
-    }
-    
-    /// <summary>
-    /// Gets dirty flag.
-    /// </summary>
-    /// <value><c>true</c> if this instance is dirty; otherwise, <c>false</c>.</value>
-    public bool IsDirty
-    {
-        get { return isDirty; }
     }
     
     /// <summary>
@@ -296,10 +298,12 @@ public class DynamicMeshCube : MonoBehaviour
         {
             point = point + (dir * (0 - point.x) / dir.x);
         }
+
         if (point.y < 0)
         {
             point = point + (dir * (0 - point.y) / dir.y);
         }
+
         if (point.z < 0)
         {
             point = point + (dir * (0 - point.z) / dir.z);
@@ -309,10 +313,12 @@ public class DynamicMeshCube : MonoBehaviour
         {
             point = point + (dir * (1 - point.x) / dir.x);
         }
+
         if (point.y > 1)
         {
             point = point + (dir * (1 - point.y) / dir.y);
         }
+
         if (point.z > 1)
         {
             point = point + (dir * (1 - point.z) / dir.z);
@@ -435,6 +441,7 @@ public class DynamicMeshCube : MonoBehaviour
             v = InitializeVoxel(x, y, z, m_voxelSize, m_initialVoxelValue, 0);
             voxelStorage.Insert(v, hashKey);
         }
+
         return v;
     }
     
@@ -452,6 +459,7 @@ public class DynamicMeshCube : MonoBehaviour
         {
             return -1;
         }
+
         index[0] = Mathf.FloorToInt((p.x - transform.position.x) / m_voxelSize);
         index[1] = Mathf.FloorToInt((p.y - transform.position.y) / m_voxelSize);
         index[2] = Mathf.FloorToInt((p.z - transform.position.z) / m_voxelSize);
@@ -490,22 +498,27 @@ public class DynamicMeshCube : MonoBehaviour
         {
             m_vertices.Clear();
         }
+
         if (m_triangles != null)
         {
             m_triangles.Clear();
         }
+
         if (m_normals != null)
         {
             m_normals.Clear();
         }
+
         if (m_uvs != null)
         {
             m_uvs.Clear();
         }
+
         if (voxelStorage != null)
         {
             voxelStorage.Clear();
         }
+
         if (m_meshFilter != null)
         {
             if (m_meshFilter.sharedMesh != null)
@@ -548,6 +561,7 @@ public class DynamicMeshCube : MonoBehaviour
             {
                 return;
             }
+
             totalTriangles += v.trianglesIndicies.Count;
             foreach (int triIndex in v.trianglesIndicies)
             {
@@ -574,6 +588,7 @@ public class DynamicMeshCube : MonoBehaviour
                 triIndicies.Add(triIndex);
             }
         }
+
         variance /= totalTriangles;
         
         if (variance > 0.05)
@@ -589,6 +604,7 @@ public class DynamicMeshCube : MonoBehaviour
             avg += m_vertices[m_triangles[index + 1]];
             avg += m_vertices[m_triangles[index + 2]];
         }
+
         avg /= totalTriangles * 3;
         
         foreach (int index in triIndicies)
@@ -598,10 +614,12 @@ public class DynamicMeshCube : MonoBehaviour
             {
                 remove = true;
             }
+
             if (Vector3.SqrMagnitude(m_vertices[m_triangles[index + 1]] - avg) < 0.05f)
             {
                 remove = true;
             }
+
             if (Vector3.SqrMagnitude(m_vertices[m_triangles[index + 2]] - avg) < 0.05f)
             {
                 remove = true;
@@ -652,6 +670,7 @@ public class DynamicMeshCube : MonoBehaviour
         {
             return 0;
         }
+
         if (m_isRegenerating)
         {
             return 0;
@@ -719,16 +738,19 @@ public class DynamicMeshCube : MonoBehaviour
             Debug.Log("vertices null");
             return;
         }
+
         if (m_normals == null)
         {
             Debug.Log("normals null");
             return;
         }
+
         if (m_uvs == null)
         {
             Debug.Log("uvs null");
             return;
         }
+
         if (m_triangles == null)
         {
             Debug.Log("triangles null");
@@ -753,6 +775,7 @@ public class DynamicMeshCube : MonoBehaviour
             Debug.Log("mesh is null");
             return;
         }
+
         mesh.Clear();
         mesh.MarkDynamic();
         mesh.vertices = m_vertices.ToArray();
@@ -871,6 +894,7 @@ public class DynamicMeshCube : MonoBehaviour
         {
             isDirty = true;
         }
+
         return v.value;
     }
 
@@ -1088,6 +1112,7 @@ public class DynamicMeshCube : MonoBehaviour
                 m_uvs[ic] = uvOptions[1];
             }
         }
+
         if (m_uvs[ia] == uvOptions[3])
         {
             if ((m_uvs[ib] == uvOptions[0]) || (m_uvs[ib] == uvOptions[3]))
@@ -1139,22 +1164,27 @@ public class DynamicMeshCube : MonoBehaviour
         {
             return 0;
         }
+
         if (v.yID >= m_voxelResolution)
         {
             return 0;
         }
+
         if (v.zID >= m_voxelResolution)
         {
             return 0;
         }
+
         if (v.xID < 0)
         {
             return 0;
         }
+
         if (v.yID < 0)
         {
             return 0;
         }
+
         if (v.zID < 0)
         {
             return 0;
@@ -1172,31 +1202,37 @@ public class DynamicMeshCube : MonoBehaviour
         {
             return 0;
         }
+
         Voxel v2 = QueryVoxel(v.xID + 1, v.yID + 1, v.zID);
         if (v2 == null)
         {
             return 0;
         }
+
         Voxel v3 = QueryVoxel(v.xID, v.yID + 1, v.zID);
         if (v3 == null) 
         {
             return 0;
         }
+
         Voxel v4 = QueryVoxel(v.xID, v.yID, v.zID + 1);
         if (v4 == null)
         {
             return 0;
         }
+
         Voxel v5 = QueryVoxel(v.xID + 1, v.yID, v.zID + 1);
         if (v5 == null) 
         {
             return 0;
         }
+
         Voxel v6 = QueryVoxel(v.xID + 1, v.yID + 1, v.zID + 1);
         if (v6 == null) 
         {
             return 0;
         }
+
         Voxel v7 = QueryVoxel(v.xID, v.yID + 1, v.zID + 1);
         if (v7 == null) 
         {

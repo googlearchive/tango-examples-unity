@@ -17,21 +17,77 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Runtime.InteropServices;
-using UnityEngine;
-
-#if UNITY_EDITOR
-using UnityEditor;
-#endif
 
 namespace Tango
 {
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
+    #if UNITY_EDITOR
+    using UnityEditor;
+    #endif
+
     /// <summary>
     /// This struct holds common global functionality used by
     /// this SDK.
     /// </summary>
     public struct Common
     {
+        /// <summary>
+        /// Name of the Tango C-API library.
+        /// </summary>
+        internal const string TANGO_UNITY_DLL = "tango_client_api";
+
+        /// <summary>
+        /// Motion Tracking permission intent string.
+        /// </summary>
+        internal const string TANGO_MOTION_TRACKING_PERMISSIONS = "MOTION_TRACKING_PERMISSION";
+
+        /// <summary>
+        /// ADF Load/Save permission intent string.
+        /// </summary>
+        internal const string TANGO_ADF_LOAD_SAVE_PERMISSIONS = "ADF_LOAD_SAVE_PERMISSION";
+
+        /// <summary>
+        /// Code used to identify the result came from the Motion Tracking permission request.
+        /// </summary>
+        internal const int TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE = 42;
+
+        /// <summary>
+        /// Code used to identify the result came from the ADF Load/Save permission request.
+        /// </summary>
+        internal const int TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE = 43;
+
+        /// <summary>
+        /// Code used to identify the result came from the ADF import activity.
+        /// </summary>
+        internal const int TANGO_ADF_IMPORT_REQUEST_CODE = 44;
+
+        /// <summary>
+        /// Code used to identify the result came from the ADF export activity.
+        /// </summary>
+        internal const int TANGO_ADF_EXPORT_REQUEST_CODE = 45;
+
+        /// <summary>
+        /// Max number of vertices the Point Cloud supports.
+        /// </summary>
+        internal const int UNITY_MAX_SUPPORTED_VERTS_PER_MESH = 65534;
+
+        /// <summary>
+        /// The length of an area description ID string.
+        /// </summary>
+        internal const int UUID_LENGTH = 37;
+
+        /// <summary>
+        /// Return values from Android actvities.
+        /// </summary>
+        public enum AndroidResult
+        {
+            SUCCESS = -1,
+            CANCELED = 0,
+            DENIED = 1
+        }
+
         /// <summary>
         /// Codes returned by Tango API functions.
         /// </summary>
@@ -78,60 +134,5 @@ namespace Tango
             public const string KEY_DATE = "date_ms_since_epoch";
             public const string KEY_TRANSFORMATION = "transformation";
         }
-
-        /// <summary>
-        /// Return values from Android actvities.
-        /// </summary>
-        public enum AndroidResult
-        {
-            SUCCESS = -1,
-            CANCELED = 0,
-            DENIED = 1
-        }
-
-        /// <summary>
-        /// Name of the Tango C-API library.
-        /// </summary>
-        internal const string TANGO_UNITY_DLL = "tango_client_api";
-
-        /// <summary>
-        /// Motion Tracking permission intent string.
-        /// </summary>
-        internal const string TANGO_MOTION_TRACKING_PERMISSIONS = "MOTION_TRACKING_PERMISSION";
-
-        /// <summary>
-        /// ADF Load/Save permission intent string.
-        /// </summary>
-        internal const string TANGO_ADF_LOAD_SAVE_PERMISSIONS = "ADF_LOAD_SAVE_PERMISSION";
-
-        /// <summary>
-        /// Code used to identify the result came from the Motion Tracking permission request.
-        /// </summary>
-        internal const int TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE = 42;
-
-        /// <summary>
-        /// Code used to identify the result came from the ADF Load/Save permission request.
-        /// </summary>
-        internal const int TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE = 43;
-
-        /// <summary>
-        /// Code used to identify the result came from the ADF import activity.
-        /// </summary>
-        internal const int TANGO_ADF_IMPORT_REQUEST_CODE = 44;
-
-        /// <summary>
-        /// Code used to identify the result came from the ADF export activity.
-        /// </summary>
-        internal const int TANGO_ADF_EXPORT_REQUEST_CODE = 45;
-
-        /// <summary>
-        /// Max number of vertices the Point Cloud supports.
-        /// </summary>
-        internal const int UNITY_MAX_SUPPORTED_VERTS_PER_MESH = 65534;
-
-        /// <summary>
-        /// The length of an area description ID string.
-        /// </summary>
-        internal const int UUID_LENGTH = 37;
     }
 }

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TangoSupport.cs" company="Google">
 //
 // Copyright 2015 Google Inc. All Rights Reserved.
@@ -17,20 +17,55 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// Contains the Project Tango Support Unity API. The Project Tango Support
     /// Unity API provides helper methods useful to external developers for
     /// manipulating Project Tango data. The Project Tango Support Unity API is
     /// experimental and subject to change.
     /// </summary>
-    public class TangoSupport
+    public static class TangoSupport
     {
+        /// <summary>
+        /// Name of the Tango Support C API shared library.
+        /// </summary>
+        internal const string TANGO_SUPPORT_UNITY_DLL = "tango_support_api";
+
+        /// <summary>
+        /// Class name for debug logging.
+        /// </summary>
+        private const string CLASS_NAME = "TangoSupport";
+
+        /// <summary>
+        /// Matrix that transforms from Start of Service to the Unity World.
+        /// </summary>
+        private static readonly Matrix4x4 UNITY_WORLD_T_START_SERVICE = new Matrix4x4
+        {
+            m00 = 1.0f, m01 = 0.0f, m02 = 0.0f, m03 = 0.0f,
+            m10 = 0.0f, m11 = 0.0f, m12 = 1.0f, m13 = 0.0f,
+            m20 = 0.0f, m21 = 1.0f, m22 = 0.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 = 0.0f, m32 = 0.0f, m33 = 1.0f
+        };
+
+        /// <summary>
+        /// Matrix that transforms from the Unity Camera to Device.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
+                                                         Justification = "Matrix visibility is more important.")]
+        private static readonly Matrix4x4 DEVICE_T_UNITY_CAMERA = new Matrix4x4
+        {
+            m00 = 1.0f, m01 = 0.0f, m02 =  0.0f, m03 = 0.0f,
+            m10 = 0.0f, m11 = 1.0f, m12 =  0.0f, m13 = 0.0f,
+            m20 = 0.0f, m21 = 1.0f, m22 = -1.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 = 0.0f, m32 =  0.0f, m33 = 1.0f
+        };
+
         /// <summary>
         /// Fits a plane to a point cloud near a user-specified location. This
         /// occurs in two passes. First, all points in cloud within
@@ -44,17 +79,33 @@ namespace Tango
         /// Common.ErrorType.TANGO_INVALID on invalid input, and
         /// Common.ErrorType.TANGO_ERROR on failure.
         /// </returns>
-        /// <param name="pointCloud">The input point cloud. Cannot be null and must have at least three points.</param>
-        /// <param name="pointCount">Number of points to read from the point cloud.</param>
-        /// <param name="timestamp">Timestamp of the depth points.</param>
-        /// <param name="intrinsics">The camera intrinsics for the color camera.  Cannot be null.</param>
-        /// <param name="matrix">Transformation matrix of the color camera with respect to the Unity World frame.</param>
-        /// <param name="uvCoordinates">The UV coordinates for the user selection. This is expected to be between (0.0f, 0.0f) and (1.0f, 1.0f).</param>
-        /// <param name="intersectionPoint">The output point in depth camera coordinates that the user selected.</param>
-        /// <param name="plane">The the plane fit.</param>
+        /// <param name="pointCloud">
+        /// The point cloud. Cannot be null and must have at least three points.
+        /// </param>
+        /// <param name="pointCount">
+        /// The number of points to read from the point cloud.
+        /// </param>
+        /// <param name="timestamp">The timestamp of the point cloud.</param>
+        /// <param name="cameraIntrinsics">
+        /// The camera intrinsics for the color camera. Cannot be null.
+        /// </param>
+        /// <param name="matrix">
+        /// Transformation matrix of the color camera with respect to the Unity
+        /// World frame.
+        /// </param>
+        /// <param name="uvCoordinates">
+        /// The UV coordinates for the user selection. This is expected to be
+        /// between (0.0, 0.0) and (1.0, 1.0).
+        /// </param>
+        /// <param name="intersectionPoint">
+        /// The output point in depth camera coordinates that the user selected.
+        /// </param>
+        /// <param name="plane">The plane fit.</param>
         public static int FitPlaneModelNearClick(
-            Vector3[] pointCloud, int pointCount, double timestamp, TangoCameraIntrinsics intrinsics,
-            ref Matrix4x4 matrix, Vector2 uvCoordinates, out Vector3 intersectionPoint, out Plane plane)
+            Vector3[] pointCloud, int pointCount, double timestamp,
+            TangoCameraIntrinsics cameraIntrinsics, ref Matrix4x4 matrix,
+            Vector2 uvCoordinates, out Vector3 intersectionPoint,
+            out Plane plane)
         {
             GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud, GCHandleType.Pinned);
 
@@ -63,17 +114,21 @@ namespace Tango
             pointCloudXyzIj.xyz_count = pointCount;
             pointCloudXyzIj.xyz = pointCloudHandle.AddrOfPinnedObject();
 
-            // Unity has Y pointing screen up; Tango camera has Y pointing screen down.
+            DMatrix4x4 doubleMatrix = new DMatrix4x4(matrix);
+
+            // Unity has Y pointing screen up; Tango camera has Y pointing
+            // screen down.
             float[] uvCoordinatesArray = new float[2];
             uvCoordinatesArray[0] = uvCoordinates.x;
             uvCoordinatesArray[1] = 1.0f - uvCoordinates.y;
 
-            double[] intersectionPointArray = new double[3];
+            DVector3 doubleIntersectionPoint = new DVector3();
             double[] planeArray = new double[4];
 
             int returnValue = TangoSupportAPI.TangoSupport_fitPlaneModelNearClickMatrixTransform(
-                pointCloudXyzIj, intrinsics, ref matrix,
-                uvCoordinatesArray, intersectionPointArray, planeArray);
+                pointCloudXyzIj, cameraIntrinsics, ref doubleMatrix,
+                uvCoordinatesArray, out doubleIntersectionPoint, planeArray);
+
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 intersectionPoint = new Vector3(0.0f, 0.0f, 0.0f);
@@ -81,9 +136,7 @@ namespace Tango
             }
             else
             {
-                intersectionPoint = new Vector3((float)intersectionPointArray[0],
-                                                (float)intersectionPointArray[1],
-                                                (float)intersectionPointArray[2]);
+                intersectionPoint = doubleIntersectionPoint.ToVector3();
                 Vector3 normal = new Vector3((float)planeArray[0],
                                              (float)planeArray[1],
                                              (float)planeArray[2]);
@@ -97,12 +150,355 @@ namespace Tango
             return returnValue;
         }
 
-        #region API_Functions
         /// <summary>
-        /// Name of the Tango Support C API shared library.
+        /// Calculates the depth in the color camera space at a user-specified
+        /// location using nearest-neighbor interpolation.
         /// </summary>
-        internal const string TANGO_SUPPORT_UNITY_DLL = "tango_support_api";
+        /// <returns>
+        /// Common.ErrorType.TANGO_SUCCESS on success and
+        /// Common.ErrorType.TANGO_INVALID on invalid input.
+        /// </returns>
+        /// <param name="pointCloud">
+        /// The point cloud. Cannot be null and must have at least one point.
+        /// </param>
+        /// <param name="pointCount">
+        /// The number of points to read from the point cloud.
+        /// </param>
+        /// <param name="timestamp">The timestamp of the depth points.</param>
+        /// <param name="cameraIntrinsics">
+        /// The camera intrinsics for the color camera. Cannot be null.
+        /// </param>
+        /// <param name="matrix">
+        /// Transformation matrix of the color camera with respect to the Unity
+        /// World frame.
+        /// </param>
+        /// <param name="uvCoordinates">
+        /// The UV coordinates for the user selection. This is expected to be
+        /// between (0.0, 0.0) and (1.0, 1.0).
+        /// </param>
+        /// <param name="colorCameraPoint">
+        /// The point (x, y, z), where (x, y) is the back-projection of the UV
+        /// coordinates to the color camera space and z is the z coordinate of
+        /// the point in the point cloud nearest to the user selection after
+        /// projection onto the image plane. If there is not a point cloud point
+        /// close to the user selection after projection onto the image plane,
+        /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
+        /// be set to 0.
+        /// </param>
+        /// <param name="isValidPoint">
+        /// A flag valued 1 if there is a point cloud point close to the user
+        /// selection after projection onto the image plane and valued 0
+        /// otherwise.
+        /// </param>
+        public static int GetDepthAtPointNearestNeighbor(
+            Vector3[] pointCloud, int pointCount, double timestamp,
+            TangoCameraIntrinsics cameraIntrinsics, ref Matrix4x4 matrix,
+            Vector2 uvCoordinates, out Vector3 colorCameraPoint,
+            out bool isValidPoint)
+        {
+            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud, GCHandleType.Pinned);
 
+            TangoXYZij pointCloudXyzIj = new TangoXYZij();
+            pointCloudXyzIj.timestamp = timestamp;
+            pointCloudXyzIj.xyz_count = pointCount;
+            pointCloudXyzIj.xyz = pointCloudHandle.AddrOfPinnedObject();
+
+            DMatrix4x4 doubleMatrix = new DMatrix4x4(matrix);
+
+            // Unity has Y pointing screen up; Tango camera has Y pointing
+            // screen down.
+            float[] uvCoordinatesArray = new float[2];
+            uvCoordinatesArray[0] = uvCoordinates.x;
+            uvCoordinatesArray[1] = 1.0f - uvCoordinates.y;
+
+            int isValidPointInteger;
+
+            int returnValue = TangoSupportAPI.TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
+                pointCloudXyzIj, cameraIntrinsics, ref doubleMatrix,
+                uvCoordinatesArray, out colorCameraPoint, out isValidPointInteger);
+
+            isValidPoint = isValidPointInteger != 0;
+
+            pointCloudHandle.Free();
+
+            return returnValue;
+        }
+
+        /// <summary>
+        /// Convert a TangoPoseData into the Unity coordinate system. This only works on TangoPoseData that describes
+        /// the device with respect to the start of service or area description. The result position and rotation can
+        /// be used to set Unity's Transform.position and Transform.rotation.
+        /// </summary>
+        /// <param name="poseData">The input pose data that is going to be converted, please note that the pose data has
+        /// to be in the start of service with respect to device frame.</param>
+        /// <param name="position">The result position data.</param>
+        /// <param name="rotation">The result rotation data.</param>
+        public static void TangoPoseToWorldTransform(TangoPoseData poseData,
+                                                     out Vector3 position,
+                                                     out Quaternion rotation)
+        {
+            if (poseData == null)
+            {
+                Debug.Log("Invalid poseData.\n" + Environment.StackTrace);
+                position = Vector3.zero;
+                rotation = Quaternion.identity;
+                return;
+            }
+
+            if (poseData.framePair.targetFrame != TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+            {
+                Debug.Log("Invalid target frame of the poseData.\n" + Environment.StackTrace);
+                position = Vector3.zero;
+                rotation = Quaternion.identity;
+                return;
+            }
+
+            if (poseData.framePair.baseFrame !=
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
+                poseData.framePair.baseFrame !=
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION)
+            {
+                Debug.Log("Invalid base frame of the poseData.\n" + Environment.StackTrace);
+                position = Vector3.zero;
+                rotation = Quaternion.identity;
+                return;
+            }
+
+            Vector3 posePosition = new Vector3((float)poseData.translation[0],
+                                               (float)poseData.translation[1],
+                                               (float)poseData.translation[2]);
+            Quaternion poseRotation = new Quaternion((float)poseData.orientation[0],
+                                                     (float)poseData.orientation[1],
+                                                     (float)poseData.orientation[2],
+                                                     (float)poseData.orientation[3]);
+
+            Matrix4x4 startServiceTDevice = Matrix4x4.TRS(posePosition, poseRotation, Vector3.one);
+            Matrix4x4 unityWorldTUnityCamera = UNITY_WORLD_T_START_SERVICE *
+                                               startServiceTDevice *
+                                               DEVICE_T_UNITY_CAMERA;
+
+            // Extract final position, rotation.
+            position = unityWorldTUnityCamera.GetColumn(3);
+            rotation = Quaternion.LookRotation(unityWorldTUnityCamera.GetColumn(2),
+                                               unityWorldTUnityCamera.GetColumn(1));
+        }
+
+        /// <summary>
+        /// A double-precision 4x4 transformation matrix.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct DMatrix4x4
+        {
+            /// <summary>
+            /// 0,0-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_00;
+
+            /// <summary>
+            /// 1,0-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_10;
+
+            /// <summary>
+            /// 2,0-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_20;
+
+            /// <summary>
+            /// 3,0-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_30;
+
+            /// <summary>
+            /// 0,1-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_01;
+
+            /// <summary>
+            /// 1,1-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_11;
+
+            /// <summary>
+            /// 2,1-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_21;
+
+            /// <summary>
+            /// 3,1-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_31;
+
+            /// <summary>
+            /// 0,2-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_02;
+
+            /// <summary>
+            /// 1,2-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_12;
+
+            /// <summary>
+            /// 2,2-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_22;
+
+            /// <summary>
+            /// 3,2-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_32;
+
+            /// <summary>
+            /// 0,3-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_03;
+
+            /// <summary>
+            /// 1,3-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_13;
+
+            /// <summary>
+            /// 2,3-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_23;
+
+            /// <summary>
+            /// 3,3-th element of this matrix.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_33;
+
+            /// <summary>
+            /// Creates a new double-precision matrix from the given
+            /// single-precision matrix.
+            /// </summary>
+            /// <param name="matrix">A single-precision matrix.</param>
+            public DMatrix4x4(Matrix4x4 matrix)
+            {
+                m_00 = matrix.m00;
+                m_10 = matrix.m10;
+                m_20 = matrix.m20;
+                m_30 = matrix.m30;
+
+                m_01 = matrix.m01;
+                m_11 = matrix.m11;
+                m_21 = matrix.m21;
+                m_31 = matrix.m31;
+
+                m_02 = matrix.m02;
+                m_12 = matrix.m12;
+                m_22 = matrix.m22;
+                m_32 = matrix.m32;
+
+                m_03 = matrix.m03;
+                m_13 = matrix.m13;
+                m_23 = matrix.m23;
+                m_33 = matrix.m33;
+            }
+
+            /// <summary>
+            /// Returns a single-precision matrix representation of this
+            /// double-precision matrix.
+            /// </summary>
+            /// <returns>A single-precision matrix.</returns>
+            public Matrix4x4 ToMatrix4x4()
+            {
+                return new Matrix4x4
+                {
+                    m00 = (float)m_00, m01 = (float)m_01, m02 = (float)m_02, m03 = (float)m_03,
+                    m10 = (float)m_10, m11 = (float)m_11, m12 = (float)m_12, m13 = (float)m_13,
+                    m20 = (float)m_20, m21 = (float)m_21, m22 = (float)m_22, m23 = (float)m_23,
+                    m30 = (float)m_30, m31 = (float)m_31, m32 = (float)m_32, m33 = (float)m_33
+                };
+            }
+
+            /// <summary>
+            /// Returns a string representation of this matrix.
+            /// </summary>
+            /// <returns>A string.</returns>
+            public override string ToString()
+            {
+                return string.Format("{0}\t{1}\t{2}\t{3}\n{4}\t{5}\t{6}\t{7}\n{8}\t{9}\t{10}\t{11}\n{12}\t{13}\t{14}\t{15}\n",
+                    m_00, m_01, m_02, m_03,
+                    m_10, m_11, m_12, m_13,
+                    m_20, m_21, m_22, m_23,
+                    m_30, m_31, m_32, m_33);
+            }
+        }
+
+        /// <summary>
+        /// A double-precision 3D vector.
+        /// </summary>
+        private struct DVector3
+        {
+            /// <summary>
+            /// X component of this vector.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_x;
+
+            /// <summary>
+            /// Y component of this vector.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_y;
+
+            /// <summary>
+            /// Z component of this vector.
+            /// </summary>
+            [MarshalAs(UnmanagedType.R8)]
+            public double m_z;
+
+            /// <summary>
+            /// Creates a new double-precision vector from the given
+            /// single-precision vector.
+            /// </summary>
+            /// <param name="vector">A single-precision vector.</param>
+            public DVector3(Vector3 vector)
+            {
+                m_x = vector.x;
+                m_y = vector.y;
+                m_z = vector.z;
+            }
+
+            /// <summary>
+            /// Returns a single-precision vector representation of this
+            /// double-precision vector.
+            /// </summary>
+            /// <returns>A single-precision vector.</returns>
+            public Vector3 ToVector3()
+            {
+                return new Vector3((float)m_x, (float)m_y, (float)m_z);
+            }
+
+            /// <summary>
+            /// Returns a string representation of this vector.
+            /// </summary>
+            /// <returns>A string.</returns>
+            public override string ToString()
+            {
+                return string.Format("({0}, {1}, {2})", m_x, m_y, m_z);
+            }
+        }
+
+        #region API_Functions
         /// <summary>
         /// Wraps the Tango Support C API.
         /// </summary>
@@ -114,15 +510,36 @@ namespace Tango
 #if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(TANGO_SUPPORT_UNITY_DLL)]
             public static extern int TangoSupport_fitPlaneModelNearClickMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics intrinsics, ref Matrix4x4 matrix,
+                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
+                ref DMatrix4x4 matrix,
                 [In, MarshalAs(UnmanagedType.LPArray, SizeConst = 2)] float[] uvCoordinates,
-                [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 3)] double[] intersectionPoint,
+                out DVector3 intersectionPoint,
                 [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] double[] planeModel);
+
+            [DllImport(TANGO_SUPPORT_UNITY_DLL)]
+            public static extern int TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
+                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
+                ref DMatrix4x4 matrix,
+                [In, MarshalAs(UnmanagedType.LPArray, SizeConst = 2)] float[] uvCoordinates,
+                out Vector3 colorCameraPoint,
+                [Out, MarshalAs(UnmanagedType.I4)] out int isValidPoint);
 #else
             public static int TangoSupport_fitPlaneModelNearClickMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics intrinsics, ref Matrix4x4 colorCameraTUnityWorld,
-                float[] uvCoordinates, double[] intersectionPoint, double[] planeModel)
+                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
+                ref DMatrix4x4 colorCameraTUnityWorld, float[] uvCoordinates,
+                out DVector3 intersectionPoint, double[] planeModel)
             {
+                intersectionPoint = new DVector3();
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
+                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
+                ref DMatrix4x4 colorCameraTUnityWorld, float[] uvCoordinates,
+                out Vector3 colorCameraPoint, out int isValidPoint)
+            {
+                colorCameraPoint = Vector3.zero;
+                isValidPoint = 1;
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 #endif

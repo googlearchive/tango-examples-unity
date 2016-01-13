@@ -29,6 +29,44 @@ using UnityEngine;
 namespace Tango
 {
     /// <summary>
+    /// The TangoCoordinateFramePair struct contains a pair of coordinate frames of reference.
+    ///
+    /// Tango pose data is calculated as a transformation between two frames
+    /// of reference (so, for example, you can be asking for the pose of the
+    /// device within a learned area).
+    ///
+    /// This struct is used to specify the desired base and target frames of
+    /// reference when requesting pose data.  You can also use it when you have
+    /// a TangoPoseData structure returned from the API and want to examine which
+    /// frames of reference were used to get that pose.
+    ///
+    /// For more information, including which coordinate frame pairs are valid,
+    /// see our page on
+    /// <a href ="/project-tango/overview/frames-of-reference">frames of reference</a>.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TangoCoordinateFramePair
+    {
+        /// <summary>
+        /// Base frame of reference to compare against when requesting pose data.
+        /// For example, if you have loaded an area and want to find out where the
+        /// device is within it, you would use the
+        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</code> frame of reference
+        /// as your base.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoEnums.TangoCoordinateFrameType baseFrame;
+
+        /// <summary>
+        /// Target frame of reference when requesting pose data, compared to the
+        /// base. For example, if you want the device's pose data, use
+        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE</code>.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoEnums.TangoCoordinateFrameType targetFrame;
+    }
+
+    /// <summary>
     /// The TangoXYZij struct contains information returned from the depth sensor.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -156,44 +194,6 @@ namespace Tango
         /// </summary>
         [MarshalAs(UnmanagedType.LPStr)]
         public string event_value;
-    }
-
-    /// <summary>
-    /// The TangoCoordinateFramePair struct contains a pair of coordinate frames of reference.
-    ///
-    /// Tango pose data is calculated as a transformation between two frames
-    /// of reference (so, for example, you can be asking for the pose of the
-    /// device within a learned area).
-    ///
-    /// This struct is used to specify the desired base and target frames of
-    /// reference when requesting pose data.  You can also use it when you have
-    /// a TangoPoseData structure returned from the API and want to examine which
-    /// frames of reference were used to get that pose.
-    ///
-    /// For more information, including which coordinate frame pairs are valid,
-    /// see our page on
-    /// <a href ="/project-tango/overview/frames-of-reference">frames of reference</a>.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct TangoCoordinateFramePair
-    {
-        /// <summary>
-        /// Base frame of reference to compare against when requesting pose data.
-        /// For example, if you have loaded an area and want to find out where the
-        /// device is within it, you would use the
-        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION</code> frame of reference
-        /// as your base.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public TangoEnums.TangoCoordinateFrameType baseFrame;
-
-        /// <summary>
-        /// Target frame of reference when requesting pose data, compared to the
-        /// base. For example, if you want the device's pose data, use
-        /// <code>TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE</code>.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public TangoEnums.TangoCoordinateFrameType targetFrame;
     }
 
     /// <summary>
@@ -471,6 +471,7 @@ namespace Tango
             {
                 this.orientation[i] = poseToCopy.orientation[i];
             }
+
             for (int i = 0; i < 3; ++i)
             {
                 this.translation[i] = poseToCopy.translation[i];

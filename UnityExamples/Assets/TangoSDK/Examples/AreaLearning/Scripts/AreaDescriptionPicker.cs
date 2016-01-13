@@ -20,10 +20,10 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using Tango;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 /// <summary>
 /// List controller of the scrolling list.
@@ -63,7 +63,7 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
     /// 
     /// TangoDeltaPoseController listens to pose updates and applies the correct pose to itself and its built-in camera.
     /// </summary>
-    public TangoDeltaPoseController m_deltaPoseController;
+    public TangoARPoseController m_poseController;
 
     /// <summary>
     /// Control panel game object.
@@ -128,10 +128,11 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
             m_guiController.m_curAreaDescription = areaDescription;
             m_tangoApplication.m_enableAreaLearning = m_enableLearningToggle.isOn;
         }
+
         m_tangoApplication.Startup(m_guiController.m_curAreaDescription);
 
         // Enable GUI controller to allow user tap and interactive with the environment.
-        m_deltaPoseController.enabled = true;
+        m_poseController.gameObject.SetActive(true);
         m_guiController.enabled = true;
         m_gameControlPanel.SetActive(true);
     }
@@ -172,7 +173,7 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
     /// 
     /// This function is responsible for connecting callbacks, set up TangoApplication and initialize the data list.
     /// </summary>
-    private void Start()
+    public void Start()
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         
@@ -189,7 +190,20 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
             Debug.Log("No Tango Manager found in scene.");
         }
     }
-    
+
+    /// <summary>
+    /// Unity Update function.
+    /// 
+    /// Application will be closed when click the back button.
+    /// </summary>
+    public void Update()
+    {
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
+    }
+
     /// <summary>
     /// Refresh the scrolling list's content for both list.
     /// 

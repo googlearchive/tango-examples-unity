@@ -17,13 +17,14 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
-using System.Runtime.InteropServices;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using System.Collections;
+    using System.Runtime.InteropServices;
+    using UnityEngine;
+
     /// <summary>
     /// C API wrapper for the Tango depth interface.
     /// </summary>
@@ -40,7 +41,7 @@ namespace Tango
         /// <summary>
         /// Set the C callback for the Tango depth interface.
         /// </summary>
-        /// <param name="callback">Callback.</param>
+        /// <param name="callback">Callback method.</param>
         internal static void SetCallback(TangoService_onDepthAvailable callback)
         {
             int returnValue = DepthAPI.TangoService_connectOnXYZijAvailable(callback);

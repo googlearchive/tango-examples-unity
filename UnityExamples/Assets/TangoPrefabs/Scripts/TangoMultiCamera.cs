@@ -27,16 +27,6 @@ using UnityEngine;
 /// </summary>
 public class TangoMultiCamera : MonoBehaviour
 {
-    /// <summary>
-    /// The different camera types supported by this multi-camera.
-    /// </summary>
-    public enum CameraType
-    {
-        FirstPerson,
-        ThirdPerson,
-        TopDown
-    }
-
     // UI fields.
     public const float UI_BUTTON_SIZE_X = 125.0f;
     public const float UI_BUTTON_SIZE_Y = 65.0f;
@@ -144,6 +134,16 @@ public class TangoMultiCamera : MonoBehaviour
     private Vector3 m_topDownOffsetStart;
 
     /// <summary>
+    /// The different camera types supported by this multi-camera.
+    /// </summary>
+    public enum CameraType
+    {
+        FirstPerson,
+        ThirdPerson,
+        TopDown
+    }
+
+    /// <summary>
     /// Start is called on the frame when a script is enabled.
     /// </summary>
     public void Start() 
@@ -181,6 +181,7 @@ public class TangoMultiCamera : MonoBehaviour
                     m_thirdPersonRotationEuler.y = m_thirdPersonRotationEulerStart.y + delta.x;
                 }
             }
+
             if (Input.touchCount == 2)
             {
                 // Multiple touch does pinch to zoom.
@@ -308,6 +309,7 @@ public class TangoMultiCamera : MonoBehaviour
         {
             EnableCamera(CameraType.FirstPerson);
         }
+
         if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
                                 Screen.height - ((UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y) * 2),
                                 UI_BUTTON_SIZE_X, 
@@ -316,6 +318,7 @@ public class TangoMultiCamera : MonoBehaviour
         {
             EnableCamera(CameraType.ThirdPerson);
         }
+
         if (GUI.Button(new Rect(Screen.width - UI_BUTTON_SIZE_X - UI_BUTTON_GAP_X, 
                                 Screen.height - (UI_BUTTON_SIZE_Y + UI_BUTTON_GAP_Y),
                                 UI_BUTTON_SIZE_X, 
@@ -347,6 +350,7 @@ public class TangoMultiCamera : MonoBehaviour
             m_topDownOffset.Set(0, 7, 0);
             break;
         }
+
         m_currentCamera = cameraType;
     }
 }

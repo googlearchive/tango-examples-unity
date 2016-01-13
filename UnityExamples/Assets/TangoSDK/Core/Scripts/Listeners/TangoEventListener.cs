@@ -17,11 +17,12 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using UnityEngine;
 
 namespace Tango
 {
+    using System;
+    using UnityEngine;
+
     /// <summary>
     /// IDelegate for Tango event events.
     /// </summary>
@@ -65,6 +66,7 @@ namespace Tango
                 {
                     m_onTangoEventAvailable(m_tangoEvent);
                 }
+
                 m_isDirty = false;
             }
         }

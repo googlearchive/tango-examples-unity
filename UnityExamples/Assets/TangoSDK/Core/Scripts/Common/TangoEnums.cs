@@ -17,11 +17,12 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
-using UnityEngine;
 
 namespace Tango
 {
+    using System.Collections;
+    using UnityEngine;
+
     /// <summary>
     /// Enumerations used by the Tango Service.
     /// </summary>
@@ -102,7 +103,7 @@ namespace Tango
             TANGO_COORDINATE_FRAME_IMU,
 
             /// <summary>
-            /// Display.
+            /// Display coordinate frame.
             /// </summary>
             TANGO_COORDINATE_FRAME_DISPLAY,
 
@@ -215,7 +216,7 @@ namespace Tango
             TANGO_CONFIG_DEFAULT = 0,
 
             /// <summary>
-            /// Current.
+            /// Current config.
             /// </summary>
             TANGO_CONFIG_CURRENT,
 
