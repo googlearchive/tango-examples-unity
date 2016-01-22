@@ -69,6 +69,11 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
      * Enable Generated Test Data
      */    
     public bool m_testData = false;
+    
+    /// <summary>
+    /// Enable Debug UI.
+    /// </summary>
+    public bool m_enableDebugUI = true;
 
     /**
      * Enable Recording
@@ -253,6 +258,15 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
         ClearLivePreviewCubes();
         m_positionHistory.Clear();
         m_meshManager.Clear();
+    }
+    
+    /// <summary>
+    /// Pause updating Point Cloud.
+    /// </summary>
+    /// <param name="val">If set to <c>true</c> pause updating Point Cloud. If set to <c>false</c> to continue.</param>
+    public void Pause(bool val)
+    {
+        m_pause = val;
     }
     
     /// <summary>
@@ -674,6 +688,11 @@ public class CustomPointCloudListener : MonoBehaviour, ITangoDepth
     /// </summary>
     private void OnGUI()
     {
+        if (!m_enableDebugUI)
+        {
+            return;
+        }
+        
         GUI.Label(new Rect(10, 180, 1000, 30), "Depth Points: " + m_currTangoDepth.m_pointCount);
         GUI.Label(new Rect(10, 200, 1000, 30), "Debug: " + m_debugText);
         if (!m_recordData)

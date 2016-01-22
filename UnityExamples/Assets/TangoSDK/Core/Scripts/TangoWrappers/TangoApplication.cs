@@ -71,7 +71,6 @@ namespace Tango
         internal bool m_enableCloudADF = false;
 
         private const string CLASS_NAME = "TangoApplication";
-        private const int MINIMUM_API_VERSION = 6804;
         private static string m_tangoServiceVersion = string.Empty;
 
         /// <summary>
@@ -490,15 +489,6 @@ namespace Tango
             {
                 m_tangoCloudEventListener.OnCloudEventAvailable(key, value);
             }
-        }
-
-        /// <summary>
-        /// Gets the get tango API version code.
-        /// </summary>
-        /// <returns>The get tango API version code.</returns>
-        private static int _GetTangoAPIVersion()
-        {
-            return AndroidHelper.GetVersionCode("com.projecttango.tango");
         }
 
         /// <summary>
@@ -957,10 +947,9 @@ namespace Tango
         /// </summary>
         private void _CheckTangoVersion()
         {
-            int tangoVersion = _GetTangoAPIVersion();
-            if (tangoVersion < MINIMUM_API_VERSION)
+            if (!AndroidHelper.IsTangoCoreUpToDate())
             {
-                Debug.Log(string.Format(CLASS_NAME + ".Initialize() Invalid API version {0}. Please update Project Tango Core to at least {1}.", tangoVersion, MINIMUM_API_VERSION));
+                Debug.Log(string.Format(CLASS_NAME + ".Initialize() Invalid API version. Please update Project Tango Core to at least {1}.", AndroidHelper.TANGO_MINIMUM_VERSION_CODE));
                 if (!m_allowOutOfDateTangoAPI)
                 {
                     AndroidHelper.ShowAndroidToastMessage("Please update Tango Core");

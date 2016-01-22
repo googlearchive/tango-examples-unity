@@ -146,22 +146,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         {
             // After saving an Area Description or mark data, we reload the scene to restart the game.
             _UpdateMarkersForLoopClosures();
-
-            // Compose a XML data list.
-            List<MarkerData> xmlDataList = new List<MarkerData>();
-            foreach (GameObject obj in m_markerList)
-            {
-                // Add marks data to the list, we intentionally didn't add the timestamp, because the timestamp will not be
-                // useful when the next time Tango Service is connected. The timestamp is only used for loop closure pose
-                // correction in current Tango connection.
-                MarkerData temp = new MarkerData();
-                temp.m_type = obj.GetComponent<ARMarker>().m_type;
-                temp.m_position = obj.transform.position;
-                temp.m_orientation = obj.transform.rotation;
-                xmlDataList.Add(temp);
-            }
-
-            _WriteToXml(m_curAreaDescription.m_uuid + ".xml", xmlDataList);
+            _SaveMarkerToDisk();
             Application.LoadLevel(Application.loadedLevel);
         }
 
@@ -357,24 +342,8 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
                     Debug.Log("AndroidInGameController.OnTangoPoseAvailable(): m_curAreaDescription is null");
                     return;
                 }
-                
-                // Attempt to load the exsiting markers from storage.
-                List<MarkerData> xmlDataList = _ReadFromXml(m_curAreaDescription.m_uuid + ".xml");
-                if (xmlDataList == null)
-                {
-                    Debug.Log("AndroidInGameController.OnTangoPoseAvailable(): xmlDataList is null");
-                    return;
-                }
 
-                m_markerList.Clear();
-                foreach (MarkerData mark in xmlDataList)
-                {
-                    // Instantiate all markers' gameobject.
-                    GameObject temp = Instantiate(m_markPrefabs[mark.m_type],
-                                                  mark.m_position,
-                                                  mark.m_orientation) as GameObject;
-                    m_markerList.Add(temp);
-                }
+                _LoadMarkerFromDisk();
             }
         }
     }
@@ -414,15 +383,23 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             // Disable interaction before saving.
             m_initialized = false;
             m_savingText.gameObject.SetActive(true);
-            m_saveThread = new Thread(delegate()
+            if (m_tangoApplication.m_enableAreaLearning)
             {
-                // Start saving process in another thread.
-                m_curAreaDescription = AreaDescription.SaveCurrent();
-                AreaDescription.Metadata metadata = m_curAreaDescription.GetMetadata();
-                metadata.m_name = kb.text;
-                m_curAreaDescription.SaveMetadata(metadata);
-            });
-            m_saveThread.Start();
+                m_saveThread = new Thread(delegate()
+                {
+                    // Start saving process in another thread.
+                    m_curAreaDescription = AreaDescription.SaveCurrent();
+                    AreaDescription.Metadata metadata = m_curAreaDescription.GetMetadata();
+                    metadata.m_name = kb.text;
+                    m_curAreaDescription.SaveMetadata(metadata);
+                });
+                m_saveThread.Start();
+            }
+            else
+            {
+                _SaveMarkerToDisk();
+                Application.LoadLevel(Application.loadedLevel);
+            }
         }
     }
 
@@ -472,30 +449,57 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// <summary>
     /// Write marker list to an xml file stored in application storage.
     /// </summary>
-    /// <param name="fileName">The xml's filename, corresponding to the Area Description's UUID.</param>
-    /// <param name="obj">List of mark data.</param>
-    private void _WriteToXml(string fileName, List<MarkerData> obj)
+    private void _SaveMarkerToDisk()
     {
-        string path = Application.persistentDataPath + fileName;
+        // Compose a XML data list.
+        List<MarkerData> xmlDataList = new List<MarkerData>();
+        foreach (GameObject obj in m_markerList)
+        {
+            // Add marks data to the list, we intentionally didn't add the timestamp, because the timestamp will not be
+            // useful when the next time Tango Service is connected. The timestamp is only used for loop closure pose
+            // correction in current Tango connection.
+            MarkerData temp = new MarkerData();
+            temp.m_type = obj.GetComponent<ARMarker>().m_type;
+            temp.m_position = obj.transform.position;
+            temp.m_orientation = obj.transform.rotation;
+            xmlDataList.Add(temp);
+        }
+
+        string path = Application.persistentDataPath + m_curAreaDescription.m_uuid + ".xml";
         var serializer = new XmlSerializer(typeof(List<MarkerData>));
         using (var stream = new FileStream(path, FileMode.Create))
         {
-            serializer.Serialize(stream, obj);
+            serializer.Serialize(stream, xmlDataList);
         }
     }
 
     /// <summary>
     /// Load marker list xml from application storage.
     /// </summary>
-    /// <returns>List of marker data.</returns>
-    /// <param name="fileName">The xml's filename, corresponding to the Area Description's UUID.</param>
-    private List<MarkerData> _ReadFromXml(string fileName)
+    private void _LoadMarkerFromDisk()
     {
-        string path = Application.persistentDataPath + fileName;
+        // Attempt to load the exsiting markers from storage.
+        string path = Application.persistentDataPath + m_curAreaDescription.m_uuid + ".xml";
+
         var serializer = new XmlSerializer(typeof(List<MarkerData>));
-        using (var stream = new FileStream(path, FileMode.Open))
+        var stream = new FileStream(path, FileMode.Open);
+
+        List<MarkerData> xmlDataList = serializer.Deserialize(stream) as List<MarkerData>;
+
+        if (xmlDataList == null)
         {
-            return serializer.Deserialize(stream) as List<MarkerData>;
+            Debug.Log("AndroidInGameController._LoadMarkerFromDisk(): xmlDataList is null");
+            return;
+        }
+
+        m_markerList.Clear();
+        foreach (MarkerData mark in xmlDataList)
+        {
+            // Instantiate all markers' gameobject.
+            GameObject temp = Instantiate(m_markPrefabs[mark.m_type],
+                                          mark.m_position,
+                                          mark.m_orientation) as GameObject;
+            m_markerList.Add(temp);
         }
     }
 

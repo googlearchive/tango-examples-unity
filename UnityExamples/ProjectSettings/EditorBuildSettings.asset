@@ -6,6 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/TangoSDK/Examples/Scenes/DetectTangoCore.unity
+  - enabled: 1
     path: Assets/TangoSDK/Examples/Scenes/MotionTracking.unity
   - enabled: 1
     path: Assets/TangoSDK/Examples/Scenes/PointCloud.unity
