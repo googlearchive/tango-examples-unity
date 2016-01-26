@@ -33,6 +33,11 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     public bool m_updatePointsMesh;
 
     /// <summary>
+    /// If set, the point cloud will be transformed using ADF pose (device with respect to ADF).
+    /// </summary>
+    public bool m_useAreaDescriptionPose;
+
+    /// <summary>
     /// The points of the point cloud, in world space.
     /// 
     /// Note that not every member of this array will be filled out, see m_pointsCount.
@@ -157,8 +162,17 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
                 // Query pose to transform point cloud to world coordinates, here we are using the timestamp
                 // that we get from depth.
-                pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
-                pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                if (m_useAreaDescriptionPose)
+                {
+                    pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                    pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                }
+                else
+                {
+                    pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+                    pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                }
+
                 PoseProvider.GetPoseAtTime(poseData, tangoDepth.m_timestamp, pair);
                 if (poseData.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
                 {

@@ -2,37 +2,37 @@ Project Tango UnitySDK Examples
 ===========================================
 Copyright (C) 2015 Google Inc.
 
-<h2>Useful Websites</h2>
 
+Useful Websites
+---------------
 SDK Download - https://developers.google.com/project-tango/downloads
 
 Developer Website - https://developers.google.com/project-tango/apis/unity
 
-<h2>Contents</h2>
 
+Contents
+--------
 This contains the Project Tango UnitySDK examples and tutorial projects for Unity 5 and above.
 
-<h2>UnityExamples</h2>
+
+#### UnityExamples
 This project contains examples for Unity 5 and above.  Each example is in its own scene:
+* **DetectTangoCore** - This example shows how to show UIs only if the Project Tango APIs are available.
 * **MotionTracking** - How to use the motion tracking APIs.
-
 * **PointCloud** - How to use the depth APIs and use the pose data to transform the point cloud into world coordinates.
-
 * **AreaLearning** - How to use the Area Description motion APIs and place objects at specific spots in the area description. 
-
 * **AreaDescriptionManagement** - How to use the Area Description management APIs and create a new area description.
-
 * **AugmentedReality** - How to create an augmented reality experience using the video camera overlay APIs and motion tracking APIs.
- 
 * **MeshBuilder(Experimental)** - How to build a mesh using the motion tracking APIs and depth APIs.
-
 * **VirtualReality(Experimental)** - How to use create a stereoscopic virtual reality experience using the motion tracking APIs.
 
-<h2>MotionTrackingTutorialStart</h2>
+
+#### MotionTrackingTutorialStart
 This project contains a starting point for the motion tracking tutorial on the Project Tango developer website.  
 
-<h2>Project Layout</h2>
 
+Project Layout
+--------------
 Projects commonly have the following folders:
 * **Google-Unity/** - General Android lifecycle management
 * **Plugins/Android/** - General Android and Tango-specific libraries
@@ -42,16 +42,18 @@ Projects commonly have the following folders:
 * **TangoSDK/Examples** - One subfolder here per example
 * **TangoSDK/Examples/Scenes/** - All the Tango example scenes
 
-<h2>Support</h2>
 
+Support
+-------
 First please take a look at our [FAQ](http://stackoverflow.com/questions/tagged/google-project-tango?sort=faq&amp;pagesize=50) page. Most of the issues can be solved by the FAQ section.
 
 If you have general API questions related to Tango, we encourage you to post your question to our [stack overflow page](http://stackoverflow.com/questions/tagged/google-project-tango).
 
 You are also welcome to visit [Project Tango Developer website](https://developers.google.com/project-tango/) to learn more about general concepts and other information about the project.
 
-<h2>Contribution</h2>
 
+Contribution
+------------
 Want to contribute? Great! First, read this page (including the small print at the end).
 
 #### Before you contribute

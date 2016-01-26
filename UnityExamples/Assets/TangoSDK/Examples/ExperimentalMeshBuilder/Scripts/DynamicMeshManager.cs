@@ -59,6 +59,11 @@ public class DynamicMeshManager : MonoBehaviour
     public bool m_raycastTesting;
 
     /// <summary>
+    /// Flag to enable DebugUI.
+    /// </summary>
+    public bool m_enableDebugUI = true;
+
+    /// <summary>
     /// Keeps track of total vertices in the mesh system.
     /// </summary>
     private int m_totalVertices = 0;
@@ -253,6 +258,11 @@ public class DynamicMeshManager : MonoBehaviour
     /// </summary>
     public void OnGUI()
     {
+        if (!m_enableDebugUI)
+        {
+            return;
+        }
+    
         GUI.Label(new Rect(10, 20, 1000, 30), "Persistent Path: " + Application.persistentDataPath);
         GUI.Label(new Rect(10, 40, 1000, 30), "Total Verts/Triangles: " + m_totalVertices + "/" + m_totalTriangles + " Volumes: " + m_totalMeshCubes + " UpdateQueue:" + m_regenerationQueue.Count);
         GUI.Label(new Rect(10, 60, 1000, 30), "Insert Count: " + m_insertCount);

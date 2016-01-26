@@ -25,8 +25,9 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper
 {
-    private const string PERMISSION_REQUEST_ACTIVITY = "com.google.atap.tango.RequestPermissionActivity";
+    internal const int TANGO_MINIMUM_VERSION_CODE = 6804;
 
+    private const string PERMISSION_REQUEST_ACTIVITY = "com.google.atap.tango.RequestPermissionActivity";
     private const string TANGO_APPLICATION_ID = "com.projecttango.tango";
     private const string LAUNCH_INTENT_SIGNATURE = "launchIntent";
     private const string ADF_IMPORT_EXPORT_ACTIVITY = "com.google.atap.tango.RequestImportExportActivity";
@@ -146,6 +147,15 @@ public partial class AndroidHelper
         }
         
         return false;
+    }
+
+    /// <summary>
+    /// Check if the Tango Core package is up to date.
+    /// </summary>
+    /// <returns><c>true</c> if the Tango Core is up to date; otherwise, <c>false</c>.</returns>
+    public static bool IsTangoCoreUpToDate()
+    {
+        return GetVersionCode(TANGO_APPLICATION_ID) >= TANGO_MINIMUM_VERSION_CODE;
     }
 
     /// <summary>
