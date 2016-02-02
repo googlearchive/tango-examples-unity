@@ -1,7 +1,7 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="ADMGUIController.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -236,7 +236,7 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     public void OnTangoEventAvailableEventHandler(Tango.TangoEvent tangoEvent)
     {
         // We will not have the saving progress when the learning mode is off.
-        if (!m_tangoApplication.m_enableAreaLearning)
+        if (!m_tangoApplication.m_areaDescriptionLearningMode)
         {
             return;
         }
