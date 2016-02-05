@@ -76,6 +76,7 @@ namespace Tango
         public bool m_enableADFLoading = false;
 
         public bool m_enableVideoOverlay = false;
+        [FormerlySerializedAs("m_useExperimentalVideoOverlay")]
         public bool m_videoOverlayUseTextureIdMethod = true;
         public bool m_videoOverlayUseByteBufferMethod = false;
 

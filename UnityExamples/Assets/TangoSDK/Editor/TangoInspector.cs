@@ -57,6 +57,14 @@ public class TangoInspector : Editor
     private void OnEnable()
     {
         m_tangoApplication = (TangoApplication)target;
+
+        // Fixup the old state of TangoApplication before there were two checkboxes.  If only m_enableVideoOverlay was
+        // set, then that meant to use the Byte Buffer method.
+        if (m_tangoApplication.m_enableVideoOverlay && !m_tangoApplication.m_videoOverlayUseByteBufferMethod
+            && !m_tangoApplication.m_videoOverlayUseTextureIdMethod)
+        {
+            m_tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+        }
     }
 
     /// <summary>
@@ -119,15 +127,56 @@ public class TangoInspector : Editor
         if (tangoApplication.m_enableVideoOverlay)
         {
             EditorGUI.indentLevel++;
-            tangoApplication.m_videoOverlayUseTextureIdMethod = EditorGUILayout.Toggle("TextureID Method", 
-                                                                            tangoApplication.m_videoOverlayUseTextureIdMethod);
-            tangoApplication.m_videoOverlayUseByteBufferMethod = EditorGUILayout.Toggle("Byte Buffer Method", 
-                                                                            tangoApplication.m_videoOverlayUseByteBufferMethod);
+            
+            string[] options = new string[]
+            {
+                "TextureID (IExperimentalTangoVideoOverlay)",
+                "Raw Bytes (ITangoVideoOverlay)",
+                "Both",
+            };
+            int selectedOption;
+            if (tangoApplication.m_videoOverlayUseTextureIdMethod && tangoApplication.m_videoOverlayUseByteBufferMethod)
+            {
+                selectedOption = 2;
+            }
+            else if (tangoApplication.m_videoOverlayUseTextureIdMethod)
+            {
+                selectedOption = 0;
+            }
+            else if (tangoApplication.m_videoOverlayUseByteBufferMethod)
+            {
+                selectedOption = 1;
+            }
+            else
+            {
+                selectedOption = 0;
+            }
+
+            switch (EditorGUILayout.Popup("Method", selectedOption, options))
+            {
+            case 0:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = false;
+                break;
+            case 1:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = false;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+                break;
+            case 2:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+                break;
+            default:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = false;
+                break;
+            }
+
             EditorGUI.indentLevel--;
         }
         else
         {
-            tangoApplication.m_videoOverlayUseTextureIdMethod = false;
+            tangoApplication.m_videoOverlayUseTextureIdMethod = true;
             tangoApplication.m_videoOverlayUseByteBufferMethod = false;
         }
 
