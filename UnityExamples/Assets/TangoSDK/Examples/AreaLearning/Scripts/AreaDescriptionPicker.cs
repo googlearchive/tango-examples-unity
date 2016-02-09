@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------
 // <copyright file="AreaDescriptionPicker.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -119,14 +119,14 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
         {
             // Completely new area description.
             m_guiController.m_curAreaDescription = null;
-            m_tangoApplication.m_enableAreaLearning = true;
+            m_tangoApplication.m_areaDescriptionLearningMode = true;
         }
         else
         {
             // Load up an existing Area Description.
             AreaDescription areaDescription = AreaDescription.ForUUID(m_curAreaDescriptionUUID);
             m_guiController.m_curAreaDescription = areaDescription;
-            m_tangoApplication.m_enableAreaLearning = m_enableLearningToggle.isOn;
+            m_tangoApplication.m_areaDescriptionLearningMode = m_enableLearningToggle.isOn;
         }
 
         m_tangoApplication.Startup(m_guiController.m_curAreaDescription);

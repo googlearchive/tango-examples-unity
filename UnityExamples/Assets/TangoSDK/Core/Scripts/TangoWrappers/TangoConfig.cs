@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TangoConfig.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -352,6 +352,7 @@ namespace Tango
             public static readonly string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
 
             // Video overlay
+            public static readonly string ENABLE_COLOR_CAMERA_BOOL = "config_enable_color_camera";
             public static readonly string EXPERIMENTAL_Y_TEXTURE_HEIGHT = "experimental_color_y_tex_data_height";
             public static readonly string EXPERIMENTAL_Y_TEXTURE_WIDTH = "experimental_color_y_tex_data_width";
             public static readonly string EXPERIMENTAL_UV_TEXTURE_HEIGHT = "experimental_color_uv_tex_data_height";

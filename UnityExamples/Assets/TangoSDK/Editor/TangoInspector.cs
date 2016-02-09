@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------
 // <copyright file="TangoInspector.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -40,6 +40,7 @@ public class TangoInspector : Editor
         EditorGUILayout.Space();
 
         _DrawMotionTrackingOptions(m_tangoApplication);
+        _DrawAreaDescriptionOptions(m_tangoApplication);
         _DrawDepthOptions(m_tangoApplication);
         _DrawVideoOverlayOptions(m_tangoApplication);
         _DrawDevelopmentOptions(m_tangoApplication);
@@ -56,6 +57,14 @@ public class TangoInspector : Editor
     private void OnEnable()
     {
         m_tangoApplication = (TangoApplication)target;
+
+        // Fixup the old state of TangoApplication before there were two checkboxes.  If only m_enableVideoOverlay was
+        // set, then that meant to use the Byte Buffer method.
+        if (m_tangoApplication.m_enableVideoOverlay && !m_tangoApplication.m_videoOverlayUseByteBufferMethod
+            && !m_tangoApplication.m_videoOverlayUseTextureIdMethod)
+        {
+            m_tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+        }
     }
 
     /// <summary>
@@ -64,20 +73,34 @@ public class TangoInspector : Editor
     /// <param name="tangoApplication">Tango application.</param>
     private void _DrawMotionTrackingOptions(TangoApplication tangoApplication)
     {
-        tangoApplication.m_enableMotionTracking = EditorGUILayout.Toggle("Enable Motion Tracking", 
-                                                                         tangoApplication.m_enableMotionTracking);
+        tangoApplication.m_enableMotionTracking = EditorGUILayout.Toggle(
+            "Enable Motion Tracking", tangoApplication.m_enableMotionTracking);
         if (tangoApplication.m_enableMotionTracking)
         {
-            EditorGUI.indentLevel++;
-            tangoApplication.m_motionTrackingAutoReset = EditorGUILayout.Toggle("Auto Reset", 
-                                                                                tangoApplication.m_motionTrackingAutoReset);
+            ++EditorGUI.indentLevel;
+            tangoApplication.m_motionTrackingAutoReset = EditorGUILayout.Toggle(
+                "Auto Reset", tangoApplication.m_motionTrackingAutoReset);
+            --EditorGUI.indentLevel;
+        }
 
-            tangoApplication.m_enableADFLoading = EditorGUILayout.Toggle("Load ADF",
-                                                                         tangoApplication.m_enableADFLoading);
-            tangoApplication.m_enableAreaLearning = EditorGUILayout.Toggle("Area Learning", 
-                                                                           tangoApplication.m_enableAreaLearning);
+        EditorGUILayout.Space();
+    }
 
-            EditorGUI.indentLevel--;
+    /// <summary>
+    /// Draw area description options.
+    /// </summary>
+    /// <param name="tangoApplication">Tango application.</param>
+    private void _DrawAreaDescriptionOptions(TangoApplication tangoApplication)
+    {
+        tangoApplication.m_enableAreaDescriptions = EditorGUILayout.Toggle(
+            "Enable Area Descriptions", tangoApplication.m_enableAreaDescriptions);
+
+        if (tangoApplication.m_enableAreaDescriptions)
+        {
+            ++EditorGUI.indentLevel;
+            tangoApplication.m_areaDescriptionLearningMode = EditorGUILayout.Toggle(
+                "Learning Mode", tangoApplication.m_areaDescriptionLearningMode);
+            --EditorGUI.indentLevel;
         }
 
         EditorGUILayout.Space();
@@ -99,14 +122,62 @@ public class TangoInspector : Editor
     /// <param name="tangoApplication">Tango application.</param>
     private void _DrawVideoOverlayOptions(TangoApplication tangoApplication)
     {
-        tangoApplication.m_enableVideoOverlay = EditorGUILayout.Toggle("Enable Video Overlay", 
-                                                                       tangoApplication.m_enableVideoOverlay);
+        tangoApplication.m_enableVideoOverlay = EditorGUILayout.Toggle(
+            "Enable Video Overlay", tangoApplication.m_enableVideoOverlay);
         if (tangoApplication.m_enableVideoOverlay)
         {
             EditorGUI.indentLevel++;
-            tangoApplication.m_useExperimentalVideoOverlay = EditorGUILayout.Toggle("GPU Accelerated (Experimental)", 
-                                                                                    tangoApplication.m_useExperimentalVideoOverlay);
+            
+            string[] options = new string[]
+            {
+                "TextureID (IExperimentalTangoVideoOverlay)",
+                "Raw Bytes (ITangoVideoOverlay)",
+                "Both",
+            };
+            int selectedOption;
+            if (tangoApplication.m_videoOverlayUseTextureIdMethod && tangoApplication.m_videoOverlayUseByteBufferMethod)
+            {
+                selectedOption = 2;
+            }
+            else if (tangoApplication.m_videoOverlayUseTextureIdMethod)
+            {
+                selectedOption = 0;
+            }
+            else if (tangoApplication.m_videoOverlayUseByteBufferMethod)
+            {
+                selectedOption = 1;
+            }
+            else
+            {
+                selectedOption = 0;
+            }
+
+            switch (EditorGUILayout.Popup("Method", selectedOption, options))
+            {
+            case 0:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = false;
+                break;
+            case 1:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = false;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+                break;
+            case 2:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = true;
+                break;
+            default:
+                tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+                tangoApplication.m_videoOverlayUseByteBufferMethod = false;
+                break;
+            }
+
             EditorGUI.indentLevel--;
+        }
+        else
+        {
+            tangoApplication.m_videoOverlayUseTextureIdMethod = true;
+            tangoApplication.m_videoOverlayUseByteBufferMethod = false;
         }
 
         EditorGUILayout.Space();
@@ -125,6 +196,7 @@ public class TangoInspector : Editor
         tangoApplication.m_allowOutOfDateTangoAPI = EditorGUILayout.Toggle("Allow out of date API",
                                                                            m_tangoApplication.m_allowOutOfDateTangoAPI);
         EditorGUI.indentLevel--;
+
         EditorGUILayout.Space();
     }
 }

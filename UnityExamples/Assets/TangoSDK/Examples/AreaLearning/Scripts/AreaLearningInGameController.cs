@@ -1,7 +1,7 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="AreaLearningInGameController.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -150,6 +150,11 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             Application.LoadLevel(Application.loadedLevel);
         }
 
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.LoadLevel(Application.loadedLevel);
+        }
+
         if (!m_initialized)
         {
             return;
@@ -200,11 +205,6 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
                 normalizedPosition.y /= Screen.height;
                 touchEffectRectTransform.anchorMin = touchEffectRectTransform.anchorMax = normalizedPosition;
             }
-        }
-
-        if (Input.GetKey(KeyCode.Escape))
-        {
-            Application.LoadLevel(Application.loadedLevel);
         }
     }
 
@@ -293,7 +293,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     public void OnTangoEventAvailableEventHandler(Tango.TangoEvent tangoEvent)
     {
         // We will not have the saving progress when the learning mode is off.
-        if (!m_tangoApplication.m_enableAreaLearning)
+        if (!m_tangoApplication.m_areaDescriptionLearningMode)
         {
             return;
         }
@@ -383,7 +383,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             // Disable interaction before saving.
             m_initialized = false;
             m_savingText.gameObject.SetActive(true);
-            if (m_tangoApplication.m_enableAreaLearning)
+            if (m_tangoApplication.m_areaDescriptionLearningMode)
             {
                 m_saveThread = new Thread(delegate()
                 {

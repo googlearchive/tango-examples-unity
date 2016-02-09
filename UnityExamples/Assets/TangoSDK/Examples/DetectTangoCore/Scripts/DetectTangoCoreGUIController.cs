@@ -1,5 +1,5 @@
 ﻿//-----------------------------------------------------------------------
-// <copyright file="AreaDescriptionListElement.cs" company="Google">
+// <copyright file="DetectTangoCoreGUIController.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
 //
@@ -19,25 +19,20 @@
 //-----------------------------------------------------------------------
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
-/// Item object of the Area Description File list.
+/// UI Controller for the DetectTangoCore scene.
 /// </summary>
-public class AreaDescriptionListElement : MonoBehaviour
+public class DetectTangoCoreGUIController : MonoBehaviour
 {
     /// <summary>
-    /// The toggle game object.
+    /// Update is called once per frame.
     /// </summary>
-    public Toggle m_toggle;
-
-    /// <summary>
-    /// The name text view for displaying the Area Description's human readable name.
-    /// </summary>
-    public Text m_areaDescriptionName;
-
-    /// <summary>
-    /// The UUID text view for displaying the Area Description's UUID.
-    /// </summary>
-    public Text m_areaDescriptionUUID;
+    public void Update()
+    {
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
+    }
 }

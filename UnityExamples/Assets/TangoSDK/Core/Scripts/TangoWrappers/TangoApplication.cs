@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------
 // <copyright file="TangoApplication.cs" company="Google">
 //
-// Copyright 2015 Google Inc. All Rights Reserved.
+// Copyright 2016 Google Inc. All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ namespace Tango
     using System.Linq;
     using System.Runtime.InteropServices;
     using UnityEngine;
+    using UnityEngine.Serialization;
 
     /// <summary>
     /// Delegate for permission callbacks.
@@ -58,15 +59,26 @@ namespace Tango
     /// </summary>
     public class TangoApplication : MonoBehaviour
     {
+        public bool m_autoConnectToService = false;
+
         public bool m_allowOutOfDateTangoAPI = false;
         public bool m_enableMotionTracking = true;
-        public bool m_enableDepth = true;
-        public bool m_enableVideoOverlay = false;
         public bool m_motionTrackingAutoReset = true;
+
+        [FormerlySerializedAs("m_enableADFLoading")]
+        public bool m_enableAreaDescriptions = false;
+        [FormerlySerializedAs("m_enableAreaLearning")]
+        public bool m_areaDescriptionLearningMode = false;
+
+        public bool m_enableDepth = true;
+
         public bool m_enableAreaLearning = false;
         public bool m_enableADFLoading = false;
-        public bool m_useExperimentalVideoOverlay = true;
-        public bool m_autoConnectToService = false;
+
+        public bool m_enableVideoOverlay = false;
+        [FormerlySerializedAs("m_useExperimentalVideoOverlay")]
+        public bool m_videoOverlayUseTextureIdMethod = true;
+        public bool m_videoOverlayUseByteBufferMethod = false;
 
         internal bool m_enableCloudADF = false;
 
@@ -229,15 +241,16 @@ namespace Tango
             
             if (m_enableVideoOverlay)
             {
-                if (m_useExperimentalVideoOverlay)
+                if (m_videoOverlayUseTextureIdMethod)
                 {
                     IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
                     if (videoOverlayHandler != null)
                     {
                         _RegisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
                     }
-                } 
-                else
+                }
+
+                if (m_videoOverlayUseByteBufferMethod)
                 {
                     ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
                     if (videoOverlayHandler != null)
@@ -309,7 +322,7 @@ namespace Tango
 
             if (m_enableVideoOverlay)
             {
-                if (m_useExperimentalVideoOverlay)
+                if (m_videoOverlayUseTextureIdMethod)
                 {
                     IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
                     if (videoOverlayHandler != null)
@@ -317,7 +330,8 @@ namespace Tango
                         _UnregisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
                     }
                 }
-                else
+
+                if (m_videoOverlayUseByteBufferMethod)
                 {
                     ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
                     if (videoOverlayHandler != null)
@@ -372,7 +386,7 @@ namespace Tango
 
             _CheckTangoVersion();
 
-            if (m_enableVideoOverlay && m_useExperimentalVideoOverlay)
+            if (m_enableVideoOverlay && m_videoOverlayUseTextureIdMethod)
             {
                 int yTextureWidth = 0;
                 int yTextureHeight = 0;
@@ -406,7 +420,8 @@ namespace Tango
                 _SetDepthCallbacks();
             }
 
-            if (m_enableVideoOverlay)
+            if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_COLOR_CAMERA_BOOL, m_enableVideoOverlay) && 
+                m_enableVideoOverlay)
             {
                 _SetVideoOverlayCallbacks();
             }
@@ -873,7 +888,16 @@ namespace Tango
 
             if (m_videoOverlayListener != null)
             {
-                m_videoOverlayListener.SetCallback(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, m_useExperimentalVideoOverlay, m_yuvTexture);
+                if (m_videoOverlayUseTextureIdMethod)
+                {
+                    m_videoOverlayListener.SetCallbackTextureIdMethod(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                                                      m_yuvTexture);
+                }
+
+                if (m_videoOverlayUseByteBufferMethod)
+                {
+                    m_videoOverlayListener.SetCallbackByteBufferMethod(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+                }
             }
         }
         
@@ -886,7 +910,8 @@ namespace Tango
             Debug.Log("TangoApplication._InitializeMotionTracking(" + uuid + ")");
 
             System.Collections.Generic.List<TangoCoordinateFramePair> framePairs = new System.Collections.Generic.List<TangoCoordinateFramePair>();
-            
+
+            bool usedUUID = false;
             if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_BOOL, m_enableMotionTracking) && m_enableMotionTracking)
             {
                 TangoCoordinateFramePair motionTracking;
@@ -894,24 +919,21 @@ namespace Tango
                 motionTracking.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
                 framePairs.Add(motionTracking);
 
-                bool areaLearningEnabled = false;
-                if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_enableAreaLearning) && m_enableAreaLearning)
+                if (m_enableAreaDescriptions)
                 {
-                    areaLearningEnabled = true;
-                    Debug.Log("Area Learning is enabled.");
-                }
+                    if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_areaDescriptionLearningMode) && m_areaDescriptionLearningMode)
+                    {
+                        Debug.Log("Area Learning is enabled.");
+                    }
 
-                // For backward compatibility, don't require the m_enableADFLoading to be set.
-                if (areaLearningEnabled || m_enableADFLoading)
-                {
                     if (!string.IsNullOrEmpty(uuid))
                     {
-                        m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid);
+                        if (m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid))
+                        {
+                            usedUUID = true;
+                        }
                     }
-                }
 
-                if (areaLearningEnabled || m_enableADFLoading)
-                {
                     TangoCoordinateFramePair areaDescription;
                     areaDescription.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
                     areaDescription.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
@@ -939,6 +961,13 @@ namespace Tango
             {
                 Debug.Log("Connect to Cloud Service.");
                 AndroidHelper.ConnectCloud();
+            }
+
+            // Check if the UUID passed in was actually used.
+            if (!usedUUID && !string.IsNullOrEmpty(uuid))
+            {
+                Debug.Log("An AreaDescription UUID was passed in, but motion tracking and area descriptions are not "
+                          + "both enabled." + Environment.StackTrace);
             }
         }
 
@@ -1153,8 +1182,7 @@ namespace Tango
         {
             if (m_requiredPermissions == PermissionsTypes.NONE)
             {
-                m_requiredPermissions |= m_enableAreaLearning ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
-                m_requiredPermissions |= m_enableADFLoading ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
+                m_requiredPermissions |= m_enableAreaDescriptions ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
             }
         }
 
