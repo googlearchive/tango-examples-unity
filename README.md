@@ -24,12 +24,16 @@ This project contains examples for Unity 5 and above.  Each example is in its ow
 * **AreaDescriptionManagement** - How to use the Area Description management APIs and create a new area description.
 * **AugmentedReality** - How to create an augmented reality experience using the video camera overlay APIs and motion tracking APIs.
 * **MeshBuilder(Experimental)** - How to build a mesh using the motion tracking APIs and depth APIs.
-* **VirtualReality(Experimental)** - How to use create a stereoscopic virtual reality experience using the motion tracking APIs.
 
 
 #### MotionTrackingTutorialStart
-This project contains a starting point for the motion tracking tutorial on the Project Tango developer website.  
+This project contains a starting point for the motion tracking tutorial on the Project Tango developer website.
 
+#### TangoWithCardboardExperiments
+This experimental project shows an example of how to integrate Cardboard UnitySDK and Tango UnitySDK together to create a 6DOF VR experience.
+
+#### TangoWithMultiplayer
+This project is an example of a networked multi-user Tango experience in a shared world using the [Photon Unity Networking SDK](https://www.photonengine.com/en/PUN).
 
 Project Layout
 --------------

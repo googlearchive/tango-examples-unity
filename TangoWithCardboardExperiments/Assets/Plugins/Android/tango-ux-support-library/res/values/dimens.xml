@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright (C) 2014 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+
+    <dimen name="connection_progress_bar_sub_margin">4dp</dimen>
+    
+    <dimen name="exception_component_height">58dp</dimen>
+    <dimen name="exception_status_component_size">30dp</dimen>
+
+    <dimen name="hold_steady_component_size">196dp</dimen>
+    <dimen name="hold_steady_frame_transform_pivot_x">98dp</dimen>
+    <dimen name="hold_steady_frame_transform_pivot_y">110dp</dimen>
+    <dimen name="hold_steady_frame_stroke_width">5dp</dimen>
+    <dimen name="hold_steady_frame_corner_radius">2.5dp</dimen>
+    <dimen name="hold_steady_frame_trace_corner_radius">0.5dp</dimen>
+    
+</resources>

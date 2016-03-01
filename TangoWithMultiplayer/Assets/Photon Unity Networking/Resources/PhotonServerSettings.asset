@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f3758f8f58fdef43803eb9be1df0608, type: 3}
+  m_Name: PhotonServerSettings
+  m_EditorClassIdentifier: 
+  HostType: 1
+  Protocol: 1
+  ServerAddress: 
+  ServerPort: 5055
+  AppID: 
+  PreferredRegion: 1
+  EnabledRegions: -1
+  JoinLobby: 0
+  EnableLobbyStatistics: 0
+  RpcList:
+  - Chat
+  - ColorRpc
+  - DestroyRpc
+  - DoJump
+  - Flash
+  - InstantiateRpc
+  - Marco
+  - OnAwakeRPC
+  - PickupItemInit
+  - Polo
+  - PunPickup
+  - PunPickupSimple
+  - PunRespawn
+  - RequestForPickupTimes
+  - TaggedPlayer
+  - ADFReceived
+  - ADFDoneLoading
+  - ADFReceivedTotalSize
+  - ADFTransferFinished
+  - ADFTransferReceived
+  - SetTransferSize
+  - _RemoveCubeAt
+  - _AddCubeAt
+  - ClientADFTransferReceived
+  - ClientSetTransferSize
+  - MasterSendPackage
+  - ClientTransferReceived
+  - SendPackage
+  - TransferFinished
+  - _ClientSetTransferSize
+  - _ClientTransferReceived
+  - _SendPackage
+  - _TransferFinished
+  - _SetSender
+  - _ToReceiver_SetSender
+  - _ToReceiver_TransferFinished
+  - _ToReceiver_TransferReceived
+  - _ToReciver_ClientSetTransferSize
+  - _ToSender_SendPackage
+  - _ToReceiver_StartTransfer
+  - _ToReceiver_TransferBuffer
+  - _ToSender_StartTransferAck
+  - _ToSender_TransferBufferAck
+  DisableAutoOpenWizard: 1

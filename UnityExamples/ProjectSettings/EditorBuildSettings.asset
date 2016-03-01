@@ -18,6 +18,6 @@ EditorBuildSettings:
   - enabled: 0
     path: Assets/TangoSDK/Examples/Scenes/AugmentedReality.unity
   - enabled: 0
-    path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilder.unity
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithColor.unity
   - enabled: 0
-    path: Assets/TangoSDK/Examples/Scenes/ExperimentalVirtualReality.unity
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithPhysics.unity
