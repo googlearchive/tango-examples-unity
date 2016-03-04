@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright (C) 2014 Google Inc.
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+
+    <!-- Splash Component -->
+    <string name="project_tango">Project Tango</string>
+    
+    <!-- Exceptions -->
+    <string name="moving_too_fast_title">Too fast.</string>
+    <string name="moving_too_fast_description">Slow down and hold device steady.</string>
+
+    <string name="unable_to_detect_surface_title">Nothing detected.</string>
+    <string name="unable_to_detect_surface_description">Keep the device at least an arm’s length from objects.</string>
+
+	<string name="space_not_recognized_title">Space not recognized.</string>
+    <string name="space_not_recognized_description">Point the device somewhere else.</string>
+
+    <string name="not_enough_light_title">Too dark.</string>
+    <string name="not_enough_light_description">Use the device in well-lit areas.</string>
+    
+    <string name="too_much_light_title">Too bright.</string>
+    <string name="too_much_light_description">Avoid pointing at bright lights.</string>
+    
+    <string name="device_not_responding_title">System unavailable.</string>
+    <string name="device_not_responding_description">Restart the app or reboot the device.</string>
+    
+    <string name="service_updated_title">Incompatible version.</string>
+    <string name="service_updated_description">Update to the latest Project Tango Core.</string>
+    <string name="service_updated_linkify">Project Tango Core</string>
+
+    <string name="lying_on_surface_title">Camera blocked.</string>
+    <string name="lying_on_surface_description">Pick up the device to continue.</string>
+    
+	<string name="motion_track_title">Tracking lost.</string>
+    <string name="motion_track_description">Hold steady to let the system recover.</string>
+    
+	<string name="run_time_mismatch_title">Incorrect configuration.</string>
+    <string name="run_time_mismatch_description">Go to Settings > Developer options and select “Use ART”.</string>
+
+    <string name="hold_posture_title">Incorrect tilt.</string>
+    <string name="hold_posture_description">Point the device %s.</string>
+    
+    <string name="action_required">Action required</string>
+    
+    <!-- Connection Layout -->
+    <string name="connection_layout_message_still">Hold still</string>
+    <string name="connection_layout_message_tight">Hold tight</string>
+
+    <!-- Hold postures -->
+    <string name="hold_posture_forward">forward</string>
+    <string name="hold_posture_up">up</string>
+    <string name="hold_posture_down">down</string>
+
+</resources>

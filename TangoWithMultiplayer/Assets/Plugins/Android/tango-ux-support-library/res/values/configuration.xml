@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Copyright 2015 Google Inc. All Rights Reserved.
+  Distributed under the Project Tango Preview Development Kit (PDK) Agreement.
+  CONFIDENTIAL. AUTHORIZED USE ONLY. DO NOT REDISTRIBUTE.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:ignore="TypographyDashes">
+  <string name="ux_library_version">1.29:2015.12.10-capella-release-2217-g11e2b13b:7481:unstable</string>
+</resources>

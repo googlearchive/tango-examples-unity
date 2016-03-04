@@ -41,6 +41,7 @@ public class BuildTools
         Icon = "TangoSDK/Examples/Common/Textures/ProjectTango_Logo.png",
         Scenes = new string[]
         {
+            "TangoSDK/Examples/Scenes/DetectTangoCore.unity",
             "TangoSDK/Examples/Scenes/MotionTracking.unity",
             "TangoSDK/Examples/Scenes/PointCloud.unity",
             "TangoSDK/Examples/Scenes/AreaLearning.unity",
@@ -57,20 +58,20 @@ public class BuildTools
         BundleIdentifier = "com.projecttango.experiments.augmentedreality"
     };
 
-    private static BuildUtil.APKSettings meshBuilderAPK = new BuildUtil.APKSettings 
+    private static BuildUtil.APKSettings meshBuilderWithPhysicsAPK = new BuildUtil.APKSettings 
     {
-        ProjectName = "Unity Mesh Builder",
+        ProjectName = "Unity Mesh Builder With Physics",
         Icon = null,
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilder.unity" },
-        BundleIdentifier = "com.google.projecttango.meshbuilder"
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithPhysics.unity" },
+        BundleIdentifier = "com.google.projecttango.meshbuilderwithphysics"
     };
 
-    private static BuildUtil.APKSettings virtualRealityAPK = new BuildUtil.APKSettings
+    private static BuildUtil.APKSettings meshBuilderWithColorAPK = new BuildUtil.APKSettings 
     {
-        ProjectName = "Unity VirtualReality",
-        Icon = "TangoSDK/Examples/ExperimentalVirtualReality/Textures/icon.png",
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalVirtualReality.unity" },
-        BundleIdentifier = "com.projecttango.experimental.virtualreality"
+        ProjectName = "Unity Mesh Builder With Color",
+        Icon = null,
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithColor.unity" },
+        BundleIdentifier = "com.google.projecttango.meshbuilderwithcolor"
     };
 
     private static BuildUtil.PackageSettings sdkPackageUnity5 = new BuildUtil.PackageSettings
@@ -101,8 +102,8 @@ public class BuildTools
     {
         BuildUtil.BuildAPK(examplesAPK);
         BuildUtil.BuildAPK(augmentedRealityAPK);
-        BuildUtil.BuildAPK(meshBuilderAPK);
-        BuildUtil.BuildAPK(virtualRealityAPK);
+        BuildUtil.BuildAPK(meshBuilderWithPhysicsAPK);
+        BuildUtil.BuildAPK(meshBuilderWithColorAPK);
         BuildSdkPackage();
     }
     
@@ -146,18 +147,18 @@ public class BuildTools
     /// <summary>
     /// Function for UI.
     /// </summary>
-    [MenuItem("Tango/Build/Mesh Builder")]
-    public static void BuildMeshBuilder()
+    [MenuItem("Tango/Build/Mesh Builder with Color")]
+    public static void BuildMeshBuilderWithColor()
     {
-        BuildUtil.BuildAPK(meshBuilderAPK);
+        BuildUtil.BuildAPK(meshBuilderWithColorAPK);
     }
     
     /// <summary>
     /// Function for UI.
     /// </summary>
-    [MenuItem("Tango/Build/Virtual Reality")]
-    public static void BuildVirtualReality()
+    [MenuItem("Tango/Build/Mesh Builder with Physics")]
+    public static void BuildMeshBuilderWithPhysics()
     {
-        BuildUtil.BuildAPK(virtualRealityAPK);
+        BuildUtil.BuildAPK(meshBuilderWithPhysicsAPK);
     }
 }
