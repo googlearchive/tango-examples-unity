@@ -68,6 +68,6 @@ public class BuildTools
 
         PhotonNetwork.PhotonServerSettings.AppID = appId;
         BuildUtil.BuildAPK(multiplayerAPK);
-        PhotonNetwork.PhotonServerSettings.AppID = "";
+        PhotonNetwork.PhotonServerSettings.AppID = string.Empty;
     }
 }
