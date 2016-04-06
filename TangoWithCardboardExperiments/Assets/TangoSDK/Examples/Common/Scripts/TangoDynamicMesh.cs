@@ -83,9 +83,14 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     private Dictionary<Tango3DReconstruction.GridIndex, TangoSingleDynamicMesh> m_meshes;
 
     /// <summary>
-    /// List of grid indexes that need to get extracted.
+    /// List of grid indices that need to get extracted.
     /// </summary>
     private List<Tango3DReconstruction.GridIndex> m_gridIndexToUpdate;
+
+    /// <summary>
+    /// Backlog of grid indices we haven't had time to process.
+    /// </summary>
+    private HashSet<Tango3DReconstruction.GridIndex> m_gridUpdateBacklog;
 
     /// <summary>
     /// Debug info: Total number of vertices in the dynamic mesh.
@@ -108,6 +113,21 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     private int m_debugRemeshingCount;
 
     /// <summary>
+    /// Gets the number of queued mesh updates still waiting for processing.
+    /// 
+    /// May be slightly overestimated if there have been too many updates to process and some
+    /// have been pushed to the backlog.
+    /// </summary>
+    /// <value>The number of queued mesh updates.</value>
+    public int NumQueuedMeshUpdates
+    {
+        get
+        {
+            return m_gridIndexToUpdate.Count + m_gridUpdateBacklog.Count;
+        }
+    }
+
+    /// <summary>
     /// Unity Awake callback.
     /// </summary>
     public void Awake()
@@ -120,6 +140,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
 
         m_meshes = new Dictionary<Tango3DReconstruction.GridIndex, TangoSingleDynamicMesh>(100);
         m_gridIndexToUpdate = new List<Tango3DReconstruction.GridIndex>(100);
+        m_gridUpdateBacklog = new HashSet<Tango3DReconstruction.GridIndex>();
 
         // Cache the renderer and collider on this object.
         m_meshRenderer = GetComponent<MeshRenderer>();
@@ -148,7 +169,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         {
             Tango3DReconstruction.GridIndex gridIndex = m_gridIndexToUpdate[it];
 
-            if ((Time.realtimeSinceStartup * 1000) - startTimeMS > TIME_BUDGET_MS)
+            if (_GoneOverTimeBudget(startTimeMS))
             {
                 Debug.Log(string.Format(
                     "TangoDynamicMesh.Update() ran over budget with {0}/{1} grid indexes processed.",
@@ -156,152 +177,33 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
                 break;
             }
 
-            TangoSingleDynamicMesh dynamicMesh;
-            if (!m_meshes.TryGetValue(gridIndex, out dynamicMesh))
+            _UpdateMeshAtGridIndex(gridIndex, needsResize);
+            m_gridUpdateBacklog.Remove(gridIndex);
+        }
+
+        // While we have time left over, go through backlog of unprocessed indices.
+        int numBacklogGridIndicesProcessed = 0;
+        if (!_GoneOverTimeBudget(startTimeMS))
+        {
+            List<Tango3DReconstruction.GridIndex> processedBacklog = new List<Tango3DReconstruction.GridIndex>();
+            foreach (Tango3DReconstruction.GridIndex gridIndex in m_gridUpdateBacklog)
             {
-                // build a dynamic mesh as a child of this game object.
-                GameObject newObj = new GameObject();
-                newObj.transform.parent = transform;
-                newObj.name = string.Format("{0},{1},{2}", gridIndex.x, gridIndex.y, gridIndex.z);
-                dynamicMesh = newObj.AddComponent<TangoSingleDynamicMesh>();
-                dynamicMesh.m_vertices = new Vector3[INITIAL_VERTEX_COUNT];
-                if (m_tangoApplication.m_3drGenerateTexCoord)
+                _UpdateMeshAtGridIndex(gridIndex, needsResize);
+
+                processedBacklog.Add(gridIndex);
+                ++numBacklogGridIndicesProcessed;
+
+                if (_GoneOverTimeBudget(startTimeMS))
                 {
-                    dynamicMesh.m_uv = new Vector2[INITIAL_VERTEX_COUNT];
-                }
-
-                if (m_tangoApplication.m_3drGenerateColor)
-                {
-                    dynamicMesh.m_colors = new Color32[INITIAL_VERTEX_COUNT];
-                }
-
-                dynamicMesh.m_triangles = new int[INITIAL_INDEX_COUNT];
-
-                // Update debug info too.
-                m_debugTotalVertices = dynamicMesh.m_vertices.Length;
-                m_debugTotalTriangles = dynamicMesh.m_triangles.Length;
-
-                // Add the other necessary objects
-                MeshFilter meshFilter = newObj.AddComponent<MeshFilter>();
-                dynamicMesh.m_mesh = meshFilter.mesh;
-
-                if (m_meshRenderer != null)
-                {
-                    MeshRenderer meshRenderer = newObj.AddComponent<MeshRenderer>();
-#if UNITY_5
-                    meshRenderer.shadowCastingMode = m_meshRenderer.shadowCastingMode;
-                    meshRenderer.receiveShadows = m_meshRenderer.receiveShadows;
-                    meshRenderer.sharedMaterials = m_meshRenderer.sharedMaterials;
-                    meshRenderer.useLightProbes = m_meshRenderer.useLightProbes;
-                    meshRenderer.reflectionProbeUsage = m_meshRenderer.reflectionProbeUsage;
-                    meshRenderer.probeAnchor = m_meshRenderer.probeAnchor;
-#elif UNITY_4_6
-                    meshRenderer.castShadows = m_meshRenderer.castShadows;
-                    meshRenderer.receiveShadows = m_meshRenderer.receiveShadows;
-                    meshRenderer.sharedMaterials = m_meshRenderer.sharedMaterials;
-                    meshRenderer.useLightProbes = m_meshRenderer.useLightProbes;
-                    meshRenderer.lightProbeAnchor = m_meshRenderer.lightProbeAnchor;
-#endif
-                }
-
-                if (m_meshCollider != null)
-                {
-                    MeshCollider meshCollider = newObj.AddComponent<MeshCollider>();
-                    meshCollider.convex = m_meshCollider.convex;
-                    meshCollider.isTrigger = m_meshCollider.isTrigger;
-                    meshCollider.sharedMaterial = m_meshCollider.sharedMaterial;
-                    meshCollider.sharedMesh = dynamicMesh.m_mesh;
-                    dynamicMesh.m_meshCollider = meshCollider;
-                }
-
-                m_meshes.Add(gridIndex, dynamicMesh);
-            }
-
-            // Last frame the mesh needed more space.  Give it more room now.
-            if (dynamicMesh.m_needsToGrow)
-            {
-                int newVertexSize = (int)(dynamicMesh.m_vertices.Length * GROWTH_FACTOR);
-                int newTriangleSize = (int)(dynamicMesh.m_triangles.Length * GROWTH_FACTOR);
-                newTriangleSize -= newTriangleSize % 3;
-
-                // Remove the old size, add the new size.
-                m_debugTotalVertices += newVertexSize - dynamicMesh.m_vertices.Length;
-                m_debugTotalTriangles += newTriangleSize - dynamicMesh.m_triangles.Length;
-
-                dynamicMesh.m_vertices = new Vector3[newVertexSize];
-                if (m_tangoApplication.m_3drGenerateTexCoord)
-                {
-                    dynamicMesh.m_uv = new Vector2[newVertexSize];
-                }
-
-                if (m_tangoApplication.m_3drGenerateColor)
-                {
-                    dynamicMesh.m_colors = new Color32[newVertexSize];
-                }
-
-                dynamicMesh.m_triangles = new int[newTriangleSize];
-                dynamicMesh.m_needsToGrow = false;
-            }
-
-            int numVertices;
-            int numTriangles;
-            Tango3DReconstruction.Status status = m_tangoApplication.Tango3DRExtractMeshSegment(
-                gridIndex, dynamicMesh.m_vertices, null, dynamicMesh.m_colors, dynamicMesh.m_triangles,
-                out numVertices, out numTriangles);
-            if (status != Tango3DReconstruction.Status.INSUFFICIENT_SPACE
-                && status != Tango3DReconstruction.Status.SUCCESS)
-            {
-                Debug.Log("Tango3DR extraction failed, status code = " + status + Environment.StackTrace);
-                continue;
-            }
-            else if (status == Tango3DReconstruction.Status.INSUFFICIENT_SPACE)
-            {
-                // We already spent the time extracting this mesh, let's not spend any more time this frame
-                // to extract the mesh.
-                Debug.Log(string.Format(
-                    "TangoDynamicMesh.Update() extraction ran out of space with room for {0} vertexes, {1} indexes.",
-                    dynamicMesh.m_vertices.Length, dynamicMesh.m_triangles.Length));
-                dynamicMesh.m_needsToGrow = true;
-                needsResize.Add(gridIndex);
-            }
-
-            // Make any leftover triangles degenerate.
-            for (int triangleIt = numTriangles * 3; triangleIt < dynamicMesh.m_triangles.Length; ++triangleIt)
-            {
-                dynamicMesh.m_triangles[triangleIt] = 0;
-            }
-
-            if (dynamicMesh.m_uv != null)
-            {
-                // Add texture coordinates.
-                for (int vertexIt = 0; vertexIt < numVertices; ++vertexIt)
-                {
-                    Vector3 vertex = dynamicMesh.m_vertices[vertexIt];
-                    dynamicMesh.m_uv[vertexIt].x = vertex.x * UV_PER_METERS;
-                    dynamicMesh.m_uv[vertexIt].y = (vertex.z + vertex.y) * UV_PER_METERS;
+                    break;
                 }
             }
 
-            dynamicMesh.m_mesh.Clear();
-            dynamicMesh.m_mesh.vertices = dynamicMesh.m_vertices;
-            dynamicMesh.m_mesh.uv = dynamicMesh.m_uv;
-            dynamicMesh.m_mesh.colors32 = dynamicMesh.m_colors;
-            dynamicMesh.m_mesh.triangles = dynamicMesh.m_triangles;
-            if (m_tangoApplication.m_3drGenerateNormal)
-            {
-                dynamicMesh.m_mesh.RecalculateNormals();
-            }
-
-            if (dynamicMesh.m_meshCollider != null)
-            {
-                // Force the mesh collider to update too.
-                dynamicMesh.m_meshCollider.sharedMesh = null;
-                dynamicMesh.m_meshCollider.sharedMesh = dynamicMesh.m_mesh;
-            }
+            m_gridUpdateBacklog.ExceptWith(processedBacklog);
         }
 
         m_debugRemeshingTime = Time.realtimeSinceStartup - (startTimeMS * 0.001f);
-        m_debugRemeshingCount = it;
+        m_debugRemeshingCount = it + numBacklogGridIndicesProcessed;
 
         // Any leftover grid indices also need to get processed next frame.
         while (it < m_gridIndexToUpdate.Count)
@@ -332,6 +234,9 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         str = string.Format("<size=30>Remeshing Time: {0:F6} Remeshing Count: {1}</size>",
                             m_debugRemeshingTime, m_debugRemeshingCount);
         GUI.Label(new Rect(40, 80, 1000, 40), str);
+
+        str = string.Format("<size=30>Backlog Size: {0}</size>", m_gridUpdateBacklog.Count);
+        GUI.Label(new Rect(40, 120, 1000, 40), str);
     }
 
     /// <summary>
@@ -340,8 +245,9 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     /// <param name="gridIndexList">List of GridIndex objects that are dirty and should be updated.</param>
     public void OnTango3DReconstructionGridIndicesDirty(List<Tango3DReconstruction.GridIndex> gridIndexList)
     {
-        // It's more important to be responsive than to handle all indexes.  Clear the current list if we have 
-        // fallen behind in processing.
+        // It's more important to be responsive than to handle all indexes.  Add unprocessed indices to the 
+        // backlog and clear the current list if we have fallen behind in processing.
+        m_gridUpdateBacklog.UnionWith(m_gridIndexToUpdate);
         m_gridIndexToUpdate.Clear();
         m_gridIndexToUpdate.AddRange(gridIndexList);
     }
@@ -359,6 +265,168 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         }
         
         m_meshes.Clear();
+    }
+
+    /// <summary>
+    /// Given a time value indicating when meshing started this frame,
+    /// returns a value indicating whether this frame's time budget for meshing has been exceeded.
+    /// </summary>
+    /// <returns><c>true</c>, if this frame's meshing time budget has been exceeded, <c>false</c> otherwise.</returns>
+    /// <param name="startTimeMS">Meshing start timestamp this frame (in milliseconds).</param>
+    private bool _GoneOverTimeBudget(int startTimeMS)
+    {
+        return (Time.realtimeSinceStartup * 1000) - startTimeMS > TIME_BUDGET_MS;
+    }
+
+    /// <summary>
+    /// Extract and update (or create, if it doesn't exist) the mesh at the given grid index.
+    /// </summary>
+    /// <param name="gridIndex">Grid index.</param>
+    /// <param name="needsResize">List to which indicies needing a future resize will be added.</param>
+    private void _UpdateMeshAtGridIndex(Tango3DReconstruction.GridIndex gridIndex, List<Tango3DReconstruction.GridIndex> needsResize)
+    {
+        TangoSingleDynamicMesh dynamicMesh;
+        if (!m_meshes.TryGetValue(gridIndex, out dynamicMesh))
+        {
+            // build a dynamic mesh as a child of this game object.
+            GameObject newObj = new GameObject();
+            newObj.transform.parent = transform;
+            newObj.name = string.Format("{0},{1},{2}", gridIndex.x, gridIndex.y, gridIndex.z);
+            dynamicMesh = newObj.AddComponent<TangoSingleDynamicMesh>();
+            dynamicMesh.m_vertices = new Vector3[INITIAL_VERTEX_COUNT];
+            if (m_tangoApplication.m_3drGenerateTexCoord)
+            {
+                dynamicMesh.m_uv = new Vector2[INITIAL_VERTEX_COUNT];
+            }
+            
+            if (m_tangoApplication.m_3drGenerateColor)
+            {
+                dynamicMesh.m_colors = new Color32[INITIAL_VERTEX_COUNT];
+            }
+            
+            dynamicMesh.m_triangles = new int[INITIAL_INDEX_COUNT];
+            
+            // Update debug info too.
+            m_debugTotalVertices = dynamicMesh.m_vertices.Length;
+            m_debugTotalTriangles = dynamicMesh.m_triangles.Length;
+            
+            // Add the other necessary objects
+            MeshFilter meshFilter = newObj.AddComponent<MeshFilter>();
+            dynamicMesh.m_mesh = meshFilter.mesh;
+            
+            if (m_meshRenderer != null)
+            {
+                MeshRenderer meshRenderer = newObj.AddComponent<MeshRenderer>();
+                #if UNITY_5
+                meshRenderer.shadowCastingMode = m_meshRenderer.shadowCastingMode;
+                meshRenderer.receiveShadows = m_meshRenderer.receiveShadows;
+                meshRenderer.sharedMaterials = m_meshRenderer.sharedMaterials;
+                meshRenderer.useLightProbes = m_meshRenderer.useLightProbes;
+                meshRenderer.reflectionProbeUsage = m_meshRenderer.reflectionProbeUsage;
+                meshRenderer.probeAnchor = m_meshRenderer.probeAnchor;
+                #elif UNITY_4_6
+                meshRenderer.castShadows = m_meshRenderer.castShadows;
+                meshRenderer.receiveShadows = m_meshRenderer.receiveShadows;
+                meshRenderer.sharedMaterials = m_meshRenderer.sharedMaterials;
+                meshRenderer.useLightProbes = m_meshRenderer.useLightProbes;
+                meshRenderer.lightProbeAnchor = m_meshRenderer.lightProbeAnchor;
+                #endif
+            }
+            
+            if (m_meshCollider != null)
+            {
+                MeshCollider meshCollider = newObj.AddComponent<MeshCollider>();
+                meshCollider.convex = m_meshCollider.convex;
+                meshCollider.isTrigger = m_meshCollider.isTrigger;
+                meshCollider.sharedMaterial = m_meshCollider.sharedMaterial;
+                meshCollider.sharedMesh = dynamicMesh.m_mesh;
+                dynamicMesh.m_meshCollider = meshCollider;
+            }
+            
+            m_meshes.Add(gridIndex, dynamicMesh);
+        }
+        
+        // Last frame the mesh needed more space.  Give it more room now.
+        if (dynamicMesh.m_needsToGrow)
+        {
+            int newVertexSize = (int)(dynamicMesh.m_vertices.Length * GROWTH_FACTOR);
+            int newTriangleSize = (int)(dynamicMesh.m_triangles.Length * GROWTH_FACTOR);
+            newTriangleSize -= newTriangleSize % 3;
+            
+            // Remove the old size, add the new size.
+            m_debugTotalVertices += newVertexSize - dynamicMesh.m_vertices.Length;
+            m_debugTotalTriangles += newTriangleSize - dynamicMesh.m_triangles.Length;
+            
+            dynamicMesh.m_vertices = new Vector3[newVertexSize];
+            if (m_tangoApplication.m_3drGenerateTexCoord)
+            {
+                dynamicMesh.m_uv = new Vector2[newVertexSize];
+            }
+            
+            if (m_tangoApplication.m_3drGenerateColor)
+            {
+                dynamicMesh.m_colors = new Color32[newVertexSize];
+            }
+            
+            dynamicMesh.m_triangles = new int[newTriangleSize];
+            dynamicMesh.m_needsToGrow = false;
+        }
+        
+        int numVertices;
+        int numTriangles;
+        Tango3DReconstruction.Status status = m_tangoApplication.Tango3DRExtractMeshSegment(
+            gridIndex, dynamicMesh.m_vertices, null, dynamicMesh.m_colors, dynamicMesh.m_triangles,
+            out numVertices, out numTriangles);
+        if (status != Tango3DReconstruction.Status.INSUFFICIENT_SPACE
+            && status != Tango3DReconstruction.Status.SUCCESS)
+        {
+            Debug.Log("Tango3DR extraction failed, status code = " + status + Environment.StackTrace);
+            return;
+        }
+        else if (status == Tango3DReconstruction.Status.INSUFFICIENT_SPACE)
+        {
+            // We already spent the time extracting this mesh, let's not spend any more time this frame
+            // to extract the mesh.
+            Debug.Log(string.Format(
+                "TangoDynamicMesh.Update() extraction ran out of space with room for {0} vertexes, {1} indexes.",
+                dynamicMesh.m_vertices.Length, dynamicMesh.m_triangles.Length));
+            dynamicMesh.m_needsToGrow = true;
+            needsResize.Add(gridIndex);
+        }
+        
+        // Make any leftover triangles degenerate.
+        for (int triangleIt = numTriangles * 3; triangleIt < dynamicMesh.m_triangles.Length; ++triangleIt)
+        {
+            dynamicMesh.m_triangles[triangleIt] = 0;
+        }
+        
+        if (dynamicMesh.m_uv != null)
+        {
+            // Add texture coordinates.
+            for (int vertexIt = 0; vertexIt < numVertices; ++vertexIt)
+            {
+                Vector3 vertex = dynamicMesh.m_vertices[vertexIt];
+                dynamicMesh.m_uv[vertexIt].x = vertex.x * UV_PER_METERS;
+                dynamicMesh.m_uv[vertexIt].y = (vertex.z + vertex.y) * UV_PER_METERS;
+            }
+        }
+        
+        dynamicMesh.m_mesh.Clear();
+        dynamicMesh.m_mesh.vertices = dynamicMesh.m_vertices;
+        dynamicMesh.m_mesh.uv = dynamicMesh.m_uv;
+        dynamicMesh.m_mesh.colors32 = dynamicMesh.m_colors;
+        dynamicMesh.m_mesh.triangles = dynamicMesh.m_triangles;
+        if (m_tangoApplication.m_3drGenerateNormal)
+        {
+            dynamicMesh.m_mesh.RecalculateNormals();
+        }
+        
+        if (dynamicMesh.m_meshCollider != null)
+        {
+            // Force the mesh collider to update too.
+            dynamicMesh.m_meshCollider.sharedMesh = null;
+            dynamicMesh.m_meshCollider.sharedMesh = dynamicMesh.m_mesh;
+        }
     }
 
     /// <summary>

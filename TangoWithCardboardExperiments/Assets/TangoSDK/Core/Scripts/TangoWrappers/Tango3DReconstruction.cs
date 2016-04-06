@@ -417,6 +417,38 @@ namespace Tango
         }
 
         /// <summary>
+        /// Extract an array of <c>SignedDistanceVoxel</c> objects.
+        /// </summary>
+        /// <returns>
+        /// Returns Status.SUCCESS if the voxels are fully extracted and stared in the array.  In this case, numVoxels
+        /// will say how many voxels are used, the rest of the array is untouched.
+        /// 
+        /// Returns Status.INVALID if the array length does not exactly equal the number of voxels in a single grid
+        /// index.  By default, the number of voxels in a grid index is 16*16*16.
+        /// 
+        /// Returns Status.INVALID if some other error occurs.
+        /// </returns>
+        /// <param name="gridIndex">Grid index to extract.</param>
+        /// <param name="voxels">
+        /// On successful extraction this will get filled out with the signed distance voxels.
+        /// </param>
+        /// <param name="numVoxels">Number of voxels filled out.</param>
+        internal Status ExtractSignedDistanceVoxel(
+            GridIndex gridIndex, APISignedDistanceVoxel[] voxels, out int numVoxels)
+        {
+            numVoxels = 0;
+
+            int result = API.Tango3DR_getVoxelGridSegment(m_context, ref gridIndex, voxels.Length, voxels);
+            if (result == (int)Status.SUCCESS)
+            {
+                // This is the current default number of voxels per grid volume.
+                numVoxels = 16 * 16 * 16;
+            }
+
+            return (Status)result;
+        }
+
+        /// <summary>
         /// Clear the current mesh in the 3D reconstruction.
         /// </summary>
         internal void Clear()
@@ -445,13 +477,26 @@ namespace Tango
 
             APIPointCloud apiCloud;
             apiCloud.numPoints = depth.xyz_count;
-            apiCloud.points = depth.xyz;
+            apiCloud.points = IntPtr.Zero;
             apiCloud.timestamp = depth.timestamp;
-            
+
+            // This copy is required until TangoXYZij stores its depth as XYZC.
+            long xyzPointerVal = depth.xyz.ToInt64();
+            for (int it = 0; it < depth.xyz_count; ++it)
+            {
+                int xyzIndex = it * 3;
+                int depthPointsIndex = it * 4;
+                Marshal.Copy(new IntPtr(xyzPointerVal + (xyzIndex * 4)), m_mostRecentDepthPoints, depthPointsIndex, 3);
+                m_mostRecentDepthPoints[depthPointsIndex + 3] = 1;
+            }
+
             APIPose apiDepthPose = APIPose.FromMatrix4x4(ref depthPose);
 
             if (!m_sendColorToUpdate)
             {
+                GCHandle mostRecentDepthPointsHandle = GCHandle.Alloc(m_mostRecentDepthPoints, GCHandleType.Pinned);
+                apiCloud.points = Marshal.UnsafeAddrOfPinnedArrayElement(m_mostRecentDepthPoints, 0);
+
                 // No need to wait for a color image, update reconstruction immediately.
                 IntPtr rawUpdatedIndices;
                 Status result = (Status)API.Tango3DR_update(
@@ -465,6 +510,8 @@ namespace Tango
 
                 _AddUpdatedIndices(rawUpdatedIndices);
                 API.Tango3DR_GridIndexArray_destroy(rawUpdatedIndices);
+
+                mostRecentDepthPointsHandle.Free();
             }
             else
             {
@@ -473,10 +520,7 @@ namespace Tango
                     // We need both a color image and a depth cloud to update reconstruction.  Cache the depth cloud
                     // because there are much less depth points than pixels.
                     m_mostRecentDepth = apiCloud;
-                    m_mostRecentDepth.points = IntPtr.Zero;
                     m_mostRecentDepthPose = apiDepthPose;
-
-                    Marshal.Copy(apiCloud.points, m_mostRecentDepthPoints, 0, apiCloud.numPoints * 3);
                     m_mostRecentDepthIsValid = true;
                 }
             }
@@ -650,6 +694,19 @@ namespace Tango
 
             [MarshalAs(UnmanagedType.I4)]
             public Int32 z;
+        }
+
+        /// <summary>
+        /// Corresponds to a Tango3DR_SignedDistanceVoxel.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct APISignedDistanceVoxel
+        {
+            [MarshalAs(UnmanagedType.I2)]
+            public Int16 sdf;
+
+            [MarshalAs(UnmanagedType.U2)]
+            public UInt16 weight;
         }
 
         /// <summary>
@@ -847,7 +904,10 @@ namespace Tango
                 IntPtr context, Int32 maxNumVertices, Int32 maxNumFaces, Vector3[] veritices,
                 int[] faces, Vector3[] normals, Color32[] colors, out Int32 numVertices, out Int32 numFaces);
 
-#else
+            [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_getVoxelGridSegment(
+                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, APISignedDistanceVoxel[] voxels);
+            #else
             public static IntPtr Tango3DR_create(IntPtr config)
             {
                 return IntPtr.Zero;
@@ -944,7 +1004,13 @@ namespace Tango
                 numFaces = 0;
                 return (int)Status.SUCCESS;
             }
-#endif
+
+            public static int Tango3DR_getVoxelGridSegment(
+                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, APISignedDistanceVoxel[] voxels)
+            {
+                return (int)Status.SUCCESS;
+            }
+            #endif
         }
     }
 }
