@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TangoInspector.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
@@ -225,8 +225,10 @@ public class TangoInspector : Editor
     {
         GUILayout.Label("Development Options (Disable these before publishing)", GUILayout.ExpandWidth(true));
         EditorGUI.indentLevel++;
-        tangoApplication.m_allowOutOfDateTangoAPI = EditorGUILayout.Toggle("Allow out of date API",
-                                                                           m_tangoApplication.m_allowOutOfDateTangoAPI);
+        tangoApplication.m_allowOutOfDateTangoAPI = EditorGUILayout.Toggle(
+            "Allow out of date API", m_tangoApplication.m_allowOutOfDateTangoAPI);
+        tangoApplication.m_testEnvironment = (GameObject)EditorGUILayout.ObjectField(
+            "Test Environment", m_tangoApplication.m_testEnvironment, typeof(GameObject), false);
         EditorGUI.indentLevel--;
 
         EditorGUILayout.Space();

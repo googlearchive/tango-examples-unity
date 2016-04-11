@@ -21,3 +21,5 @@ EditorBuildSettings:
     path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithColor.unity
   - enabled: 0
     path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithPhysics.unity
+  - enabled: 0
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshOcclusion.unity

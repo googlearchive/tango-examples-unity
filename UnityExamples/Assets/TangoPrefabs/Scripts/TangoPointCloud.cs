@@ -107,6 +107,11 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     // Pose controller from which the offset is queried.
     private TangoDeltaPoseController m_tangoDeltaPoseController;
 
+    /// <summary>
+    /// The lowest point in y in the point cloud used to remember the floor.
+    /// </summary>
+    private float m_lowestPointY;
+
     /// @cond
     /// <summary>
     /// Use this for initialization.
@@ -216,6 +221,9 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
                 m_overallZ = m_overallZ / m_pointsCount;
                 m_depthTimestamp = tangoDepth.m_timestamp;
 
+                // Calculate the floor plane.
+                _SetLowestPointY();
+
                 if (m_updatePointsMesh)
                 {
                     // Need to update indicies too!
@@ -315,6 +323,47 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     }
 
     /// <summary>
+    /// Finds the floor plane based on the lowest saved point.
+    /// </summary>
+    /// <returns><c>true</c>, if floor plane was found, <c>false</c> otherwise.</returns>
+    /// <param name="planePosY">Filled with the lowest saved point in y.</param>
+    /// <param name="plane">Filled with a new plane created with up vector and lowest y point.</param>
+    public bool FindFloorPlane(out float planePosY, out Plane plane)
+    {
+        planePosY = m_lowestPointY;
+        plane = new Plane(Vector3.up, new Vector3(0.0f, m_lowestPointY, 0.0f));
+
+        if (m_lowestPointY < float.MaxValue)
+        {
+            return true;
+        }
+        else 
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Finds the lowest point in y at 95th percentile and saves it.
+    /// </summary>
+    private void _SetLowestPointY()
+    {
+        List<float> yPoints = new List<float>(m_pointsCount);
+        for (int i = 0; i < m_pointsCount; i++)
+        {
+            yPoints.Add(m_points[i].y);
+        }
+
+        yPoints.Sort();
+        float yPos = yPoints[Mathf.FloorToInt(m_pointsCount * 0.05f)];
+
+        if (yPos < m_lowestPointY)
+        {
+            m_lowestPointY = yPos;
+        }
+    }
+
+    /// <summary>
     /// Sets up extrinsic matrixes and camera intrinsics for this hardware.
     /// </summary>
     private void _SetUpCameraData()
@@ -328,6 +377,18 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
         TangoCoordinateFramePair pair;
         TangoPoseData poseData = new TangoPoseData();
 
+#if UNITY_EDITOR
+        // Constant matrixes representing just the convention swap.
+        m_imuTDevice.SetColumn(0, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+        m_imuTDevice.SetColumn(1, new Vector4(-1.0f, 0.0f, 0.0f, 0.0f));
+        m_imuTDevice.SetColumn(2, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+        m_imuTDevice.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+        
+        m_imuTDepthCamera.SetColumn(0, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+        m_imuTDepthCamera.SetColumn(1, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+        m_imuTDepthCamera.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
+        m_imuTDepthCamera.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+#else
         // Query the extrinsics between IMU and device frame.
         pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
         pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
@@ -339,6 +400,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
         pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH;
         PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
         m_imuTDepthCamera = poseData.ToMatrix4x4();
+#endif
 
         // Also get the camera intrinsics
         m_colorCameraIntrinsics = new TangoCameraIntrinsics();

@@ -413,6 +413,21 @@ namespace Tango
             int result = API.Tango3DR_extractPreallocatedFullMesh(
                 m_context, vertices.Length, triangles.Length / 3, vertices, triangles, normals, colors,
                 out numVertices, out numTriangles);
+
+            // NOTE: The 3D Reconstruction library does not handle left handed matrices correctly.  For now, transform
+            // into the Unity world space after extraction and account for winding order changes.
+            for (int it = 0; it < numVertices; ++it)
+            {
+                vertices[it] = m_unityWorld_T_startService.MultiplyPoint(vertices[it]);
+            }
+            
+            for (int it = 0; it < numTriangles; ++it)
+            {
+                int temp = triangles[(it * 3) + 0];
+                triangles[(it * 3) + 0] = triangles[(it * 3) + 1];
+                triangles[(it * 3) + 1] = temp;
+            }
+
             return (Status)result;
         }
 

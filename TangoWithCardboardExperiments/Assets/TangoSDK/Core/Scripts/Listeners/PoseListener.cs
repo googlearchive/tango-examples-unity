@@ -63,7 +63,8 @@ namespace Tango
         /// <summary>
         /// Raise a Tango pose event if there is new data.
         /// </summary>
-        internal void SendPoseIfAvailable()
+        /// <param name="emulateAreaDescriptions">If set, Area description poses are emulated.</param>
+        internal void SendPoseIfAvailable(bool emulateAreaDescriptions)
         {
 #if UNITY_EDITOR
             PoseProvider.UpdateTangoEmulation();
@@ -71,14 +72,20 @@ namespace Tango
             {
                 if (m_onTangoPoseAvailable != null)
                 {
-                    FillEmulatedPoseData(ref m_motionTrackingData, 
-                                         TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE,
-                                         TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE);
-                    FillEmulatedPoseData(ref m_areaLearningData,
-                                         TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION,
-                                         TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE);
+                    TangoCoordinateFramePair framePair;
+
+                    framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+                    framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                    PoseProvider.GetPoseAtTime(m_motionTrackingData, 0, framePair);
                     m_isMotionTrackingPoseAvailable = true;
-                    m_isAreaLearningPoseAvailable = true;
+
+                    if (emulateAreaDescriptions)
+                    {
+                        framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                        framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                        PoseProvider.GetPoseAtTime(m_areaLearningData, 0, framePair);
+                        m_isAreaLearningPoseAvailable = true;
+                    }
                 }
             }
 #endif
@@ -185,36 +192,5 @@ namespace Tango
                 }
             }
         }
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// Fill out <c>poseData</c> with emulated values from Tango.
-        /// </summary>
-        /// <param name="poseData">The poseData to fill out.</param>
-        /// <param name="baseFrame">Base frame to set.</param>
-        /// <param name="targetFrame">Target frame to set.</param>
-        private void FillEmulatedPoseData(ref TangoPoseData poseData, TangoEnums.TangoCoordinateFrameType baseFrame,
-                                          TangoEnums.TangoCoordinateFrameType targetFrame)
-        {
-            Vector3 position;
-            Quaternion rotation;
-            PoseProvider.GetTangoEmulation(out position, out rotation);
-
-            poseData.framePair.baseFrame = baseFrame;
-            poseData.framePair.targetFrame = targetFrame;
-
-            poseData.timestamp = Time.time * 1000; // timestamp is in ms, time is in sec.
-            poseData.version = 0; // Not actually used
-            poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID;
-
-            poseData.translation[0] = position.x;
-            poseData.translation[1] = position.y;
-            poseData.translation[2] = position.z;
-            poseData.orientation[0] = rotation.x;
-            poseData.orientation[1] = rotation.y;
-            poseData.orientation[2] = rotation.z;
-            poseData.orientation[3] = rotation.w;
-        }
-#endif
     }
 }
