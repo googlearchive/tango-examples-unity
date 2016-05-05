@@ -141,12 +141,13 @@ namespace Tango
         /// <param name="onUnityFrameAvailable">Callback method.</param>
         internal static void ExperimentalConnectTexture(TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onUnityFrameAvailable onUnityFrameAvailable)
         {
-            int returnValue = VideoOverlayAPI.TangoService_Experimental_connectTextureIdUnity(cameraId, 
-                                                                                              (uint)textures.m_videoOverlayTextureY.GetNativeTextureID(), 
-                                                                                              (uint)textures.m_videoOverlayTextureCb.GetNativeTextureID(), 
-                                                                                              (uint)textures.m_videoOverlayTextureCr.GetNativeTextureID(), 
-                                                                                              callbackContext, 
-                                                                                              onUnityFrameAvailable);
+            int returnValue = VideoOverlayAPI.TangoService_Experimental_connectTextureIdUnity(
+                cameraId, 
+                (uint)textures.m_videoOverlayTextureY.GetNativeTexturePtr().ToInt64(), 
+                (uint)textures.m_videoOverlayTextureCb.GetNativeTexturePtr().ToInt64(), 
+                (uint)textures.m_videoOverlayTextureCr.GetNativeTexturePtr().ToInt64(), 
+                callbackContext, 
+                onUnityFrameAvailable);
             
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {

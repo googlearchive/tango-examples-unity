@@ -147,12 +147,16 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             // After saving an Area Description or mark data, we reload the scene to restart the game.
             _UpdateMarkersForLoopClosures();
             _SaveMarkerToDisk();
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
         }
 
         if (Input.GetKey(KeyCode.Escape))
         {
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
         }
 
         if (!m_initialized)
@@ -218,7 +222,9 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         {
             // When application is backgrounded, we reload the level because the Tango Service is disconected. All
             // learned area and placed marker should be discarded as they are not saved.
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
         }
     }
 
@@ -398,7 +404,9 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             else
             {
                 _SaveMarkerToDisk();
+                #pragma warning disable 618
                 Application.LoadLevel(Application.loadedLevel);
+                #pragma warning restore 618
             }
         }
     }

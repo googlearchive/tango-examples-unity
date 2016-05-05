@@ -133,6 +133,14 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     }
 
     /// <summary>
+    /// Unity destroy function.
+    /// </summary>
+    public void OnDestroy()
+    {
+        m_tangoApplication.Unregister(this);
+    }
+
+    /// <summary>
     /// Updates UI and handles player input.
     /// </summary>
     public void Update()

@@ -120,6 +120,18 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
+    /// Unity callback when the component gets destroyed.
+    /// </summary>
+    public void OnDestroy()
+    {
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
+        {
+            tangoApplication.Unregister(this);
+        }
+    }
+
+    /// <summary>
     /// Handle the callback sent by the Tango Service
     /// when a new pose is sampled.
     /// </summary>

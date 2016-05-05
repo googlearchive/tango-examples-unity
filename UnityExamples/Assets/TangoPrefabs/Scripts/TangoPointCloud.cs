@@ -140,7 +140,15 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
         m_renderer = GetComponent<Renderer>();
     }
-    
+
+    /// <summary>
+    /// Unity callback when the component gets destroyed.
+    /// </summary>
+    public void OnDestroy()
+    {
+        m_tangoApplication.Unregister(this);
+    }
+
     /// <summary>
     /// Callback that gets called when depth is available from the Tango Service.
     /// </summary>
@@ -373,10 +381,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
             return;
         }
 
-        double timestamp = 0.0;
-        TangoCoordinateFramePair pair;
-        TangoPoseData poseData = new TangoPoseData();
-
 #if UNITY_EDITOR
         // Constant matrixes representing just the convention swap.
         m_imuTDevice.SetColumn(0, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
@@ -389,6 +393,10 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
         m_imuTDepthCamera.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
         m_imuTDepthCamera.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
 #else
+        double timestamp = 0.0;
+        TangoCoordinateFramePair pair;
+        TangoPoseData poseData = new TangoPoseData();
+
         // Query the extrinsics between IMU and device frame.
         pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
         pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;

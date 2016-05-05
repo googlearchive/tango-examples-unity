@@ -22,104 +22,14 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Build scripts for this specific project.  Uses BuildUtil.cs, which should be sharable across
-/// all projects.
-/// 
-/// To use this from the command line, run the following command:
-/// [FULLPATH_UNITY.APP]/Contents/MacOS/Unity -batchmode -projectPath [FULLPATH] -executeMethod [METHOD_TO_RUN] -quit
-/// 
-/// For example:
-/// /Applications/Unity/Unity.app/Contents/MacOS/Unity -batchmode -projectPath ~/Unity/tango-examples-unity/UnityExamples/ -executeMethod BuildTools.BuildAll -quit
-/// 
-/// For more info, goto [http://docs.unity3d.com/Manual/CommandLineArguments.html].
+/// Build scripts for this specific project.
 /// </summary>
 public class BuildTools
 {
-    private static BuildUtil.APKSettings examplesAPK = new BuildUtil.APKSettings
-    {
-        ProjectName = "Unity Examples",
-        Icon = "TangoSDK/Examples/Common/Textures/ProjectTango_Logo.png",
-        Scenes = new string[]
-        {
-            "TangoSDK/Examples/Scenes/DetectTangoCore.unity",
-            "TangoSDK/Examples/Scenes/MotionTracking.unity",
-            "TangoSDK/Examples/Scenes/PointCloud.unity",
-            "TangoSDK/Examples/Scenes/AreaLearning.unity",
-            "TangoSDK/Examples/Scenes/AreaDescriptionManagement.unity",
-        },
-        BundleIdentifier = "com.google.projecttango.examples"
-    };
-
-    private static BuildUtil.APKSettings augmentedRealityAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Augmented Reality",
-        Icon = "TangoSDK/Examples/AugmentedReality/Textures/ar_icon.png",
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/AugmentedReality.unity" },
-        BundleIdentifier = "com.projecttango.experiments.augmentedreality"
-    };
-
-    private static BuildUtil.APKSettings meshBuilderWithPhysicsAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Mesh Builder With Physics",
-        Icon = null,
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithPhysics.unity" },
-        BundleIdentifier = "com.google.projecttango.meshbuilderwithphysics"
-    };
-
-    private static BuildUtil.APKSettings meshBuilderWithColorAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Mesh Builder With Color",
-        Icon = null,
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithColor.unity" },
-        BundleIdentifier = "com.google.projecttango.meshbuilderwithcolor"
-    };
-
-    private static BuildUtil.APKSettings meshOcclusionAPK = new BuildUtil.APKSettings 
-    {
-        ProjectName = "Unity Mesh Occlusion",
-        Icon = null,
-        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshOcclusion.unity" },
-        BundleIdentifier = "com.google.projecttango.meshocclusion"
-    };
-
-    private static BuildUtil.PackageSettings sdkPackageUnity5 = new BuildUtil.PackageSettings
-    {
-        PackageName = "TangoSDK_Unity5",
-        Directories = new string[]
-        {
-            "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK/Core", "TangoSDK/Editor", "TangoSDK/Examples",
-            "TangoSDK/TangoSupport", "TangoSDK/TangoUX"
-        }
-    };
-
-    private static BuildUtil.PackageSettings sdkPackageUnity4 = new BuildUtil.PackageSettings
-    {
-        PackageName = "TangoSDK_Unity4",
-        Directories = new string[]
-        {
-            "Google-Unity", "Plugins", "TangoPrefabs", "TangoSDK/Core", "TangoSDK/Editor",
-            "TangoSDK/TangoSupport", "TangoSDK/TangoUX"
-        }
-    };
-    
     /// <summary>
-    /// Builds all the appropriate APKs for this project.
+    /// Function for UMB.
     /// </summary>
-    [MenuItem("Tango/Build/All", false, 1)]
-    public static void BuildAll()
-    {
-        BuildUtil.BuildAPK(examplesAPK);
-        BuildUtil.BuildAPK(augmentedRealityAPK);
-        BuildUtil.BuildAPK(meshBuilderWithPhysicsAPK);
-        BuildUtil.BuildAPK(meshBuilderWithColorAPK);
-        BuildSdkPackage();
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/SDK Packages", false, 21)]
-    public static void BuildSdkPackage()
+    public static void BuildTangoDat()
     {
         // Write out a version file.
         string filePath = Application.dataPath + TangoSDKAbout.TANGO_VERSION_DATA_PATH;
@@ -129,44 +39,5 @@ public class BuildTools
             binaryWriter.Write(GitHelpers.GetPrettyGitHash());
             binaryWriter.Write(GitHelpers.GetRemoteBranchName());
         }
-
-        BuildUtil.BuildPackage(sdkPackageUnity5);
-        BuildUtil.BuildPackage(sdkPackageUnity4);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Examples")]
-    public static void BuildExamples()
-    {
-        BuildUtil.BuildAPK(examplesAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Augmented Reality")]
-    public static void BuildAugmentedReality()
-    {
-        BuildUtil.BuildAPK(augmentedRealityAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Mesh Builder with Color")]
-    public static void BuildMeshBuilderWithColor()
-    {
-        BuildUtil.BuildAPK(meshBuilderWithColorAPK);
-    }
-    
-    /// <summary>
-    /// Function for UI.
-    /// </summary>
-    [MenuItem("Tango/Build/Mesh Builder with Physics")]
-    public static void BuildMeshBuilderWithPhysics()
-    {
-        BuildUtil.BuildAPK(meshBuilderWithPhysicsAPK);
     }
 }

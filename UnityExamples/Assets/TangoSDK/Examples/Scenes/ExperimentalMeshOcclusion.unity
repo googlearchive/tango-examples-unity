@@ -353,7 +353,6 @@ GameObject:
   m_Component:
   - 4: {fileID: 221904627}
   - 114: {fileID: 221904626}
-  - 114: {fileID: 221904628}
   m_Layer: 0
   m_Name: UI Controller
   m_TagString: Untagged
@@ -401,17 +400,6 @@ Transform:
   - {fileID: 1294101501}
   m_Father: {fileID: 0}
   m_RootOrder: 5
---- !u!114 &221904628
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 221904625}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 411f0927fe60043c09cf4bfc50866763, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &286256096
 GameObject:
   m_ObjectHideFlags: 0

@@ -152,14 +152,19 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     private bool m_initialized = false;
 
     /// <summary>
-    /// The UUID of the selected area description.
-    /// </summary>
-    private string m_savedUUID;
-
-    /// <summary>
     /// The check whether user has selected to create a new mesh or start the game with an existing one.
     /// </summary>
     private bool m_3dReconstruction = false;
+
+    /// <summary>
+    /// The check whether the menu is currently open. Determines the back button behavior.
+    /// </summary>
+    private bool m_menuOpen = true;
+
+    /// <summary>
+    /// The UUID of the selected area description.
+    /// </summary>
+    private string m_savedUUID;
 
     /// <summary>
     /// The path where the generated meshes are saved.
@@ -194,6 +199,27 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     }
 
     /// <summary>
+    /// Update is called once per frame.
+    /// Return to menu or quit current application when back button is triggered.
+    /// </summary>
+    public void Update()
+    {
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            if (m_menuOpen)
+            {
+                Application.Quit();
+            }
+            else
+            {
+                #pragma warning disable 618
+                Application.LoadLevel(Application.loadedLevel);
+                #pragma warning restore 618
+            }
+        }
+    }
+
+    /// <summary>
     /// Application onPause / onResume callback.
     /// </summary>
     /// <param name="pauseStatus"><c>true</c> if the application about to pause, otherwise <c>false</c>.</param>
@@ -203,7 +229,20 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         {
             // When application is backgrounded, we reload the level because the Tango Service is disconected. All
             // learned area and placed marker should be discarded as they are not saved.
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
+        }
+    }
+    
+    /// <summary>
+    /// Unity destroy function.
+    /// </summary>
+    public void OnDestroy()
+    {
+        if (m_tangoApplication != null)
+        {
+            m_tangoApplication.Unregister(this);
         }
     }
 
@@ -289,6 +328,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     public void Button_CreateAreaDescriptionMesh()
     {
         m_3dReconstruction = true;
+        m_menuOpen = false;
 
         // Enable the pose controller, but disable the AR screen.
         m_arPoseController.gameObject.SetActive(true);
@@ -343,6 +383,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         }
 
         m_3dReconstruction = false;
+        m_menuOpen = false;
 
         // Enable objects needed to use area description and mesh for occlusion.
         m_arPoseController.gameObject.SetActive(true);
@@ -396,7 +437,9 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
 
         AndroidHelper.ShowAndroidToastMessage("All area description meshes have been deleted.");
 
+        #pragma warning disable 618
         Application.LoadLevel(Application.loadedLevel);
+        #pragma warning restore 618
     }
 
     /// <summary>
@@ -467,7 +510,9 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// </summary>
     public void Button_Exit()
     {
+        #pragma warning disable 618
         Application.LoadLevel(Application.loadedLevel);
+        #pragma warning restore 618
     }
 
     /// <summary>
@@ -647,7 +692,9 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         _SerializeAreaDescriptionMesh(adfMesh);
 
         // Restart scene after completion.
+        #pragma warning disable 618
         Application.LoadLevel(Application.loadedLevel);
+        #pragma warning restore 618
     }
 
     /// <summary>

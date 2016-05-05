@@ -151,6 +151,7 @@ namespace Tango
             NONE = 0,
             MOTION_TRACKING = 0x1,
             AREA_LEARNING = 0x2,
+            SERVICE_BOUND = 0x4,
         }
 
         /// <summary>
@@ -453,6 +454,10 @@ namespace Tango
 
             _CheckTangoVersion();
 
+            // Setup configs.
+            m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
+            m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
+
             if (m_enableVideoOverlay && m_videoOverlayUseTextureIdMethod)
             {
                 int yTextureWidth = 0;
@@ -638,7 +643,7 @@ namespace Tango
         /// </param>
         /// <param name="numVoxels">Number of voxels filled out.</param>
         public Tango3DReconstruction.Status Tango3DRExtractSignedDistanceVoxel(
-            Tango3DReconstruction.GridIndex gridIndex, Tango3DReconstruction.APISignedDistanceVoxel[] voxels,
+            Tango3DReconstruction.GridIndex gridIndex, Tango3DReconstruction.SignedDistanceVoxel[] voxels,
             out int numVoxels)
         {
             if (m_tango3DReconstruction != null)
@@ -1133,7 +1138,7 @@ namespace Tango
             if (m_enableCloudADF)
             {
                 Debug.Log("Connect to Cloud Service.");
-                AndroidHelper.ConnectCloud();
+                AndroidHelper.BindTangoCloudService();
             }
 
             // Check if the UUID passed in was actually used.
@@ -1202,6 +1207,8 @@ namespace Tango
         /// </summary>
         private void _TangoDisconnect()
         {
+            AndroidHelper.UnbindTangoService();
+
             if (!m_isServiceConnected)
             {
                 Debug.Log(CLASS_NAME + ".Disconnect() Not disconnecting from Tango Service "
@@ -1228,7 +1235,7 @@ namespace Tango
             if (m_enableCloudADF)
             {
                 Debug.Log("Disconnect from Cloud Service.");
-                AndroidHelper.DisconnectCloud();
+                AndroidHelper.UnbindTangoCloudService();
             }
         }
 
@@ -1321,14 +1328,49 @@ namespace Tango
         }
 
         /// <summary>
+        /// Delegate for when connected to the Tango Android service.
+        /// </summary>
+        /// <param name="binder">Binder for the service.</param>
+        private void _androidOnTangoServiceConnected(AndroidJavaObject binder)
+        {
+            Debug.Log("_androidOnTangoServiceConnected");
+
+            // By keeping this logic in C#, the client app can respond if this call fails.
+            int result = AndroidHelper.TangoSetBinder(binder);
+            if (result != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log("Error when calling TangoService_setBinder " + result);
+                _PermissionWasDenied();
+            }
+
+            _FlipBitAndCheckPermissions(PermissionsTypes.SERVICE_BOUND);
+        }
+
+        /// <summary>
+        /// Delegate for when disconnected from the Tango Android service.
+        /// </summary>
+        private void _androidOnTangoServiceDisconnected()
+        {
+            Debug.Log("_androidOnTangoServiceDisconnected");
+        }
+
+        /// <summary>
         /// Awake this instance.
         /// </summary>
         private void Awake()
         {
+            if (!AndroidHelper.LoadTangoLibrary())
+            {
+                Debug.Log("Unable to load Tango library.  Things may not work.");
+                return;
+            }
+
             AndroidHelper.RegisterPauseEvent(_androidOnPause);
             AndroidHelper.RegisterResumeEvent(_androidOnResume);
             AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
             AndroidHelper.RegisterOnScreenOrientationChangedEvent(_androidOnScreenOrientationChanged);
+            AndroidHelper.RegisterOnTangoServiceConnected(_androidOnTangoServiceConnected);
+            AndroidHelper.RegisterOnTangoServiceDisconnected(_androidOnTangoServiceDisconnected);
 
             // Setup listeners.
             m_tangoEventListener = new TangoEventListener();
@@ -1367,10 +1409,6 @@ namespace Tango
                 m_tango3DReconstruction.m_sendColorToUpdate = m_3drGenerateColor;
             }
 
-            // Setup configs.
-            m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
-            m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
-
             TangoSupport.UpdateCurrentRotationIndex();
 
 #if UNITY_EDITOR
@@ -1383,10 +1421,17 @@ namespace Tango
         /// </summary>
         private void _ResetPermissionsFlags()
         {
+#if UNITY_EDITOR
+            m_requiredPermissions = PermissionsTypes.NONE;
+#else
             if (m_requiredPermissions == PermissionsTypes.NONE)
             {
                 m_requiredPermissions |= m_enableAreaDescriptions ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
             }
+
+            // It is always required to rebind to the service.
+            m_requiredPermissions |= PermissionsTypes.SERVICE_BOUND;
+#endif
         }
 
         /// <summary>
@@ -1454,6 +1499,13 @@ namespace Tango
                 else
                 {
                     AndroidHelper.StartTangoPermissionsActivity(Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS);
+                }
+            }
+            else if ((m_requiredPermissions & PermissionsTypes.SERVICE_BOUND) == PermissionsTypes.SERVICE_BOUND)
+            {
+                if (!AndroidHelper.BindTangoService())
+                {
+                    _PermissionWasDenied();
                 }
             }
         }
