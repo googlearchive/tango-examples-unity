@@ -394,7 +394,7 @@ namespace Tango
         /// selection after projection onto the image plane and valued false
         /// otherwise.
         /// </param>
-        public static int ScreenCooordinateToWorldBilateral(
+        public static int ScreenCoordinateToWorldBilateral(
             Vector3[] pointCloud, int pointCount, double timestamp,
             TangoCameraIntrinsics cameraIntrinsics, TangoImageBuffer colorImage,
             ref Matrix4x4 matrix, Vector2 uvCoordinates,

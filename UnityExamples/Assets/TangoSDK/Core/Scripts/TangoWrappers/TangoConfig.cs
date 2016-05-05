@@ -291,6 +291,9 @@ namespace Tango
         /// <typeparam name="T">The type of object to set.</typeparam>
         private bool _ConfigHelperSet<T>(ConfigAPISetter<T> apiCall, string key, T value, string tangoMethodName)
         {
+#if UNITY_EDITOR
+            return true;
+#else
             if (m_configHandle == IntPtr.Zero)
             {
                 Debug.Log(string.Format(m_ConfigErrorFormat, CLASS_NAME, tangoMethodName));
@@ -305,6 +308,7 @@ namespace Tango
             }
 
             return wasSuccess;
+#endif
         }
 
         /// <summary>

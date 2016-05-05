@@ -21,6 +21,7 @@
 namespace Tango
 {
     using System;
+    using System.Collections.Generic;
     using System.Runtime.InteropServices;
     using UnityEngine;
 
@@ -76,6 +77,30 @@ namespace Tango
         /// </summary>
         internal void SendDepthIfAvailable()
         {
+#if UNITY_EDITOR
+            lock (m_lockObject)
+            {
+                if (m_onTangoDepthAvailable != null || m_onTangoDepthMultithreadedAvailable != null)
+                {
+                    _FillEmulatedPointCloudData(m_tangoDepth);
+                }
+
+                if (m_onTangoDepthMultithreadedAvailable != null)
+                {
+                    // Pretend to be making a call from unmanaged code.
+                    GCHandle pinnedPoints = GCHandle.Alloc(m_tangoDepth.m_points, GCHandleType.Pinned);
+                    TangoXYZij emulatedXyzij = _GetEmulatedRawXyzijData(m_tangoDepth, pinnedPoints);
+                    m_onTangoDepthMultithreadedAvailable(emulatedXyzij);
+                    pinnedPoints.Free();
+                }
+
+                if (m_onTangoDepthAvailable != null)
+                {
+                    m_isDirty = true;
+                }
+            }
+#endif
+
             if (m_isDirty && m_onTangoDepthAvailable != null)
             {
                 lock (m_lockObject)
@@ -176,5 +201,52 @@ namespace Tango
                 }
             }
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Fill out <c>pointCloudData</c> with emulated values from Tango.
+        /// </summary>
+        /// <param name="pointCloudData">The point cloud data to fill out.</param>
+        private void _FillEmulatedPointCloudData(TangoUnityDepth pointCloudData)
+        {
+            List<Vector3> pointCloud = DepthProvider.GetTangoEmulation(out pointCloudData.m_timestamp);
+
+            pointCloudData.m_version = 0; // Not actually used
+
+            pointCloudData.m_pointCount = pointCloud.Count;
+            for (int it = 0; it < pointCloud.Count; ++it)
+            {
+                pointCloudData.m_points[(it * 3) + 0] = pointCloud[it].x;
+                pointCloudData.m_points[(it * 3) + 1] = pointCloud[it].y;
+                pointCloudData.m_points[(it * 3) + 2] = pointCloud[it].z;
+            }
+
+            pointCloudData.m_ijRows = 0;
+            pointCloudData.m_ijColumns = 0;
+            for (int it = 0; it < pointCloudData.m_ij.Length; ++it)
+            {
+                pointCloudData.m_ij[it] = -1;
+            }
+        }
+
+        /// <summary>
+        /// It's backwards, but fill emulated raw xyzij data with emulated TangoUnityDepth data.
+        /// It is the responsibility of the caller to GC pin/free the pointCloudData's m_points.
+        /// </summary>
+        /// <returns>Emulated raw xyzij data.</returns>
+        /// <param name="pointCouldData">Emulated point could data.</param>>
+        /// <param name="pinnedPoints">Pinned array of pointCouldData.m_points.</param>
+        private TangoXYZij _GetEmulatedRawXyzijData(TangoUnityDepth pointCouldData, GCHandle pinnedPoints)
+        {
+            TangoXYZij data = new TangoXYZij();
+            data.xyz = pinnedPoints.AddrOfPinnedObject();
+            data.xyz_count = pointCouldData.m_pointCount;
+            data.ij_cols = 0;
+            data.ij_rows = 0;
+            data.ij = IntPtr.Zero;
+            data.timestamp = pointCouldData.m_timestamp;
+            return data;
+        }
+#endif
     }
 }

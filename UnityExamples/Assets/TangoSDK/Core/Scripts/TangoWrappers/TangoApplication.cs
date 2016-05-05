@@ -62,6 +62,8 @@ namespace Tango
         public bool m_autoConnectToService = false;
 
         public bool m_allowOutOfDateTangoAPI = false;
+        public GameObject m_testEnvironment;
+
         public bool m_enableMotionTracking = true;
         public bool m_motionTrackingAutoReset = true;
 
@@ -615,6 +617,36 @@ namespace Tango
 
             numVertices = 0;
             numTriangles = 0;
+            return Tango3DReconstruction.Status.INVALID;
+        }
+
+        /// <summary>
+        /// Extract an array of <c>SignedDistanceVoxel</c> objects.
+        /// </summary>
+        /// <returns>
+        /// Returns Status.SUCCESS if the voxels are fully extracted and stared in the array.  In this case, numVoxels
+        /// will say how many voxels are used, the rest of the array is untouched.
+        /// 
+        /// Returns Status.INVALID if the array length does not exactly equal the number of voxels in a single grid
+        /// index.  By default, the number of voxels in a grid index is 16*16*16.
+        /// 
+        /// Returns Status.INVALID if some other error occurs.
+        /// </returns>
+        /// <param name="gridIndex">Grid index to extract.</param>
+        /// <param name="voxels">
+        /// On successful extraction this will get filled out with the signed distance voxels.
+        /// </param>
+        /// <param name="numVoxels">Number of voxels filled out.</param>
+        public Tango3DReconstruction.Status Tango3DRExtractSignedDistanceVoxel(
+            Tango3DReconstruction.GridIndex gridIndex, Tango3DReconstruction.APISignedDistanceVoxel[] voxels,
+            out int numVoxels)
+        {
+            if (m_tango3DReconstruction != null)
+            {
+                return m_tango3DReconstruction.ExtractSignedDistanceVoxel(gridIndex, voxels, out numVoxels);
+            }
+
+            numVoxels = 0;
             return Tango3DReconstruction.Status.INVALID;
         }
 
@@ -1340,6 +1372,10 @@ namespace Tango
             m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
 
             TangoSupport.UpdateCurrentRotationIndex();
+
+#if UNITY_EDITOR
+            EmulatedEnvironmentRenderHelper.InitForEnvironment(m_testEnvironment);
+#endif
         }
 
         /// <summary>
@@ -1465,9 +1501,18 @@ namespace Tango
                 m_sendPermissions = false;
             }
 
+            // Update any emulation
+#if UNITY_EDITOR
+            PoseProvider.UpdateTangoEmulation();
+            if (m_enableDepth && m_testEnvironment != null)
+            {
+                DepthProvider.UpdateTangoEmulation();
+            }
+#endif
+
             if (m_poseListener != null)
             {
-                m_poseListener.SendPoseIfAvailable();
+                m_poseListener.SendPoseIfAvailable(m_enableAreaDescriptions);
             }
 
             if (m_tangoEventListener != null)

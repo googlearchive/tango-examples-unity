@@ -19,6 +19,8 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Text;
 using Tango;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -268,6 +270,90 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     }
 
     /// <summary>
+    /// Exports the constructed mesh to a Wavefront OBJ file format. The file will include info
+    /// based on the enabled options in TangoApplication.
+    /// </summary>
+    /// <param name="filepath">Filepath to output the OBJ.</param>
+    public void ExportMeshToObj(string filepath)
+    {
+        AndroidHelper.ShowAndroidToastMessage("Exporting mesh...");
+
+        StringBuilder sb = new StringBuilder();
+
+        int startVertex = 0;
+
+        foreach (TangoSingleDynamicMesh tmesh in m_meshes.Values)
+        {
+            Mesh mesh = tmesh.m_mesh;
+            int meshVertices = 0;
+
+            sb.Append(string.Format("g {0}\n", tmesh.name));
+
+            // Vertices.
+            for (int i = 0; i < mesh.vertices.Length; i++)
+            {
+                meshVertices++;
+
+                Vector3 v = tmesh.transform.TransformPoint(mesh.vertices[i]);
+
+                // Include vertex colors as part of vertex point for applications that support it.
+                if (mesh.colors32.Length > 0)
+                {
+                    float r = mesh.colors32[i].r / 255.0f;
+                    float g = mesh.colors32[i].g / 255.0f;
+                    float b = mesh.colors32[i].b / 255.0f;
+                    sb.Append(string.Format("v {0} {1} {2} {3} {4} {5} 1.0\n", v.x, v.y, -v.z, r, g, b));
+                }
+                else
+                {
+                    sb.Append(string.Format("v {0} {1} {2} 1.0\n", v.x, v.y, -v.z));
+                }
+            }
+
+            sb.Append("\n");
+
+            // Normals.
+            if (mesh.normals.Length > 0)
+            {
+                foreach (Vector3 n in mesh.normals)
+                {
+                    sb.Append(string.Format("vn {0} {1} {2}\n", n.x, n.y, -n.z));
+                }
+
+                sb.Append("\n");
+            }
+
+            // Texture coordinates.
+            if (mesh.uv.Length > 0)
+            {
+                foreach (Vector3 uv in mesh.uv)
+                {
+                    sb.Append(string.Format("vt {0} {1}\n", uv.x, uv.y));
+                }
+
+                sb.Append("\n");
+            }
+
+            // Faces.
+            int[] triangles = mesh.triangles;
+            for (int j = 0; j < triangles.Length; j += 3)
+            {
+                sb.Append(string.Format("f {0}/{0}/{0} {1}/{1}/{1} {2}/{2}/{2}\n", triangles[j + 2] + 1 + startVertex, triangles[j + 1] + 1 + startVertex, triangles[j] + 1 + startVertex));
+            }
+
+            sb.Append("\n");
+
+            startVertex += meshVertices;
+        }
+
+        StreamWriter sw = new StreamWriter(filepath);
+        sw.AutoFlush = true;
+        sw.Write(sb.ToString());
+
+        AndroidHelper.ShowAndroidToastMessage(string.Format("Exported: {0}", filepath));
+    }
+
+    /// <summary>
     /// Given a time value indicating when meshing started this frame,
     /// returns a value indicating whether this frame's time budget for meshing has been exceeded.
     /// </summary>
@@ -292,6 +378,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             GameObject newObj = new GameObject();
             newObj.transform.parent = transform;
             newObj.name = string.Format("{0},{1},{2}", gridIndex.x, gridIndex.y, gridIndex.z);
+            newObj.layer = gameObject.layer;
             dynamicMesh = newObj.AddComponent<TangoSingleDynamicMesh>();
             dynamicMesh.m_vertices = new Vector3[INITIAL_VERTEX_COUNT];
             if (m_tangoApplication.m_3drGenerateTexCoord)

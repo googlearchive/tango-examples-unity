@@ -74,6 +74,14 @@ public class BuildTools
         BundleIdentifier = "com.google.projecttango.meshbuilderwithcolor"
     };
 
+    private static BuildUtil.APKSettings meshOcclusionAPK = new BuildUtil.APKSettings 
+    {
+        ProjectName = "Unity Mesh Occlusion",
+        Icon = null,
+        Scenes = new string[] { "TangoSDK/Examples/Scenes/ExperimentalMeshOcclusion.unity" },
+        BundleIdentifier = "com.google.projecttango.meshocclusion"
+    };
+
     private static BuildUtil.PackageSettings sdkPackageUnity5 = new BuildUtil.PackageSettings
     {
         PackageName = "TangoSDK_Unity5",

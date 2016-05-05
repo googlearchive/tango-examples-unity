@@ -4,31 +4,44 @@ Properties{
 }
   SubShader {
      Pass {
-        GLSLPROGRAM
-        
-        #ifdef VERTEX
-        uniform mat4 depthCameraTUnityWorld;
-        uniform float point_size;
-        varying vec4 v_color;
-        void main()
-        {   
-           gl_PointSize = point_size;
-           gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+        CGPROGRAM
+        #pragma vertex vert
+        #pragma fragment frag
+       
+        #include "UnityCG.cginc"
+
+        struct appdata
+        {
+           float4 vertex : POSITION;
+        };
+
+        struct v2f
+        {
+           float4 vertex : SV_POSITION;
+           float4 color : COLOR;
+           float size : PSIZE;
+        };
+       
+        float4x4 depthCameraTUnityWorld;
+        float point_size;
+       
+        v2f vert (appdata v)
+        {
+           v2f o;
+           o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
+           o.size = point_size;
            
            // Color should be based on pose relative info
-           v_color = depthCameraTUnityWorld * gl_Vertex;
+           o.color = mul(depthCameraTUnityWorld, v.vertex);
+           return o;
         }
-        #endif
-
-        #ifdef FRAGMENT
-        varying vec4 v_color;
-        void main()
+       
+        fixed4 frag (v2f i) : SV_Target
         {
-           gl_FragColor = v_color;
+           return i.color;
         }
-        #endif
-
-        ENDGLSL
+        ENDCG
      }
   }
 }
+
