@@ -80,11 +80,6 @@ namespace Tango
         private Matrix4x4 m_device_T_colorCamera;
 
         /// <summary>
-        /// Constant matrix converting start of service frame to Unity world frame.
-        /// </summary>
-        private Matrix4x4 m_unityWorld_T_startService;
-
-        /// <summary>
         /// Constant calibration data for the color camera.
         /// </summary>
         private APICameraCalibration m_colorCameraIntrinsics;
@@ -125,10 +120,19 @@ namespace Tango
         /// <param name="spaceClearing">If true the reconstruction will clear empty space it detects.</param> 
         internal Tango3DReconstruction(float resolution, bool generateColor, bool spaceClearing)
         {
-            IntPtr config = API.Tango3DR_Config_create();
+            IntPtr config = API.Tango3DR_Config_create((int)APIConfigType.Context);
             API.Tango3DR_Config_setDouble(config, "resolution", resolution);
             API.Tango3DR_Config_setBool(config, "generate_color", generateColor);
             API.Tango3DR_Config_setBool(config, "use_space_clearing", spaceClearing);
+
+            // The 3D Reconstruction library can not handle a left handed transformation during update.  Instead,
+            // transform into the Unity world space via the external_T_tango config.
+            APIMatrix3x3 unityWorld_T_startService = new APIMatrix3x3();
+            unityWorld_T_startService.SetRow(0, new Vector3(1, 0, 0));
+            unityWorld_T_startService.SetRow(1, new Vector3(0, 0, 1));
+            unityWorld_T_startService.SetRow(2, new Vector3(0, 1, 0));
+            API.Tango3DR_Config_setMatrix3x3(config, "external_T_tango", ref unityWorld_T_startService);
+            API.Tango3DR_Config_setBool(config, "use_clockwise_winding_order", true);
 
             m_context = API.Tango3DR_create(config);
             API.Tango3DR_Config_destroy(config);
@@ -143,6 +147,22 @@ namespace Tango
             INSUFFICIENT_SPACE = -2,
             INVALID = -1,
             SUCCESS = 0
+        }
+
+        /// <summary>
+        /// Corresponds to a Tango3DR_ConfigType.
+        /// </summary>
+        private enum APIConfigType
+        {
+            /// <summary>
+            /// Needed by Tango3DR_create.
+            /// </summary>
+            Context = 0,
+
+            /// <summary>
+            /// Needed by Tango3DR_textureMeshFromDataset.
+            /// </summary>
+            Texturing = 1
         }
 
         /// <summary>
@@ -227,8 +247,8 @@ namespace Tango
                 return;
             }
 
-            // NOTE: The 3D Reconstruction library does not handle left handed matrices correctly.  For now, transform
-            // into the Unity world space after extraction.
+            // The 3D Reconstruction library can not handle a left handed transformation during update.  Instead,
+            // transform into the Unity world space via the external_T_tango config.
             Matrix4x4 world_T_depthCamera = world_T_devicePose.ToMatrix4x4() * m_device_T_depthCamera;
 
             _UpdateDepth(tangoDepth, world_T_depthCamera);
@@ -278,8 +298,8 @@ namespace Tango
                 return;
             }
 
-            // NOTE: The 3D Reconstruction library does not handle left handed matrices correctly.  For now, transform
-            // into the Unity world space after extraction.
+            // The 3D Reconstruction library can not handle a left handed transformation during update.  Instead,
+            // transform into the Unity world space via the external_T_tango config.
             Matrix4x4 world_T_colorCamera = world_T_devicePose.ToMatrix4x4() * m_device_T_colorCamera;
 
             _UpdateColor(imageBuffer, world_T_colorCamera);
@@ -361,25 +381,13 @@ namespace Tango
             GridIndex gridIndex, Vector3[] vertices, Vector3[] normals, Color32[] colors, int[] triangles,
             out int numVertices, out int numTriangles)
         {
-            numVertices = 0;
-            numTriangles = 0;
-            int result = API.Tango3DR_extractPreallocatedMeshSegment(
-                m_context, ref gridIndex, vertices.Length, triangles.Length / 3, vertices, triangles, normals, colors,
-                out numVertices, out numTriangles);
+            APIMeshGCHandles pinnedHandles = APIMeshGCHandles.Alloc(vertices, normals, colors, triangles);
+            APIMesh mesh = APIMesh.FromArrays(vertices, normals, colors, triangles);
 
-            // NOTE: The 3D Reconstruction library does not handle left handed matrices correctly.  For now, transform
-            // into the Unity world space after extraction and account for winding order changes.
-            for (int it = 0; it < numVertices; ++it)
-            {
-                vertices[it] = m_unityWorld_T_startService.MultiplyPoint(vertices[it]);
-            }
-
-            for (int it = 0; it < numTriangles; ++it)
-            {
-                int temp = triangles[(it * 3) + 0];
-                triangles[(it * 3) + 0] = triangles[(it * 3) + 1];
-                triangles[(it * 3) + 1] = temp;
-            }
+            int result = API.Tango3DR_extractPreallocatedMeshSegment(m_context, ref gridIndex, ref mesh);
+            numVertices = (int)mesh.numVertices;
+            numTriangles = (int)mesh.numFaces;
+            pinnedHandles.Free();
 
             return (Status)result;
         }
@@ -407,26 +415,13 @@ namespace Tango
             Vector3[] vertices, Vector3[] normals, Color32[] colors, int[] triangles, out int numVertices,
             out int numTriangles)
         {
-            numVertices = 0;
-            numTriangles = 0;
+            APIMeshGCHandles pinnedHandles = APIMeshGCHandles.Alloc(vertices, normals, colors, triangles);
+            APIMesh mesh = APIMesh.FromArrays(vertices, normals, colors, triangles);
 
-            int result = API.Tango3DR_extractPreallocatedFullMesh(
-                m_context, vertices.Length, triangles.Length / 3, vertices, triangles, normals, colors,
-                out numVertices, out numTriangles);
-
-            // NOTE: The 3D Reconstruction library does not handle left handed matrices correctly.  For now, transform
-            // into the Unity world space after extraction and account for winding order changes.
-            for (int it = 0; it < numVertices; ++it)
-            {
-                vertices[it] = m_unityWorld_T_startService.MultiplyPoint(vertices[it]);
-            }
-            
-            for (int it = 0; it < numTriangles; ++it)
-            {
-                int temp = triangles[(it * 3) + 0];
-                triangles[(it * 3) + 0] = triangles[(it * 3) + 1];
-                triangles[(it * 3) + 1] = temp;
-            }
+            int result = API.Tango3DR_extractPreallocatedFullMesh(m_context, ref mesh);
+            numVertices = (int)mesh.numVertices;
+            numTriangles = (int)mesh.numFaces;
+            pinnedHandles.Free();
 
             return (Status)result;
         }
@@ -449,11 +444,11 @@ namespace Tango
         /// </param>
         /// <param name="numVoxels">Number of voxels filled out.</param>
         internal Status ExtractSignedDistanceVoxel(
-            GridIndex gridIndex, APISignedDistanceVoxel[] voxels, out int numVoxels)
+            GridIndex gridIndex, SignedDistanceVoxel[] voxels, out int numVoxels)
         {
             numVoxels = 0;
 
-            int result = API.Tango3DR_getVoxelGridSegment(m_context, ref gridIndex, voxels.Length, voxels);
+            int result = API.Tango3DR_extractPreallocatedVoxelGridSegment(m_context, ref gridIndex, voxels.Length, voxels);
             if (result == (int)Status.SUCCESS)
             {
                 // This is the current default number of voxels per grid volume.
@@ -673,11 +668,6 @@ namespace Tango
             m_device_T_depthCamera = device_T_imu * imu_T_depthCameraPose.ToMatrix4x4();
             m_device_T_colorCamera = device_T_imu * imu_T_colorCameraPose.ToMatrix4x4();
 
-            m_unityWorld_T_startService.SetColumn(0, new Vector4(1, 0, 0, 0));
-            m_unityWorld_T_startService.SetColumn(1, new Vector4(0, 0, 1, 0));
-            m_unityWorld_T_startService.SetColumn(2, new Vector4(0, 1, 0, 0));
-            m_unityWorld_T_startService.SetColumn(3, new Vector4(0, 0, 0, 1));
-
             // Update the camera intrinsics too.
             TangoCameraIntrinsics colorCameraIntrinsics = new TangoCameraIntrinsics();
             VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, colorCameraIntrinsics);
@@ -715,11 +705,23 @@ namespace Tango
         /// Corresponds to a Tango3DR_SignedDistanceVoxel.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
-        public struct APISignedDistanceVoxel
+        public struct SignedDistanceVoxel
         {
+            /// <summary>
+            /// The signed distance function's value, in normalized units.
+            /// 
+            /// The signed distance function is stored as a truncated signed distance function.  The floating point
+            /// value is represented as a signed integer where Int16.MinValue represents the most negative value 
+            /// possible and Int16.MaxValue represents the most positive value possible.
+            /// </summary>
             [MarshalAs(UnmanagedType.I2)]
             public Int16 sdf;
 
+            /// <summary>
+            /// Observation weight.
+            /// 
+            /// The greater this value, the more certain the system is about the value in sdf.
+            /// </summary>
             [MarshalAs(UnmanagedType.U2)]
             public UInt16 weight;
         }
@@ -789,6 +791,212 @@ namespace Tango
             public int format;
 
             public IntPtr data;
+        }
+
+        /// <summary>
+        /// Corresponds to a Tango3DR_Matrix3x3.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct APIMatrix3x3
+        {
+            [MarshalAs(UnmanagedType.R8)]
+            public double r00;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r10;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r20;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r01;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r11;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r21;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r02;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r12;
+
+            [MarshalAs(UnmanagedType.R8)]
+            public double r22;
+
+            /// <summary>
+            /// Set a row in the matrix.
+            /// </summary>
+            /// <param name="row">Row index to set, 0 to 2.</param>
+            /// <param name="value">Value to set.</param>
+            public void SetRow(int row, Vector3 value)
+            {
+                switch (row)
+                {
+                case 0:
+                    r00 = value.x;
+                    r01 = value.y;
+                    r02 = value.z;
+                    break;
+
+                case 1:
+                    r10 = value.x;
+                    r11 = value.y;
+                    r12 = value.z;
+                    break;
+
+                case 2:
+                    r20 = value.x;
+                    r21 = value.y;
+                    r22 = value.z;
+                    break;
+
+                default:
+                    Debug.Log("Unsupported row index.");
+                    break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Corresponds to a Tango3DR_Mesh.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct APIMesh
+        {
+            [MarshalAs(UnmanagedType.R8)]
+            public double timestamp;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 numVertices;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 numFaces;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 numTextures;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 maxNumVertices;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 maxNumFaces;
+
+            [MarshalAs(UnmanagedType.U4)]
+            public Int32 maxNumTextures;
+
+            public IntPtr vertices;
+            public IntPtr faces;
+            public IntPtr normals;
+            public IntPtr colors;
+            public IntPtr textureCoords;
+            public IntPtr textures;
+
+            /// <summary>
+            /// Build an APIMesh from the constituent arrays, pinning the arrays.  Make sure you've pinned the arrays
+            /// before calling this method.
+            /// </summary>
+            /// <returns>APIMesh ready to pass to C API.</returns>
+            /// <param name="vertices">Vertex array.</param>
+            /// <param name="normals">Normal array.</param>
+            /// <param name="colors">Color array.</param>
+            /// <param name="triangles">Index array.</param>
+            public static APIMesh FromArrays(Vector3[] vertices, Vector3[] normals, Color32[] colors, int[] triangles)
+            {
+                APIMesh mesh;
+                mesh.timestamp = 0;
+                mesh.numVertices = 0;
+                mesh.numFaces = 0;
+                mesh.numTextures = 0;
+                mesh.maxNumVertices = vertices.Length;
+                mesh.maxNumFaces = triangles.Length / 3;
+                mesh.maxNumTextures = 0;
+
+                mesh.vertices = _AddrOfOptionalArray(vertices);
+                mesh.faces = _AddrOfOptionalArray(triangles);
+                mesh.normals = _AddrOfOptionalArray(normals);
+                mesh.colors = _AddrOfOptionalArray(colors);
+                mesh.textureCoords = IntPtr.Zero;
+                mesh.textures = IntPtr.Zero;
+
+                return mesh;
+            }
+
+            /// <summary>
+            /// Get the address for the start of an Array, or IntPtr.Zero if the array is null.
+            /// </summary>
+            /// <returns>IntPtr representing the address of the start of the array.</returns>
+            /// <param name="array">Array to get the addres of.</param>
+            private static IntPtr _AddrOfOptionalArray(Array array)
+            {
+                if (array == null)
+                {
+                    return IntPtr.Zero;
+                }
+                else
+                {
+                    return Marshal.UnsafeAddrOfPinnedArrayElement(array, 0);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Contains all the GCHandles for pinning an APIMesh.
+        /// </summary>
+        private struct APIMeshGCHandles
+        {
+            /// <summary>
+            /// GCHandle for the vertices field.
+            /// </summary>
+            private GCHandle m_verticesGCHandle;
+
+            /// <summary>
+            /// GCHandle for the faces field.
+            /// </summary>
+            private GCHandle m_facesGCHandle;
+
+            /// <summary>
+            /// GCHandle for the normals field.
+            /// </summary>
+            private GCHandle m_normalsGCHandle;
+
+            /// <summary>
+            /// GCHandle for the colors field.
+            /// </summary>
+            private GCHandle m_colorsGCHandle;
+
+            /// <summary>
+            /// Pin all the arrays passed in.
+            /// </summary>
+            /// <returns>A single object that you can Free to unpin all.</returns>
+            /// <param name="vertices">Vertex array.</param>
+            /// <param name="normals">Normal array.</param>
+            /// <param name="colors">Color array.</param>
+            /// <param name="triangles">Index array.</param>
+            public static APIMeshGCHandles Alloc(
+                Vector3[] vertices, Vector3[] normals, Color32[] colors, int[] triangles)
+            {
+                APIMeshGCHandles handles;
+                handles.m_verticesGCHandle = GCHandle.Alloc(vertices, GCHandleType.Pinned);
+                handles.m_facesGCHandle = GCHandle.Alloc(triangles, GCHandleType.Pinned);
+                handles.m_normalsGCHandle = GCHandle.Alloc(normals, GCHandleType.Pinned);
+                handles.m_colorsGCHandle = GCHandle.Alloc(colors, GCHandleType.Pinned);
+
+                return handles;
+            }
+
+            /// <summary>
+            /// Call GCHandle.Free() on all the internal handles.
+            /// </summary>
+            public void Free()
+            {
+                m_verticesGCHandle.Free();
+                m_facesGCHandle.Free();
+                m_normalsGCHandle.Free();
+                m_colorsGCHandle.Free();
+            }
         }
 
         /// <summary>
@@ -870,7 +1078,7 @@ namespace Tango
             public static extern int Tango3DR_destroy(IntPtr context);
 
             [DllImport(TANGO_3DR_DLL)]
-            public static extern IntPtr Tango3DR_Config_create();
+            public static extern IntPtr Tango3DR_Config_create(Int32 config);
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_Config_destroy(IntPtr config);
@@ -885,6 +1093,9 @@ namespace Tango
             public static extern int Tango3DR_Config_setDouble(IntPtr config, string key, double value);
 
             [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_Config_setMatrix3x3(IntPtr config, string key, ref APIMatrix3x3 value);
+
+            [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_Config_getBool(IntPtr config, string key, out bool value);
 
             [DllImport(TANGO_3DR_DLL)]
@@ -892,6 +1103,9 @@ namespace Tango
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_Config_getDouble(IntPtr config, string key, out double value);
+
+            [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_Config_getMatrix3x3(IntPtr config, string key, out APIMatrix3x3 value);
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_GridIndexArray_destroy(IntPtr gridIndexArray);
@@ -911,17 +1125,14 @@ namespace Tango
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_extractPreallocatedMeshSegment(
-                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVertices, Int32 maxNumFaces, Vector3[] veritices,
-                int[] faces, Vector3[] normals, Color32[] colors, out Int32 numVertices, out Int32 numFaces);
+                IntPtr context, ref GridIndex gridIndex, ref APIMesh mesh);
 
             [DllImport(TANGO_3DR_DLL)]
-            public static extern int Tango3DR_extractPreallocatedFullMesh(
-                IntPtr context, Int32 maxNumVertices, Int32 maxNumFaces, Vector3[] veritices,
-                int[] faces, Vector3[] normals, Color32[] colors, out Int32 numVertices, out Int32 numFaces);
+            public static extern int Tango3DR_extractPreallocatedFullMesh(IntPtr context, ref APIMesh mesh);
 
             [DllImport(TANGO_3DR_DLL)]
-            public static extern int Tango3DR_getVoxelGridSegment(
-                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, APISignedDistanceVoxel[] voxels);
+            public static extern int Tango3DR_extractPreallocatedVoxelGridSegment(
+                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, SignedDistanceVoxel[] voxels);
             #else
             public static IntPtr Tango3DR_create(IntPtr config)
             {
@@ -933,7 +1144,7 @@ namespace Tango
                 return (int)Status.SUCCESS;
             }
 
-            public static IntPtr Tango3DR_Config_create()
+            public static IntPtr Tango3DR_Config_create(Int32 config)
             {
                 return IntPtr.Zero;
             }
@@ -958,6 +1169,11 @@ namespace Tango
                 return (int)Status.SUCCESS;
             }
 
+            public static int Tango3DR_Config_setMatrix3x3(IntPtr config, string key, ref APIMatrix3x3 value)
+            {
+                return (int)Status.SUCCESS;
+            }
+
             public static int Tango3DR_Config_getBool(IntPtr config, string key, out bool value)
             {
                 value = false;
@@ -973,6 +1189,13 @@ namespace Tango
             public static int Tango3DR_Config_getDouble(IntPtr config, string key, out double value)
             {
                 value = 0;
+                return (int)Status.SUCCESS;
+            }
+
+            public static int Tango3DR_Config_getMatrix3x3(IntPtr config, string key, out APIMatrix3x3 value)
+            {
+                value.r00 = value.r11 = value.r22 = 1;
+                value.r10 = value.r20 = value.r01 = value.r21 = value.r02 = value.r12 = 0;
                 return (int)Status.SUCCESS;
             }
 
@@ -1003,25 +1226,24 @@ namespace Tango
             }
 
             public static int Tango3DR_extractPreallocatedMeshSegment(
-                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVertices, Int32 maxNumFaces, Vector3[] veritices,
-                int[] faces, Vector3[] normals, Color32[] colors, out Int32 numVertices, out Int32 numFaces)
+                IntPtr context, ref GridIndex gridIndex, ref APIMesh mesh)
             {
-                numVertices = 0;
-                numFaces = 0;
+                mesh.numVertices = 0;
+                mesh.numFaces = 0;
+                mesh.numTextures = 0;
                 return (int)Status.SUCCESS;
             }
 
-            public static int Tango3DR_extractPreallocatedFullMesh(
-                IntPtr context, Int32 maxNumVertices, Int32 maxNumFaces, Vector3[] veritices, int[] faces,
-                Vector3[] normals, Color32[] colors, out Int32 numVertices, out Int32 numFaces)
+            public static int Tango3DR_extractPreallocatedFullMesh(IntPtr context, ref APIMesh mesh)
             {
-                numVertices = 0;
-                numFaces = 0;
+                mesh.numVertices = 0;
+                mesh.numFaces = 0;
+                mesh.numTextures = 0;
                 return (int)Status.SUCCESS;
             }
 
-            public static int Tango3DR_getVoxelGridSegment(
-                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, APISignedDistanceVoxel[] voxels)
+            public static int Tango3DR_extractPreallocatedVoxelGridSegment(
+                IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, SignedDistanceVoxel[] voxels)
             {
                 return (int)Status.SUCCESS;
             }

@@ -202,6 +202,18 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
+    /// Unity callback when the component gets destroyed.
+    /// </summary>
+    public void OnDestroy()
+    {
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
+        {
+            tangoApplication.Unregister(this);
+        }
+    }
+
+    /// <summary>
     /// OnGUI is called for rendering and handling GUI events.
     /// </summary>
     public void OnGUI()

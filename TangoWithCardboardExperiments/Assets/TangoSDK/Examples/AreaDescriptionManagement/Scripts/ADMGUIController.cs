@@ -149,7 +149,9 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         if (m_saveThread != null && m_saveThread.ThreadState != ThreadState.Running)
         {
             // After saving an Area Description, we reload the scene to restart the game.
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
         }
 
         // Pressing the back button should popup the management window if you are not in the management screen,
@@ -162,7 +164,9 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
             }
             else
             {
+                #pragma warning disable 618
                 Application.LoadLevel(Application.loadedLevel);
+                #pragma warning restore 618
             }
         }
     }
@@ -199,7 +203,9 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         {
             // When application is backgrounded, we reload the level because the Tango Service is disconected. All
             // learned area and placed marker should be discarded as they are not saved.
+            #pragma warning disable 618
             Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
         }
     }
 

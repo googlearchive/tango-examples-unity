@@ -328,6 +328,21 @@ public class MultiplayerCubeStackerUIController : Photon.PunBehaviour, ITangoAre
     }
 
     /// <summary>
+    /// Called after switching to a new MasterClient when the current one leaves.
+    /// </summary>
+    /// <remarks>
+    /// This is not called when this client enters a room.
+    /// The former MasterClient is still in the player list when this method get called.
+    /// </remarks>
+    /// <param name="newMasterClient">New master client.</param>
+    public override void OnMasterClientSwitched(PhotonPlayer newMasterClient)
+    {
+        // In the case of master client leave the room, we lost host that sharing Area Description. So, all client
+        // should quit the room too.
+        _QuitGame();
+    }
+
+    /// <summary>
     /// Photon networking callback. Called when a new player is joined the room.
     /// 
     /// We use this callback to notify master client to send over the Area Description File.

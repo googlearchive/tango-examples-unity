@@ -159,6 +159,17 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     }
 
     /// <summary>
+    /// Unity destroy function.
+    /// </summary>
+    public void OnDestroy()
+    {
+        if (m_tangoApplication != null)
+        {
+            m_tangoApplication.Unregister(this);
+        }
+    }
+
+    /// <summary>
     /// Unity Update callback.
     /// </summary>
     public void Update()

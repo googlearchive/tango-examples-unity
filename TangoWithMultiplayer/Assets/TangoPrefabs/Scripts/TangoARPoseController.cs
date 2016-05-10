@@ -162,6 +162,18 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
+    /// Unity callback when the component gets destroyed.
+    /// </summary>
+    public void OnDestroy()
+    {
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
+        {
+            tangoApplication.Unregister(this);
+        }
+    }
+
+    /// <summary>
     /// This is called when the permission granting process is finished.
     /// </summary>
     /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>

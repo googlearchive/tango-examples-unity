@@ -52,6 +52,17 @@ public class RelocalizingOverlay : MonoBehaviour, ITangoPose, ITangoLifecycle
     }
 
     /// <summary>
+    /// Unity destroy function.
+    /// </summary>
+    public void OnDestroy()
+    {
+        if (m_tangoApplication != null)
+        {
+            m_tangoApplication.Unregister(this);
+        }
+    }
+
+    /// <summary>
     /// OnTangoPoseAvailable is called from Tango when a new Pose is available.
     /// </summary>
     /// <param name="pose">The new Tango pose.</param>

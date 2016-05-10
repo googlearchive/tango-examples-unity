@@ -23,38 +23,16 @@ using UnityEditor;
 using UnityEngine;
 
 /// <summary>
-/// Build scripts for this specific project.  Uses BuildUtil.cs, which should be sharable across
-/// all projects.
-/// 
-/// To use this from the command line, run the following command:
-/// [FULLPATH_UNITY.APP]/Contents/MacOS/Unity -batchmode -projectPath [FULLPATH] -executeMethod [METHOD_TO_RUN] -quit
-/// 
-/// For example:
-/// /Applications/Unity/Unity.app/Contents/MacOS/Unity -batchmode -projectPath ~/Unity/tango-examples-unity/UnityExamples/ -executeMethod BuildTools.BuildAll -quit
-/// 
-/// For more info, goto [http://docs.unity3d.com/Manual/CommandLineArguments.html].
+/// Build scripts for this specific project.
 /// </summary>
 public class BuildTools
 {
-    private static BuildUtil.APKSettings multiplayerAPK = new BuildUtil.APKSettings
-    {
-        ProjectName = "Tango Multiplayer",
-        Icon = "Texture/multiplayer_logo.png",
-        Scenes = new string[]
-        {
-            "Scenes/AreaDescriptionPicker.unity",
-            "Scenes/MultiplayerCubeStacker.unity"
-        },
-        BundleIdentifier = "com.projecttango.multiplayerdemo"
-    };
-
     /// <summary>
-    /// Builds all the appropriate APKs for this project.
+    /// Fill out App-specific IDs.
     /// </summary>
-    [MenuItem("Tango/Build/All", false, 1)]
-    public static void BuildAll()
+    public static void FillAppID()
     {
-        string appId = File.ReadAllText(BuildUtil.FindKeystoreDirectory() + "/pun-app-id.txt");
+        string appId = File.ReadAllText(_FindKeystoreDirectory() + "/pun-app-id.txt");
 
         if (PhotonNetwork.PhotonServerSettings == null)
         {
@@ -67,7 +45,28 @@ public class BuildTools
         }
 
         PhotonNetwork.PhotonServerSettings.AppID = appId;
-        BuildUtil.BuildAPK(multiplayerAPK);
-        PhotonNetwork.PhotonServerSettings.AppID = string.Empty;
+        EditorUtility.SetDirty(PhotonNetwork.PhotonServerSettings);
+    }
+
+    /// <summary>
+    /// Searches up the directory hierarchy for a Keystore directory.
+    /// </summary>
+    /// <returns>Absolute path to the keystore directory or null if none is found.</returns>
+    private static string _FindKeystoreDirectory()
+    {
+        DirectoryInfo dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+        while (dir != null)
+        {
+            string keystoreDirName = dir.FullName + "/Keystore";
+            if (Directory.Exists(keystoreDirName))
+            {
+                return keystoreDirName;
+            }
+
+            dir = dir.Parent;
+        }
+
+        Debug.Log("Unable to find keystore");
+        return null;
     }
 }

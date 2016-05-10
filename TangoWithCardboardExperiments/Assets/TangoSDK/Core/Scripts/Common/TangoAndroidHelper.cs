@@ -36,6 +36,38 @@ public partial class AndroidHelper
     private static AndroidJavaObject m_tangoHelper = null;
 #endif
 
+    private static TangoServiceLifecycleListener m_tangoServiceLifecycle;
+
+    /// <summary>
+    /// Callback for when the Tango service gets connected.
+    /// </summary>
+    /// <param name="binder">Binder for the service.</param>
+    public delegate void OnTangoServiceConnected(AndroidJavaObject binder);
+
+    /// <summary>
+    /// Callback for when the Tango service gets disconnected.
+    /// </summary>
+    public delegate void OnTangoServiceDisconnected();
+
+    /// <summary>
+    /// Load the Tango library.
+    /// </summary>
+    /// <returns><c>true</c>, if the Tango library was loaded, <c>false</c> otherwise.</returns>
+    public static bool LoadTangoLibrary()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        AndroidJavaClass tangoInitialization = new AndroidJavaClass("com.projecttango.unity.TangoInitialization");
+        if (tangoInitialization != null)
+        {
+            return tangoInitialization.CallStatic<bool>("loadLibrary");
+        }
+
+        return false;
+#else
+        return true;
+#endif
+    }
+
     /// <summary>
     /// Gets the Java tango helper object.
     /// </summary>
@@ -152,6 +184,9 @@ public partial class AndroidHelper
     /// <returns><c>true</c> if the package is installed; otherwise, <c>false</c>.</returns>
     public static bool IsTangoCorePresent()
     {
+#if UNITY_EDITOR
+        return true;
+#else
         AndroidJavaObject unityActivity = GetUnityActivity();
         
         if (unityActivity != null)
@@ -163,6 +198,7 @@ public partial class AndroidHelper
         }
         
         return false;
+#endif
     }
 
     /// <summary>
@@ -175,32 +211,110 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Connects to the TangoCloudService.
+    /// Register a delegate to be called when connected to the Tango Android service.
     /// </summary>
-    /// <returns><c>true</c> if we successfully connect; otherwise, <c>false</c>.</returns>
-    internal static bool ConnectCloud()
+    /// <param name="onConnected">Delegate to get called.</param>
+    internal static void RegisterOnTangoServiceConnected(OnTangoServiceConnected onConnected)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (m_tangoServiceLifecycle == null)
+        {
+            _RegisterTangoServiceLifecycle();
+        }
+
+        m_tangoServiceLifecycle.m_onTangoServiceConnected += onConnected;
+#endif
+    }
+
+    /// <summary>
+    /// Register a delegate to be called when disconnected from the Tango Android service.
+    /// </summary>
+    /// <param name="onDisconnected">Delegate to get called.</param>
+    internal static void RegisterOnTangoServiceDisconnected(OnTangoServiceDisconnected onDisconnected)
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        if (m_tangoServiceLifecycle == null)
+        {
+            _RegisterTangoServiceLifecycle();
+        }
+
+        m_tangoServiceLifecycle.m_onTangoServiceDisconnected += onDisconnected;
+#endif
+    }
+
+    /// <summary>
+    /// Set the Tango binder.  Necessary to do before calling any Tango functions.
+    /// </summary>
+    /// <returns>TANGO_SUCCESS if binder was set correctly, otherwise TANGO_ERROR.</returns>
+    /// <param name="binder">Android service binder.</param>
+    internal static int TangoSetBinder(AndroidJavaObject binder)
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
 
         if (tangoObject != null)
         {
-            return tangoObject.Call<bool>("connectCloud");
+            return tangoObject.Call<int>("setBinder", binder);
+        }
+
+        return Tango.Common.ErrorType.TANGO_ERROR;
+    }
+
+    /// <summary>
+    /// Binds to the Tango Android Service.
+    /// </summary>
+    /// <returns><c>true</c>, if tango service connection was initiated, <c>false</c> otherwise.</returns>
+    internal static bool BindTangoService()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<bool>("bindTangoService");
         }
 
         return false;
     }
 
     /// <summary>
-    /// Disconnects from the TangoCloudService.
+    /// Unbinds from the Tango Android Service.
     /// </summary>
-    /// <returns><c>true</c> if we successfully disconnect; otherwise, <c>false</c>.</returns>
-    internal static bool DisconnectCloud()
+    internal static void UnbindTangoService()
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
 
         if (tangoObject != null)
         {
-            return tangoObject.Call<bool>("disconnectCloud");
+            tangoObject.Call("unbindTangoService");
+        }
+    }
+
+    /// <summary>
+    /// Binds to the Tango Cloud Android Service.
+    /// </summary>
+    /// <returns><c>true</c> if we successfully connect; otherwise, <c>false</c>.</returns>
+    internal static bool BindTangoCloudService()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<bool>("bindTangoCloudService");
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Unbinds from the Tango Cloud Android Service.
+    /// </summary>
+    /// <returns><c>true</c> if we successfully disconnect; otherwise, <c>false</c>.</returns>
+    internal static bool UnbindTangoCloudService()
+    {
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<bool>("unbindTangoCloudService");
         }
 
         return false;
@@ -249,6 +363,19 @@ public partial class AndroidHelper
     }
 
     /// <summary>
+    /// Registers Java callbacks to get Android events.
+    /// </summary>
+    private static void _RegisterTangoServiceLifecycle()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        m_tangoServiceLifecycle = new TangoServiceLifecycleListener();
+        tangoObject.Call("attachTangoServiceLifecycleListener", m_tangoServiceLifecycle);
+#endif
+    }
+
+    /// <summary>
     /// Holds the current and default orientation of the device.
     /// </summary>
     public struct TangoDeviceOrientation
@@ -262,5 +389,54 @@ public partial class AndroidHelper
         /// The current orientation of the device.
         /// </summary>
         public DeviceOrientation currentRotation;
+    }
+
+    /// <summary>
+    /// Listener class for Tango service lifecycle.  Maintains C# callbacks to get called when interesting
+    /// lifecycle events happen.
+    /// </summary>
+    private class TangoServiceLifecycleListener : AndroidJavaProxy
+    {
+        public OnTangoServiceConnected m_onTangoServiceConnected;
+        public OnTangoServiceDisconnected m_onTangoServiceDisconnected;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AndroidHelper+TangoServiceLifecycleListener"/> class.
+        /// </summary>
+        public TangoServiceLifecycleListener() : base("com.projecttango.unity.TangoUnityHelper$TangoServiceLifecycleListener")
+        {
+        }
+
+        /// <summary>
+        /// Method called from Java side when connected to the Tango service.
+        /// </summary>
+        /// <param name="binder">Android service binder.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
+                                                         "SA1300:ElementMustBeginWithUpperCaseLetter",
+                                                         Justification = "Android API.")]
+        public void onTangoServiceConnected(AndroidJavaObject binder)
+        {
+            Debug.Log("onTangoServiceConnected");
+
+            if (m_onTangoServiceConnected != null)
+            {
+                m_onTangoServiceConnected(binder);
+            }
+        }
+
+        /// <summary>
+        /// Method called from Java side when disconnected from the Tango service.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
+                                                         "SA1300:ElementMustBeginWithUpperCaseLetter",
+                                                         Justification = "Android API.")]
+        public void onTangoServiceDisconnected()
+        {
+            Debug.Log("onTangoServiceDisconnected");
+            if (m_onTangoServiceDisconnected != null)
+            {
+                m_onTangoServiceDisconnected();
+            }
+        }
     }
 }

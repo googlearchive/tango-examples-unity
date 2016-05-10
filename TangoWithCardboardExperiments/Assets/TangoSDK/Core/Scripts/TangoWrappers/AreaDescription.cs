@@ -103,6 +103,9 @@ namespace Tango
         /// <returns>A list of area descriptions, or <c>null</c> if the list could not be queried.</returns>
         public static AreaDescription[] GetList()
         {
+#if UNITY_EDITOR
+            return null;
+#else
             string[] uuids = _GetUUIDList();
             if (uuids == null || uuids.Length == 0)
             {
@@ -116,6 +119,7 @@ namespace Tango
             }
 
             return adfs;
+#endif
         }
 
         /// <summary>

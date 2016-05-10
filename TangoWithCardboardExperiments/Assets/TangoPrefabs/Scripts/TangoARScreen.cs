@@ -152,6 +152,18 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
             }
         }
     }
+
+    /// <summary>
+    /// Unity callback when the component gets destroyed.
+    /// </summary>
+    public void OnDestroy()
+    {
+        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        if (tangoApplication != null)
+        {
+            tangoApplication.Unregister(this);
+        }
+    }
     
     /// <summary>
     /// This is called when the permission granting process is finished.

@@ -54,10 +54,13 @@ public class SceneSwitcher : MonoBehaviour
                                        SCENE_BUTTON_GAP_Y + ((SCENE_BUTTON_GAP_Y + SCENE_BUTTON_SIZE_Y) * it),
                                        SCENE_BUTTON_SIZE_X,
                                        SCENE_BUTTON_SIZE_Y);
-            if (GUI.Button(buttonRect, "<size=20>" + m_sceneNames[it] + "</size>") && Application.loadedLevelName != m_sceneNames[it])
+            #pragma warning disable 618
+            if (GUI.Button(buttonRect, "<size=20>" + m_sceneNames[it] + "</size>")
+                && Application.loadedLevelName != m_sceneNames[it])
             {
                 Application.LoadLevel(m_sceneNames[it]);
             }
+            #pragma warning restore 618
         }
     }
 }
