@@ -85,7 +85,7 @@ namespace Tango
         /// </summary>
         /// <param name="cameraId">Camera identifier to get events for.</param>
         /// <param name="videoOverlayTexture">The video overlay texture to use.</param> 
-        internal virtual void SetCallbackTextureIdMethod(Tango.TangoEnums.TangoCameraId cameraId, 
+        internal void SetCallbackTextureIdMethod(Tango.TangoEnums.TangoCameraId cameraId, 
                                                          YUVTexture videoOverlayTexture)
         {
             if (videoOverlayTexture != null)
@@ -111,7 +111,7 @@ namespace Tango
         /// Unity thread.
         /// </summary>
         /// <param name="cameraId">Camera identifier to get events for.</param>
-        internal virtual void SetCallbackByteBufferMethod(Tango.TangoEnums.TangoCameraId cameraId)
+        internal void SetCallbackByteBufferMethod(Tango.TangoEnums.TangoCameraId cameraId)
         {
             m_previousImageBuffer = new TangoUnityImageData();
             m_onImageAvailable = new Tango.VideoOverlayProvider.TangoService_onImageAvailable(_OnImageAvailable);
@@ -123,6 +123,39 @@ namespace Tango
         /// </summary>
         internal void SendIfVideoOverlayAvailable()
         {
+#if UNITY_EDITOR
+            lock (m_lockObject)
+            {
+                if (VideoOverlayProvider.m_emulationIsDirty)
+                {
+                    VideoOverlayProvider.m_emulationIsDirty = false;
+                    
+                    if (m_shouldSendTextureIdMethodEvent != null)
+                    {
+                        m_shouldSendTextureIdMethodEvent = true;
+                    }
+
+                    if (m_onTangoImageAvailable != null || m_onTangoImageMultithreadedAvailable != null)
+                    {
+                        _FillEmulatedColorCameraData(m_previousImageBuffer);
+                        m_previousCameraId = TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR;
+                    }
+
+                    if (m_onTangoImageMultithreadedAvailable != null)
+                    {
+                        GCHandle pinnedColorBuffer = GCHandle.Alloc(m_previousImageBuffer.data, GCHandleType.Pinned);
+                        TangoImageBuffer emulatedImageBuffer = _GetEmulatedTangoImageBuffer(m_previousImageBuffer, pinnedColorBuffer);
+                        m_onTangoImageMultithreadedAvailable(m_previousCameraId, emulatedImageBuffer);
+                    }
+
+                    if (m_onTangoImageAvailable != null)
+                    {
+                        m_shouldSendByteBufferMethodEvent = true;
+                    }
+                }
+            }
+#endif
+
             lock (m_lockObject)
             {
                 if (m_onExperimentalTangoImageAvailable != null && m_shouldSendTextureIdMethodEvent)
@@ -260,5 +293,36 @@ namespace Tango
                 m_shouldSendTextureIdMethodEvent = true;
             }
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Fill out <c>colorCameraData</c> with emulated values from Tango.
+        /// </summary>
+        /// <param name="colorCameraData">The image data to fill out.</param>
+        private void _FillEmulatedColorCameraData(TangoUnityImageData colorCameraData)
+        {
+            VideoOverlayProvider.GetTangoEmulation(colorCameraData);
+        }
+
+        /// <summary>
+        /// It's backwards, but fill tango image buffer data with already-emulated data.
+        /// It is the responsibility of the caller to GC pin/free the colorImageData's data array.
+        /// </summary>
+        /// <returns>Emulated raw color buffer.</returns>
+        /// <param name="colorImageData">Emulated color buffer data.</param>>
+        /// <param name="pinnedColorBuffer">Pinned array of imageBuffer.data.</param>
+        private TangoImageBuffer _GetEmulatedTangoImageBuffer(TangoUnityImageData colorImageData, GCHandle pinnedColorBuffer)
+        {
+            TangoImageBuffer imageBuffer = new TangoImageBuffer();
+            imageBuffer.data = pinnedColorBuffer.AddrOfPinnedObject();
+            imageBuffer.width = colorImageData.width;
+            imageBuffer.height = colorImageData.height;
+            imageBuffer.stride = colorImageData.stride;
+            imageBuffer.format = colorImageData.format;
+            imageBuffer.timestamp = colorImageData.timestamp;
+            imageBuffer.frame_number = colorImageData.frame_number;
+            return imageBuffer;
+        }
+#endif
     }
 }

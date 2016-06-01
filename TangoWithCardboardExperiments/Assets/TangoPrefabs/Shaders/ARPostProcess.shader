@@ -16,67 +16,72 @@ SubShader
 {
 Pass 
 {
-    GLSLPROGRAM
-    uniform sampler2D _MainTex;
-    
-    varying vec4 textureCoordinates; 
+    CGPROGRAM
+    #pragma vertex vert
+    #pragma fragment frag
 
-    #ifdef VERTEX
-    void main()
+    struct appdata
     {
-        textureCoordinates = gl_MultiTexCoord0;
-        gl_Position = gl_ModelViewProjectionMatrix  * gl_Vertex;
-        gl_Position = vec4(gl_Position.x * 1.03, gl_Position.y * 1.03, 0, 1);
+        float4 vertex : POSITION;
+        float2 uv : TEXCOORD0;
+    };
+
+    struct v2f
+    {
+        float2 uv : TEXCOORD0;
+        float4 vertex : SV_POSITION;
+    };
+
+    v2f vert (appdata v)
+    {
+        v2f o;
+        o.uv = v.uv;
+        o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
+        o.vertex = float4(o.vertex.x * 1.03, o.vertex.y * 1.03, 0, 1);
+        return o;
     }
     
-    #endif
+    sampler2D _MainTex;
+    
+    float _Width;
+    float _Height;
+    float _Fx;
+    float _Fy;
+    float _Cx;
+    float _Cy;
+    float _K0;
+    float _K1;
+    float _K2;
 
-    #ifdef FRAGMENT
-    uniform float _Width;
-    uniform float _Height;
-    uniform float _Fx;
-    uniform float _Fy;
-    uniform float _Cx;
-    uniform float _Cy;
-    uniform float _K0;
-    uniform float _K1;
-    uniform float _K2;
-
-    void main()
+    fixed4 frag (v2f i) : SV_Target
     {
-        vec4 normalized_coords;
-        normalized_coords.s = (textureCoordinates.s * _Width - _Cx) / _Fx;
-        normalized_coords.t = (textureCoordinates.t * _Height - _Cy) / _Fy;
+        float4 normalized_coords;
+        normalized_coords.x = (i.uv.x * _Width - _Cx) / _Fx;
+        normalized_coords.y = (i.uv.y * _Height - _Cy) / _Fy;
         
-        float r_u2 = normalized_coords.s * normalized_coords.s +
-                normalized_coords.t * normalized_coords.t;
-        vec4 normalized_distorted_coords;
-        normalized_distorted_coords.s =
-            normalized_coords.s * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
-        normalized_distorted_coords.t =
-            normalized_coords.t * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
+        float r_u2 = normalized_coords.x * normalized_coords.x +
+                normalized_coords.y * normalized_coords.y;
+        float4 normalized_distorted_coords;
+        normalized_distorted_coords.x =
+            normalized_coords.x * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
+        normalized_distorted_coords.y =
+            normalized_coords.y * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
         
-        vec4 distorted_coords;
-        distorted_coords.s = normalized_distorted_coords.s * _Fx + _Cx;
-        distorted_coords.t = normalized_distorted_coords.t * _Fy + _Cy;
+        float4 distorted_coords;
+        distorted_coords.x = normalized_distorted_coords.x * _Fx + _Cx;
+        distorted_coords.y = normalized_distorted_coords.y * _Fy + _Cy;
         
-        distorted_coords.s = distorted_coords.s / _Width;
-        distorted_coords.t = distorted_coords.t / _Height;
+        distorted_coords.x = distorted_coords.x / _Width;
+        distorted_coords.y = distorted_coords.y / _Height;
         
 
         
-        gl_FragColor = texture2D(_MainTex, vec2(distorted_coords.s,
-            distorted_coords.t));
-            
-        if (distorted_coords.s < 0.0 || distorted_coords.s > 1.0 ||
-            distorted_coords.t < 0.0 || distorted_coords.t > 1.0) {
-            gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-            return;
-        }
+        fixed4 col = tex2D(_MainTex, float2(distorted_coords.x,
+            distorted_coords.y));
+        
+        return col;
     }
-    #endif
-
-    ENDGLSL
+    ENDCG
 }
 }
 }

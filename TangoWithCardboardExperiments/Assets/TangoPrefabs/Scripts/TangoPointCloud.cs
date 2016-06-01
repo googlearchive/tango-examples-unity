@@ -23,19 +23,22 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// Point cloud visualize using depth frame API.
+/// Utility functions for working with and visualizing point cloud data from the
+/// Tango depth API. Used by the Tango Point Cloud prefab to enable depth point
+/// functionality. 
 /// </summary>
 public class TangoPointCloud : MonoBehaviour, ITangoDepth
 {
     /// <summary>
-    /// If set, the point cloud's mesh gets updated (much slower, useful for debugging).
-    /// </summary>
-    public bool m_updatePointsMesh;
-
-    /// <summary>
-    /// If set, the point cloud will be transformed using ADF pose (device with respect to ADF).
+    /// If set, the point cloud will be transformed to be in the Area 
+    /// Description frame.
     /// </summary>
     public bool m_useAreaDescriptionPose;
+
+    /// <summary>
+    /// If set, update the point cloud's mesh (very slow, useful for debugging).
+    /// </summary>
+    public bool m_updatePointsMesh;
 
     /// <summary>
     /// The points of the point cloud, in world space.
@@ -64,9 +67,43 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     public float m_depthDeltaTime = 0.0f;
 
     /// <summary>
+    /// The position of the floor at y height when FindFloor has been called.
+    /// 
+    /// The default value is 0, even if no floor has been found. When FindFloor has completed successfully,
+    /// the result is assigned here.
+    /// </summary>
+    [HideInInspector]
+    public float m_floorPlaneY = 0.0f;
+
+    /// <summary>
+    /// Check if a floor has been found. 
+    /// 
+    /// The value is <c>true</c> if the method FindFloor has successfully found a floor, which is assigned 
+    /// to m_floorPlaneY. The value is always <c>false</c> if FindFloor has not been called.
+    /// </summary>
+    [HideInInspector]
+    public bool m_floorFound = false;
+
+    /// <summary>
     /// The maximum points displayed.  Just some const value.
     /// </summary>
     private const int MAX_POINT_COUNT = 61440;
+
+    /// <summary>
+    /// The minimum number of points near a world position y to determine that it is a reasonable floor.
+    /// </summary>
+    private const int RECOGNITION_THRESHOLD = 1000;
+    
+    /// <summary>
+    /// The minimum number of points near a world position y to determine that it is not simply noise points.
+    /// </summary>
+    private const int NOISE_THRESHOLD = 500;
+    
+    /// <summary>
+    /// The interval in meters between buckets of points. For example, a high sensitivity of 0.01 will group 
+    /// points into buckets every 1cm.
+    /// </summary>
+    private const float SENSITIVITY = 0.02f;
 
     private TangoApplication m_tangoApplication;
     
@@ -108,9 +145,21 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     private TangoDeltaPoseController m_tangoDeltaPoseController;
 
     /// <summary>
-    /// The lowest point in y in the point cloud used to remember the floor.
+    /// Set to <c>true</c> when currently attempting to find a floor using depth points, <c>false</c> when not
+    /// floor finding.
     /// </summary>
-    private float m_lowestPointY;
+    private bool m_findFloorWithDepth = false;
+
+    /// <summary>
+    /// Used for floor finding, container for the number of points that fall into a y bucket within a sensitivity range.
+    /// </summary>
+    private Dictionary<float, int> m_numPointsAtY;
+    
+    /// <summary>
+    /// Used for floor finding, the list of y value buckets that have sufficient points near that y position height
+    /// to determine that it not simply noise.
+    /// </summary>
+    private List<float> m_nonNoiseBuckets;
 
     /// @cond
     /// <summary>
@@ -137,6 +186,10 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
         m_mesh = GetComponent<MeshFilter>().mesh;
         m_mesh.Clear();
+
+        // Points used for finding floor plane.
+        m_numPointsAtY = new Dictionary<float, int>();
+        m_nonNoiseBuckets = new List<float>();
 
         m_renderer = GetComponent<Renderer>();
     }
@@ -229,9 +282,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
                 m_overallZ = m_overallZ / m_pointsCount;
                 m_depthTimestamp = tangoDepth.m_timestamp;
 
-                // Calculate the floor plane.
-                _SetLowestPointY();
-
                 if (m_updatePointsMesh)
                 {
                     // Need to update indicies too!
@@ -248,6 +298,12 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
 
                 // The color should be pose relative, we need to store enough info to go back to pose values.
                 m_renderer.material.SetMatrix("depthCameraTUnityWorld", unityWorldOffsetTDepthCamera.inverse);
+
+                // Try to find the floor using this set of depth points if requested.
+                if (m_findFloorWithDepth)
+                {
+                    _FindFloorWithDepth();
+                }
             }
             else
             {
@@ -260,8 +316,8 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// <summary>
     /// Finds the closest point from a point cloud to a position on screen.
     /// 
-    /// NOTE: This is slow because it looks at every single point in the point cloud.  Avoid
-    /// calling this more than once a frame.
+    /// This function is slow, as looks at every single point in the point
+    /// cloud. Avoid calling this more than once a frame.
     /// </summary>
     /// <returns>The index of the closest point, or -1 if not found.</returns>
     /// <param name="cam">The current camera.</param>
@@ -294,11 +350,14 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     }
 
     /// <summary>
-    /// Given a screen coordinate, find a plane that most closely fits depth values in that area.
+    /// Given a screen coordinate, finds a plane that most closely fits the
+    /// depth values in that area.
     /// 
-    /// This assumes you are using this in an AR context.
+    /// This function is slow, as looks at every single point in the point
+    /// cloud. Avoid calling this more than once a frame. This also assumes the
+    /// Unity camera intrinsics match the device's color camera.
     /// </summary>
-    /// <returns><c>true</c>, if plane was found, <c>false</c> otherwise.</returns>
+    /// <returns><c>true</c>, if plane was found; <c>false</c> otherwise.</returns>
     /// <param name="cam">The Unity camera.</param>
     /// <param name="pos">The point in screen space to perform detection on.</param>
     /// <param name="planeCenter">Filled in with the center of the plane in Unity world space.</param>
@@ -331,44 +390,13 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     }
 
     /// <summary>
-    /// Finds the floor plane based on the lowest saved point.
+    /// Start processing the point cloud depth points to find the position of the floor.
     /// </summary>
-    /// <returns><c>true</c>, if floor plane was found, <c>false</c> otherwise.</returns>
-    /// <param name="planePosY">Filled with the lowest saved point in y.</param>
-    /// <param name="plane">Filled with a new plane created with up vector and lowest y point.</param>
-    public bool FindFloorPlane(out float planePosY, out Plane plane)
+    public void FindFloor()
     {
-        planePosY = m_lowestPointY;
-        plane = new Plane(Vector3.up, new Vector3(0.0f, m_lowestPointY, 0.0f));
-
-        if (m_lowestPointY < float.MaxValue)
-        {
-            return true;
-        }
-        else 
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Finds the lowest point in y at 95th percentile and saves it.
-    /// </summary>
-    private void _SetLowestPointY()
-    {
-        List<float> yPoints = new List<float>(m_pointsCount);
-        for (int i = 0; i < m_pointsCount; i++)
-        {
-            yPoints.Add(m_points[i].y);
-        }
-
-        yPoints.Sort();
-        float yPos = yPoints[Mathf.FloorToInt(m_pointsCount * 0.05f)];
-
-        if (yPos < m_lowestPointY)
-        {
-            m_lowestPointY = yPos;
-        }
+        m_floorFound = false;
+        m_findFloorWithDepth = true;
+        m_floorPlaneY = 0.0f;
     }
 
     /// <summary>
@@ -381,18 +409,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
             return;
         }
 
-#if UNITY_EDITOR
-        // Constant matrixes representing just the convention swap.
-        m_imuTDevice.SetColumn(0, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_imuTDevice.SetColumn(1, new Vector4(-1.0f, 0.0f, 0.0f, 0.0f));
-        m_imuTDevice.SetColumn(2, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
-        m_imuTDevice.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-        
-        m_imuTDepthCamera.SetColumn(0, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_imuTDepthCamera.SetColumn(1, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_imuTDepthCamera.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
-        m_imuTDepthCamera.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-#else
         double timestamp = 0.0;
         TangoCoordinateFramePair pair;
         TangoPoseData poseData = new TangoPoseData();
@@ -408,12 +424,65 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
         pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH;
         PoseProvider.GetPoseAtTime(poseData, timestamp, pair);
         m_imuTDepthCamera = poseData.ToMatrix4x4();
-#endif
 
         // Also get the camera intrinsics
         m_colorCameraIntrinsics = new TangoCameraIntrinsics();
         VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, m_colorCameraIntrinsics);
 
         m_cameraDataSetUp = true;
+    }
+
+    /// <summary>
+    /// Use the last received set of depth points to find a reasonable floor.
+    /// </summary>
+    private void _FindFloorWithDepth()
+    {
+        m_numPointsAtY.Clear();
+        m_nonNoiseBuckets.Clear();
+        
+        // Count each depth point into a bucket based on its world position y value.
+        for (int i = 0; i < m_pointsCount; i++)
+        {
+            Vector3 point = m_points[i];
+            if (!point.Equals(Vector3.zero))
+            {
+                // Group similar points into buckets based on sensitivity. 
+                float roundedY = Mathf.Round(point.y / SENSITIVITY) * SENSITIVITY;
+                if (!m_numPointsAtY.ContainsKey(roundedY))
+                {
+                    m_numPointsAtY.Add(roundedY, 0);
+                }
+                
+                m_numPointsAtY[roundedY]++;
+
+                // Check if the y plane is a non-noise plane.
+                if (m_numPointsAtY[roundedY] > NOISE_THRESHOLD && !m_nonNoiseBuckets.Contains(roundedY))
+                {
+                    m_nonNoiseBuckets.Add(roundedY);
+                }
+            }
+        }
+        
+        // Find a plane at the y value. The y value must be below the camera y position.
+        m_nonNoiseBuckets.Sort();
+        for (int i = 0; i < m_nonNoiseBuckets.Count; i++)
+        {
+            float yBucket = m_nonNoiseBuckets[i];
+            int numPoints = m_numPointsAtY[yBucket];
+            if (numPoints > RECOGNITION_THRESHOLD && yBucket < Camera.main.transform.position.y)
+            {
+                // Reject the plane if it is not the lowest.
+                if (yBucket > m_nonNoiseBuckets[0])
+                {
+                    return;
+                }
+                
+                m_floorFound = true;
+                m_findFloorWithDepth = false;
+                m_floorPlaneY = yBucket;
+                m_numPointsAtY.Clear();
+                m_nonNoiseBuckets.Clear();
+            }
+        }
     }
 }

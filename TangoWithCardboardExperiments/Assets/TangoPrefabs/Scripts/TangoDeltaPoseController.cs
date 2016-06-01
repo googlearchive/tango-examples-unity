@@ -23,11 +23,12 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// This is a more advanced movement controller based on the poses returned
-/// from the Tango service.
-/// 
-/// This updates the position with deltas, so movement can be done using a
-/// CharacterController, or physics, or anything else that wants deltas.
+/// An advanced movement controller which updates the position and rotation of a
+/// GameObject's transform by applying deltas based on the poses returned from
+/// Tango. This allows you to control movement using movement deltas, e.g. with
+/// a CharacterController or physics. The Tango Delta Camera prefab uses this
+/// controller with an optional Character Controller to control the Unity camera
+/// with a Tango device's movement.
 /// </summary>
 public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
 {
@@ -44,37 +45,36 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     public int m_poseCount;
 
     /// <summary>
-    /// The most recent pose status received.
+    /// The status of the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public TangoEnums.TangoPoseStatusType m_poseStatus;
 
     /// <summary>
-    /// The most recent pose timestamp received.
+    /// The timestamp of the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public float m_poseTimestamp;
 
     /// <summary>
-    /// The most recent Tango rotation.
-    /// 
-    /// This is different from the pose's rotation because it takes into
-    /// account teleporting and the clutch.
+    /// The absolute target position for this controller. This is based on the
+    /// most recent pose recieved from the Tango service, and adjusted for any
+    /// offsets from calling <c>SetPose</c> or using the clutch feature.
     /// </summary>
     [HideInInspector]
     public Vector3 m_tangoPosition;
     
     /// <summary>
-    /// The most recent Tango position.
-    /// 
-    /// This is different from the pose's position because it takes into
-    /// account teleporting and the clutch.
+    /// The absolute target rotation for this controller. This is based on the
+    /// most recent pose recieved from the Tango service, and adjusted for any
+    /// offsets from calling <c>SetPose()</c> or using the clutch feature.
     /// </summary>
     [HideInInspector]
     public Quaternion m_tangoRotation;
 
     /// <summary>
-    /// If set, use the character controller to move the object.
+    /// If set, use the Move function of the CharacterController attached to the
+    /// parent object to update the position.
     /// </summary>
     public bool m_characterMotion;
 
@@ -84,23 +84,19 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     public bool m_enableClutchUI;
 
     /// <summary>
-    /// If set, this contoller will use the Device with respect Area Description frame pose.
+    /// If set, the initial pose uses the Area Description base frame.
     /// </summary>
     public bool m_useAreaDescriptionPose;
 
     /// <summary>
-    /// The previous Tango's position.
-    /// 
-    /// This is different from the pose's position because it takes into
-    /// account teleporting and the clutch.
+    /// The previous target position for this controller. Used to calculate
+    /// movement deltas.
     /// </summary>
     private Vector3 m_prevTangoPosition;
 
     /// <summary>
-    /// The previous Tango's rotation.
-    /// 
-    /// This is different from the pose's rotation because it takes into
-    /// account teleporting and the clutch.
+    /// The previous target rotation for this controller. Used to calculate
+    /// movement deltas.
     /// </summary>
     private Quaternion m_prevTangoRotation;
 
@@ -130,10 +126,10 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     /// <summary>
     /// Gets or sets a value indicating whether the clutch is active.
     /// 
-    /// When the clutch is active, the Tango device can be moved and rotated
-    /// without the controller actually moving.
+    /// If the clutch is active, the controller ignores device movement and yaw,
+    /// but follows pitch and roll to keep the ground plane level.
     /// </summary>
-    /// <value><c>true</c> if clutch active; otherwise, <c>false</c>.</value>
+    /// <value><c>true</c> if the clutch is active; <c>false</c> otherwise.</value>
     public bool ClutchActive
     {
         get
@@ -153,9 +149,15 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     }
 
     /// <summary>
-    /// Gets the unity world offset which can be then multiplied to any transform to apply this offset.
+    /// Gets the TRS matrix for the offset between the pose returned by the 
+    /// Tango service and the desired pose in the Unity world. If the only 
+    /// source of movement are position and rotation updates from the Tango
+    /// service, there is no offset and this returns an identity matrix. If
+    /// other movement is applied (i.e. from activating the clutch or calling
+    /// <c>SetPose</c>), this returns a matrix which can be multiplied to a 
+    /// transform to apply the offset.
     /// </summary>
-    /// <value>The unity world offset.</value>
+    /// <value>The Unity world offset.</value>
     public Matrix4x4 UnityWorldOffset
     {
         get
@@ -278,7 +280,9 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
 
     /// @endcond
     /// <summary>
-    /// Sets the pose on this component.  Future Tango pose updates will move relative to this pose.
+    /// Sets the absolute position and yaw of the GameObject this controller is
+    /// attached to. Pitch and roll from the rotation are ignored. Future
+    /// movement will be relative to this new location.
     /// </summary>
     /// <param name="pos">New position.</param>
     /// <param name="quat">New rotation.</param>

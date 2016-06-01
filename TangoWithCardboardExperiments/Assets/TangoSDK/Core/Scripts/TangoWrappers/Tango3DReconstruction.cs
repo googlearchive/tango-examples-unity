@@ -40,12 +40,12 @@ namespace Tango
     public class Tango3DReconstruction : IDisposable, ITangoLifecycle, ITangoDepthMultithreaded, ITangoVideoOverlayMultithreaded
     {
         /// <summary>
-        /// If set 3D reconstruction will happen in the area description's reference frame.
+        /// If set 3D Reconstruction will happen in the area description's reference frame.
         /// </summary>
         internal bool m_useAreaDescriptionPose;
 
         /// <summary>
-        /// If set, 3D reconstruction will pass color information into the reconstruction.
+        /// If set, 3D Reconstruction will pass color information into the reconstruction.
         /// </summary>
         internal bool m_sendColorToUpdate;
 
@@ -65,7 +65,7 @@ namespace Tango
         private object m_lockObject = new object();
 
         /// <summary>
-        /// Called when the 3D reconstruction is dirty.
+        /// Called when the 3D Reconstruction is dirty.
         /// </summary>
         private OnTango3DReconstructionGridIndiciesDirtyEventHandler m_onGridIndicesDirty;
 
@@ -108,7 +108,7 @@ namespace Tango
         private bool m_mostRecentDepthIsValid;
 
         /// <summary>
-        /// If true, 3D reconstruction will be updated with depth.  Otherwise, it will not.
+        /// If true, 3D Reconstruction will be updated with depth.  Otherwise, it will not.
         /// </summary>
         private bool m_enabled = true;
 
@@ -149,6 +149,7 @@ namespace Tango
             SUCCESS = 0
         }
 
+        /// @cond
         /// <summary>
         /// Corresponds to a Tango3DR_ConfigType.
         /// </summary>
@@ -305,8 +306,9 @@ namespace Tango
             _UpdateColor(imageBuffer, world_T_colorCamera);
         }
 
+        /// @endcond
         /// <summary>
-        /// Set if the 3DReconstruction is enabled or not.  If disabled, the 3D reconstruction will not get updated.
+        /// Set if the 3DReconstruction is enabled or not.  If disabled, the 3D Reconstruction will not get updated.
         /// </summary>
         /// <param name="enabled">If set to <c>true</c> enabled.</param>
         internal void SetEnabled(bool enabled)
@@ -393,7 +395,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Extract a mesh for the entire 3D reconstruction, into a suitable format for Unity Mesh.
+        /// Extract a mesh for the entire 3D Reconstruction, into a suitable format for Unity Mesh.
         /// </summary>
         /// <returns>
         /// Returns Status.SUCCESS if the mesh is fully extracted and stored in the arrays.  In this case, numVertices 
@@ -459,7 +461,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Clear the current mesh in the 3D reconstruction.
+        /// Clear the current mesh in the 3D Reconstruction.
         /// </summary>
         internal void Clear()
         {
@@ -686,7 +688,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Indexes into the 3D reconstruction mesh's grid cells.
+        /// Indexes into the 3D Reconstruction mesh's grid cells.
         /// </summary>
         [StructLayout(LayoutKind.Sequential)]
         public struct GridIndex

@@ -25,7 +25,7 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper
 {
-    internal const int TANGO_MINIMUM_VERSION_CODE = 6804;
+    internal const int TANGO_MINIMUM_VERSION_CODE = 9377;
 
     private const string PERMISSION_REQUEST_ACTIVITY = "com.google.atap.tango.RequestPermissionActivity";
     private const string TANGO_APPLICATION_ID = "com.projecttango.tango";
@@ -207,7 +207,11 @@ public partial class AndroidHelper
     /// <returns><c>true</c> if the Tango Core is up to date; otherwise, <c>false</c>.</returns>
     public static bool IsTangoCoreUpToDate()
     {
+#if UNITY_EDITOR
+        return true;
+#else
         return GetVersionCode(TANGO_APPLICATION_ID) >= TANGO_MINIMUM_VERSION_CODE;
+#endif
     }
 
     /// <summary>

@@ -62,7 +62,32 @@ namespace Tango
         public bool m_autoConnectToService = false;
 
         public bool m_allowOutOfDateTangoAPI = false;
-        public GameObject m_testEnvironment;
+#if UNITY_EDITOR
+        /// <summary>
+        /// Mesh used in emulating the physical world 
+        /// (e.g. depth and color camera data).
+        /// </summary>
+        public Mesh m_emulationEnvironment;
+
+        /// <summary>
+        /// Optional texture to be applied to emulation environment mesh.
+        /// </summary>
+        public Texture m_emulationEnvironmentTexture;
+
+        /// <summary>
+        /// If true, use the more performance-demanding aspects of tango emulation
+        /// (Currently, depth and color camera).
+        /// </summary>
+        public bool m_doSlowEmulation;
+
+        /// <summary>
+        /// Whether the emulation environment mesh should be lit
+        /// (For example, a scanned/generated mesh of a room with color data
+        /// should not be virtually lit, because it already represents real
+        /// lighting).
+        /// </summary>
+        public bool m_emulationVideoOverlaySimpleLighting;
+#endif
 
         public bool m_enableMotionTracking = true;
         public bool m_motionTrackingAutoReset = true;
@@ -564,7 +589,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Clear the 3D reconstruction data.  The reconstruction will start fresh.
+        /// Clear the 3D Reconstruction data.  The reconstruction will start fresh.
         /// </summary>
         public void Tango3DRClear()
         {
@@ -601,7 +626,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Extract a single mesh for the entire 3D reconstruction state.
+        /// Extract a single mesh for the entire 3D Reconstruction state.
         /// </summary>
         /// <returns>Status of the extraction.</returns>
         /// <param name="vertices">Filled out with extracted vertices.</param>
@@ -656,7 +681,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Enable or disable the 3D reconstruction.
+        /// Enable or disable the 3D Reconstruction.
         /// </summary>
         /// <param name="enabled">If set to <c>true</c> enabled.</param>
         public void Set3DReconstructionEnabled(bool enabled)
@@ -1412,7 +1437,20 @@ namespace Tango
             TangoSupport.UpdateCurrentRotationIndex();
 
 #if UNITY_EDITOR
-            EmulatedEnvironmentRenderHelper.InitForEnvironment(m_testEnvironment);
+            if (m_doSlowEmulation && (m_enableDepth || m_enableVideoOverlay))
+            {
+                if (m_emulationEnvironment == null)
+                {
+                    Debug.LogError("No Mesh for Emulation assigned on the Tango Application (commonly in the Tango Manager prefab)."
+                                   + " Expect blank camera and/or depth frames.");
+                }
+
+                EmulatedEnvironmentRenderHelper.InitForEnvironment(m_emulationEnvironment, m_emulationEnvironmentTexture, m_emulationVideoOverlaySimpleLighting);
+            }
+            else
+            {
+                EmulatedEnvironmentRenderHelper.Clear();
+            }
 #endif
         }
 
@@ -1555,10 +1593,21 @@ namespace Tango
 
             // Update any emulation
 #if UNITY_EDITOR
-            PoseProvider.UpdateTangoEmulation();
-            if (m_enableDepth && m_testEnvironment != null)
+            if(m_isServiceConnected)
             {
-                DepthProvider.UpdateTangoEmulation();
+                PoseProvider.UpdateTangoEmulation();
+                if (m_doSlowEmulation)
+                {
+                    if (m_enableDepth)
+                    {
+                        DepthProvider.UpdateTangoEmulation();
+                    }
+
+                    if(m_enableVideoOverlay)
+                    {
+                        VideoOverlayProvider.UpdateTangoEmulation(m_videoOverlayUseByteBufferMethod);
+                    }
+                }
             }
 #endif
 

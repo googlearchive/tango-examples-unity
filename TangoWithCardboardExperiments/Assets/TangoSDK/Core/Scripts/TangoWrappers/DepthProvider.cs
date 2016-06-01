@@ -31,12 +31,19 @@ namespace Tango
     /// </summary>
     internal class DepthProvider
     {
+#if UNITY_EDITOR
+        /// <summary>
+        /// INTERNAL USE: Flag set to true whenever emulated values have been updated.
+        /// </summary>
+        internal static bool m_emulationIsDirty;
+#endif
+
         private const float MIN_POINT_DISTANCE = 0.5f;
         private const float MAX_POINT_DISTANCE = 5f;
         private const int NUM_X_DEPTH_SAMPLES = 120;
         private const int NUM_Y_DEPTH_SAMPLES = 80;
         
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         /// <summary>
         /// The emulated point cloud.  Used for Tango emulation on PC.
         /// </summary>
@@ -51,17 +58,17 @@ namespace Tango
         /// Texture used to capture emulated depth info from render target.
         /// </summary>
         private static Texture2D m_emulationCaptureTexture = null;
-        
-        /// <summary>
-        /// Shader used to render environment for Tango emulation on PC.
-        /// </summary>
-        private static Shader m_emulatedDepthShader = null;
 
         /// <summary>
-        /// The theoretical capture time of most recent emulated depth frame. 
+        /// The theoretical capture time of most recent emulated depth frame.
         /// </summary>
         private static float m_lastDepthEmulationTime;
-        #endif
+
+        /// <summary>
+        /// Whether resources needed for emulation have been created.
+        /// </summary>
+        private static bool m_emulationIsInitialized = false;
+#endif
 
         /// <summary>
         /// Tango depth C callback function signature.
@@ -91,15 +98,18 @@ namespace Tango
 #if UNITY_EDITOR
         /// <summary>
         /// INTERNAL USE: Update the Tango emulation state for depth data.
-        /// 
-        /// Make this this is only called once per frame.
         /// </summary>
         internal static void UpdateTangoEmulation()
         {
             m_emulatedPointCloud.Clear();
 
             // Timestamp shall be something in the past, and we'll emulate the depth cloud based on it.
-            m_lastDepthEmulationTime = PoseProvider.GetTimestampForDepthEmulation();
+            if (!PoseProvider.GetTimestampForDepthEmulation(out m_lastDepthEmulationTime))
+            {
+                Debug.LogError("Couldn't get a valid timestamp with which to emulate depth data. "
+                               + "Depth emulation will be skipped this frame.");
+                return;
+            }
 
             // Get emulated position and rotation in Unity space.
             TangoPoseData poseData = new TangoPoseData();
@@ -118,29 +128,15 @@ namespace Tango
             TangoSupport.TangoPoseToWorldTransform(poseData, out position, out rotation);
 
             // Instantiate any resources that we haven't yet.
-            if (m_emulatedDepthTexture == null)
+            if(!m_emulationIsInitialized)
             {
-                m_emulatedDepthTexture = new RenderTexture(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, 24, RenderTextureFormat.ARGB32);
-            }
-
-            if (m_emulationCaptureTexture == null)
-            {
-                m_emulationCaptureTexture = new Texture2D(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, TextureFormat.ARGB32, false);
-            }
-
-            if (m_emulatedDepthShader == null)
-            {
-                // Find depth shader by searching for it in project.
-                string[] foundAssetGuids = UnityEditor.AssetDatabase.FindAssets("DepthEmulation t:Shader");
-                if (foundAssetGuids.Length > 0)
-                {
-                    string assetPath = UnityEditor.AssetDatabase.GUIDToAssetPath(foundAssetGuids[0]);
-                    m_emulatedDepthShader = UnityEditor.AssetDatabase.LoadAssetAtPath(assetPath, typeof(Shader)) as Shader;
-                }
+                _InitializeResourcesForEmulation();
+                m_emulationIsInitialized = true;
             }
 
             // Render emulated depth camera data.
-            EmulatedEnvironmentRenderHelper.RenderEmulatedEnvironment(m_emulatedDepthTexture, m_emulatedDepthShader,
+            EmulatedEnvironmentRenderHelper.RenderEmulatedEnvironment(m_emulatedDepthTexture,
+                                                                      EmulatedEnvironmentRenderHelper.EmulatedDataType.DEPTH,
                                                                       position, rotation);
             
             // Capture rendered depth points from texture.
@@ -181,6 +177,8 @@ namespace Tango
                     }
                 }
             }
+
+            m_emulationIsDirty = true;
         }
 
         /// <summary>
@@ -192,6 +190,16 @@ namespace Tango
         {
             timestamp = m_lastDepthEmulationTime;
             return m_emulatedPointCloud;
+        }
+
+        /// <summary>
+        /// Create any resources needed for emulation.
+        /// </summary>
+        private static void _InitializeResourcesForEmulation()
+        {
+            m_emulatedDepthTexture = new RenderTexture(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, 24, RenderTextureFormat.ARGB32);
+
+            m_emulationCaptureTexture = new Texture2D(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, TextureFormat.ARGB32, false);
         }
 #endif
 

@@ -47,7 +47,7 @@ namespace Tango
         /// NOTE: Tango event callbacks happen on a different thread than the main
         /// Unity thread.
         /// </summary>
-        internal virtual void SetCallback()
+        internal void SetCallback()
         {
             m_onEventAvaialableCallback = new TangoEvents.TangoService_onEventAvailable(_onEventAvailable);
             TangoEvents.SetCallback(m_onEventAvaialableCallback);

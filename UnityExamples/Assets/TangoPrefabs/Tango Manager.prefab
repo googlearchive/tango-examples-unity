@@ -41,6 +41,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_allowOutOfDateTangoAPI: 0
+  m_emulationEnvironment: {fileID: 4300002, guid: e80bac5c99a63412b8472d348c3a51ce,
+    type: 3}
+  m_doSlowEmulation: 1
+  m_emulationVideoOverlaySimpleLighting: 1
   m_enableMotionTracking: 1
   m_enableDepth: 0
   m_enableVideoOverlay: 0

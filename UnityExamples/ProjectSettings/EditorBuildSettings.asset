@@ -23,3 +23,5 @@ EditorBuildSettings:
     path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithPhysics.unity
   - enabled: 0
     path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshOcclusion.unity
+  - enabled: 0
+    path: Assets/TangoSDK/Examples/Scenes/ExperimentalFloorFinding.unity

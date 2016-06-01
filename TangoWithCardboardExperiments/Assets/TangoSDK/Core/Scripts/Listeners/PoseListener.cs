@@ -67,24 +67,28 @@ namespace Tango
         internal void SendPoseIfAvailable(bool emulateAreaDescriptions)
         {
 #if UNITY_EDITOR
-            PoseProvider.UpdateTangoEmulation();
             lock (m_lockObject)
             {
-                if (m_onTangoPoseAvailable != null)
+                if (PoseProvider.m_emulationIsDirty)
                 {
-                    TangoCoordinateFramePair framePair;
+                    PoseProvider.m_emulationIsDirty = false;
 
-                    framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
-                    framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-                    PoseProvider.GetPoseAtTime(m_motionTrackingData, 0, framePair);
-                    m_isMotionTrackingPoseAvailable = true;
-
-                    if (emulateAreaDescriptions)
+                    if (m_onTangoPoseAvailable != null)
                     {
-                        framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                        TangoCoordinateFramePair framePair;
+
+                        framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
                         framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-                        PoseProvider.GetPoseAtTime(m_areaLearningData, 0, framePair);
-                        m_isAreaLearningPoseAvailable = true;
+                        PoseProvider.GetPoseAtTime(m_motionTrackingData, 0, framePair);
+                        m_isMotionTrackingPoseAvailable = true;
+
+                        if (emulateAreaDescriptions)
+                        {
+                            framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                            framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+                            PoseProvider.GetPoseAtTime(m_areaLearningData, 0, framePair);
+                            m_isAreaLearningPoseAvailable = true;
+                        }
                     }
                 }
             }
