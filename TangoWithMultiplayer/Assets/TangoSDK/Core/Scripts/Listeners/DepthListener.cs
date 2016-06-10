@@ -65,7 +65,7 @@ namespace Tango
         /// NOTE: Tango depth callbacks happen on a different thread than the main
         /// Unity thread.
         /// </summary>
-        internal virtual void SetCallback()
+        internal void SetCallback()
         {
             m_tangoDepth = new TangoUnityDepth();
             m_onDepthAvailableCallback = new Tango.DepthProvider.TangoService_onDepthAvailable(_OnDepthAvailable);
@@ -80,23 +80,28 @@ namespace Tango
 #if UNITY_EDITOR
             lock (m_lockObject)
             {
-                if (m_onTangoDepthAvailable != null || m_onTangoDepthMultithreadedAvailable != null)
+                if (DepthProvider.m_emulationIsDirty)
                 {
-                    _FillEmulatedPointCloudData(m_tangoDepth);
-                }
+                    DepthProvider.m_emulationIsDirty = false;
 
-                if (m_onTangoDepthMultithreadedAvailable != null)
-                {
-                    // Pretend to be making a call from unmanaged code.
-                    GCHandle pinnedPoints = GCHandle.Alloc(m_tangoDepth.m_points, GCHandleType.Pinned);
-                    TangoXYZij emulatedXyzij = _GetEmulatedRawXyzijData(m_tangoDepth, pinnedPoints);
-                    m_onTangoDepthMultithreadedAvailable(emulatedXyzij);
-                    pinnedPoints.Free();
-                }
+                    if (m_onTangoDepthAvailable != null || m_onTangoDepthMultithreadedAvailable != null)
+                    {
+                        _FillEmulatedPointCloudData(m_tangoDepth);
+                    }
 
-                if (m_onTangoDepthAvailable != null)
-                {
-                    m_isDirty = true;
+                    if (m_onTangoDepthMultithreadedAvailable != null)
+                    {
+                        // Pretend to be making a call from unmanaged code.
+                        GCHandle pinnedPoints = GCHandle.Alloc(m_tangoDepth.m_points, GCHandleType.Pinned);
+                        TangoXYZij emulatedXyzij = _GetEmulatedRawXyzijData(m_tangoDepth, pinnedPoints);
+                        m_onTangoDepthMultithreadedAvailable(emulatedXyzij);
+                        pinnedPoints.Free();
+                    }
+
+                    if (m_onTangoDepthAvailable != null)
+                    {
+                        m_isDirty = true;
+                    }
                 }
             }
 #endif

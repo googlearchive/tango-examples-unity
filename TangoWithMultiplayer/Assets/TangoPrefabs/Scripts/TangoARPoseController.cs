@@ -23,69 +23,90 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// This is a movement controller based on the poses returned from the Tango service, using the correct timing needed
-/// for augmented reality.
+/// A movement controller that automatically sets the position and rotation of 
+/// the GameObject this is attached to. Movement matches what comes from Tango
+/// and is syncronized with the color camera. Used by the Tango AR Camera
+/// prefab to provide an augmented reality experience.
 /// </summary>
 [RequireComponent(typeof(TangoARScreen))]
 public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
 {
     /// <summary>
-    /// If set, this contoller will use the Device with respect Area Description frame pose.
+    /// If set, use the Area Description base frame for the pose.
     /// </summary>
     public bool m_useAreaDescriptionPose = false;
 
     /// <summary>
-    /// Total number of poses ever applied by this controller.
+    /// When enabled (which is the default), pose positions are based on the 
+    /// timestamp of the most recent video camera update.
+    /// 
+    /// Can be disabled for whenever this behaviour is not desired: For instance, in
+    /// an application where only some segments of the experience display an
+    /// active camera feed.
+    /// </summary>
+    [Tooltip("This should always be enabled when using AR. Can be disabled "
+             + "to get smoother motion in non-AR parts of an app.")]
+    public bool m_syncToARScreen = true;
+
+    /// <summary>
+    /// The number of poses applied by this controller. Resets to 0 if motion
+    /// tracking goes invalid or is reset.
     /// </summary>
     [HideInInspector]
     public int m_poseCount;
 
     /// <summary>
-    /// The most recent pose status applied.
+    /// The status of the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public TangoEnums.TangoPoseStatusType m_poseStatus;
 
     /// <summary>
-    /// The most recent pose timestamp applied.
+    /// The timestamp of the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public double m_poseTimestamp;
 
     /// <summary>
-    /// The most recent Tango rotation.
+    /// The position from the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public Vector3 m_tangoPosition;
 
     /// <summary>
-    /// The most recent Tango position.
+    /// The rotation from the most recent pose used by this controller.
     /// </summary>
     [HideInInspector]
     public Quaternion m_tangoRotation;
 
+    // We use multiple matrix transformations to convert a pose from the Tango
+    // coordinate system to the Unity coordinate system.
+    // The full equation is:
+    //     Matrix4x4 uwTuc = uwTss * ssTd * dTuc;
+    //
+    // uwTuc: The Unity camera with respect to the Unity world coordinate frame; 
+    //        this is the desired matrix.
+    // uwTss: A constant matrix converting the start of service coordinate frame 
+    //        to the Unity world coordinate frame.
+    // ssTd:  The device frame with respect to start of service frame; this 
+    //        matrix comes from the Tango pose data.
+    // dTuc:  A constant matrix converting the Unity world coordinate frame to 
+    //        the device coordinate frame.
+    //
+    // For more information, see the Tango coordinate system documentation:
+    //     https://developers.google.com/project-tango/overview/coordinate-systems
+
     /// <summary>
-    /// Matrix that transforms from the Unity Camera to Device.
+    /// The transformation matrix that converts from the left-handed Unity
+    /// Camera coordinate frame to the right-handed Device coordinate frame.
     /// </summary>
     [HideInInspector]
     public Matrix4x4 m_dTuc;
 
-    // We use couple of matrix transformation to convert the pose from Tango coordinate
-    // frame to Unity coordinate frame.
-    // The full equation is:
-    //     Matrix4x4 uwTuc = uwTss * ssTd * dTuc;
-    //
-    // uwTuc: Unity camera with respect to Unity world, this is the desired matrix.
-    // uwTss: Constant matrix converting start of service frame to Unity world frame.
-    // ssTd: Device frame with repect to start of service frame, this matrix denotes the 
-    //       pose transform we get from pose callback.
-    // dTuc: Constant matrix converting Unity world frame frame to device frame.
-    //
-    // Please see the coordinate system section online for more information:
-    //     https://developers.google.com/project-tango/overview/coordinate-systems
-
     /// <summary>
-    /// Matrix that transforms from Start of Service to the Unity World.
+    /// The transformation matrix that converts from the right-handed Start of
+    /// Service  coordinate frame to the left-handed Unity World coordinate
+    /// frame.
     /// </summary>
     [HideInInspector]
     public Matrix4x4 m_uwTss;
@@ -144,9 +165,16 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void Update()
     {
-        if (m_tangoARScreen.m_screenUpdateTime != m_poseTimestamp)
+        if (m_syncToARScreen)
         {
-            _UpdateTransformation(m_tangoARScreen.m_screenUpdateTime);
+            if (m_tangoARScreen.m_screenUpdateTime != m_poseTimestamp)
+            {
+                _UpdateTransformation(m_tangoARScreen.m_screenUpdateTime);
+            }
+        }
+        else
+        {
+            _UpdateTransformation(0);
         }
     }
 
@@ -174,7 +202,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// This is called when the permission granting process is finished.
+    /// Called when the permission granting process is finished.
     /// </summary>
     /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
     public void OnTangoPermissions(bool permissionsGranted)
@@ -182,7 +210,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// Called when succesfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -190,7 +218,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// This is called when disconnected from the Tango service.
+    /// Called when disconnected from the Tango service.
     /// </summary>
     public void OnTangoServiceDisconnected()
     {
@@ -198,7 +226,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
 
     /// @endcond
     /// <summary>
-    /// Update the transformation to the pose for that timestamp.
+    /// Updates the transformation to the pose for that timestamp.
     /// </summary>
     /// <param name="timestamp">Time in seconds to update the transformation to.</param>
     private void _UpdateTransformation(double timestamp)
@@ -251,13 +279,14 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// The function is for querying the camera extrinsic, for example: the transformation between
-    /// IMU and device frame. These extrinsics is used to transform the pose from the color camera frame
-    /// to the device frame. Because the extrinsic is being queried using the GetPoseAtTime()
-    /// with a desired frame pair, it can only be queried after the ConnectToService() is called.
+    /// Gets device and camera extrinsics necessary for the transformations done
+    /// by this controller. Extrinsics queries use GetPoseAtTime() with a
+    /// specific frame pair, and can only be done after the Tango service is
+    /// connected.
     ///
-    /// The device with respect to IMU frame is not directly queryable from API, so we use the IMU
-    /// frame as a temporary value to get the device frame with respect to IMU frame.
+    /// The transform for the device with respect to the color camera frame is
+    /// not directly queryable from API, so we use the IMU frame to get the
+    /// transformation between the two.
     /// </summary>
     private void _SetCameraExtrinsics()
     {

@@ -482,12 +482,28 @@ namespace Tango
         /// Convert this pose into matrix form.
         /// </summary>
         /// <returns>Matrix4x4 that represents this pose.</returns>
-        internal Matrix4x4 ToMatrix4x4()
+        public Matrix4x4 ToMatrix4x4()
         {
             Vector3 pos = new Vector3((float)translation[0], (float)translation[1], (float)translation[2]);
             Quaternion rot = new Quaternion((float)orientation[0], (float)orientation[1], (float)orientation[2],
                                             (float)orientation[3]);
             return Matrix4x4.TRS(pos, rot, Vector3.one);
+        }
+
+        /// <summary>
+        /// Convert Tango pose to string.
+        /// </summary>
+        /// <returns>Formatted string.</returns>
+        public override string ToString()
+        {
+            return string.Format("Translation: {0}, {1}, {2}; Orientation: {0}, {1}, {2}, {3}", 
+                                 translation[0].ToString("F3"),
+                                 translation[1].ToString("F3"),
+                                 translation[2].ToString("F3"),
+                                 orientation[0].ToString("F3"),
+                                 orientation[1].ToString("F3"),
+                                 orientation[2].ToString("F3"),
+                                 orientation[3].ToString("F3"));
         }
     }
 

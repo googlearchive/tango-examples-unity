@@ -39,79 +39,152 @@ namespace Tango
         public static Camera m_emulationCamera;
 
         /// <summary>
-        /// Set of data, extracted from renderers and mesh filters,
-        /// needed to render the emulated environment.
+        /// Field of view of the emulated camera (both color and depth).
         /// </summary>
-        private static List<EmulatedMeshRenderData> m_renderObjects;
+        private const float EMULATED_CAMERA_FOV = 37.8f;
         
         /// <summary>
-        /// Callback to allow a class requesting a render to manipulate the material
-        /// just prior to rendering a particular emulated environment object.
+        /// Name of shader resource used for depth emulation.
         /// </summary>
-        /// <param name="material">Material the next environment object will be rendered with.</param>
-        /// <param name="trsMatrix">Transform next environment object will be rendered at
-        /// (in case that information is needed to set material matrix parameters).</param>
-        public delegate void OnEmulatedMeshPreRender(Material material, Matrix4x4 trsMatrix);
+        private const string EMULATED_DEPTH_SHADERNAME = "Hidden/Tango/DepthEmulation";
+
+        /// <summary>
+        /// Name of shader resource used for color emulation.
+        /// </summary>
+        private const string EMULATED_COLORCAMERA_SHADERNAME = "Hidden/Tango/ColorCameraEmulation";
+        
+        /// <summary>
+        /// Mesh to use as the emulated environment.
+        /// </summary>
+        private static Mesh m_renderObject;
+
+        /// <summary>
+        /// Material used to render environment as depth data for Tango emulation.
+        /// </summary>
+        private static Material m_emulatedDepthMaterial = null;
+
+        /// <summary>
+        /// Material used to render environment as color camera feed for Tango emulation.
+        /// </summary>
+        private static Material m_emulatedColorCameraMaterial = null;
+
+        /// <summary>
+        /// Selection of possible ways to render the emulated environment.
+        /// </summary>
+        public enum EmulatedDataType
+        {
+            DEPTH,
+            COLOR_CAMERA
+        }
 
         /// <summary>
         /// Set up the helper to render the given prefab as the emulated environment.
         /// </summary>
-        /// <param name="environmentPrefab">Environment prefab.</param>
-        public static void InitForEnvironment(GameObject environmentPrefab)
+        /// <param name="environmentMesh">Mesh to render as environment.</param>
+        /// <param name="environmentTexture">Texture to render environment mesh with.</param>
+        /// <param name="cameraSimUsesLighting">Whether color camera emulation needs
+        /// simulated lighting (e.g. an untextured mesh).</param>
+        public static void InitForEnvironment(Mesh environmentMesh, Texture environmentTexture, bool cameraSimUsesLighting)
         {
-            if (environmentPrefab == null)
-            {
-                return;
-            }
-
-            // Briefly instantiate environment to extract meshes, materials, transforms needed for rendering,
-            // because GetComponent() cannot be called directly on a prefab.
-            m_renderObjects = new List<EmulatedMeshRenderData>();
-            GameObject environment = GameObject.Instantiate(environmentPrefab) as GameObject;
-            MeshRenderer[] meshRenderers = environment.GetComponentsInChildren<MeshRenderer>();
-            foreach (MeshRenderer meshRenderer in meshRenderers)
-            {
-                MeshFilter meshFilter = meshRenderer.GetComponent<MeshFilter>();
-                Mesh mesh = meshFilter ? meshFilter.mesh : null;
-                Material mat = meshRenderer.material;
-                
-                if (mesh != null && mat != null)
-                {
-                    m_renderObjects.Add(new EmulatedMeshRenderData(mesh, mat, meshFilter.transform.localToWorldMatrix));
-                }
-            }
-
-            GameObject.DestroyImmediate(environment);
+            // Assign environment render data.
+            m_renderObject = environmentMesh;
 
             // Create camera/depth emulation camera.
             if (m_emulationCamera == null)
             {
                 m_emulationCamera = new GameObject().AddComponent<Camera>();
                 m_emulationCamera.gameObject.name = "Tango Environment Emulation Camera";
+                m_emulationCamera.fieldOfView = EMULATED_CAMERA_FOV;
                 m_emulationCamera.enabled = false;
+                GameObject.DontDestroyOnLoad(m_emulationCamera.gameObject);
+            }
+
+            // Create materials for rendering environment.
+            if (m_emulatedColorCameraMaterial == null)
+            {
+                if (!CreateMaterialFromShaderName(EMULATED_COLORCAMERA_SHADERNAME,
+                                                   out m_emulatedColorCameraMaterial))
+                {
+                    Debug.LogError("Could not find color camera emulation shader "
+                                   + EMULATED_COLORCAMERA_SHADERNAME
+                                   + ". Color camera emulation will not function as expected." 
+                                   + " Video feed in editor will always be black.");
+                }
+            }
+            
+            if (m_emulatedDepthMaterial == null)
+            {
+                if (!CreateMaterialFromShaderName(EMULATED_DEPTH_SHADERNAME,
+                                                   out m_emulatedDepthMaterial))
+                {
+                    Debug.LogError("Could not find depth emulation shader "
+                                   + EMULATED_DEPTH_SHADERNAME
+                                   + ". Depth emulation will produce only empty depth frames.");
+                }
+            }
+
+            // Extra setup for color camera material:
+            if (m_emulatedColorCameraMaterial != null)
+            {
+                // Assign texture.
+                m_emulatedColorCameraMaterial.mainTexture = environmentTexture;
+            
+                // Set lighting feature for color camera emulation, on or off.
+                if (cameraSimUsesLighting)
+                {
+                    m_emulatedColorCameraMaterial.EnableKeyword("LIT_TANGO_AR_EMULATION");
+                }
+                else
+                {
+                    m_emulatedColorCameraMaterial.DisableKeyword("LIT_TANGO_AR_EMULATION");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reset any publicly visible elements of EmulatedEnvironmentRenderHelper
+        /// to an equivalent-to-unintialized state.
+        /// </summary>
+        public static void Clear()
+        {
+            if (m_emulationCamera != null)
+            {
+                GameObject.DestroyImmediate(m_emulationCamera);
+                m_emulationCamera = null;
             }
         }
 
         /// <summary>
         /// Render the emulated environment in the specified manner.
         /// </summary>
-        /// <param name="renderTarget">Render target to render into. 
-        /// When using more than one, the depth buffer of the first will be used.</param>
-        /// <param name="shaderToRenderWith">Shader to render with. Note that Unity's lighting pipeline
-        /// is bypassed here, so shaders utilizing Unity's lighting system will not render correctly.</param>
-        /// <param name="renderPosition">Position (relative to emulated environment) 
+        /// <param name="renderTarget">Render target to render into.</param>
+        /// <param name="dataTypeToRender">Type of data to render (e.g. color camera, depth data).</param>
+        /// <param name="renderCameraPosition">Position (relative to emulated environment) 
         /// for the simulation camera to render from.</param>
-        /// <param name="renderRotation">Rotation (relative to emulated environment) 
+        /// <param name="renderCameraRotation">Rotation (relative to emulated environment) 
         /// for the simulation camera to render at.</param>
-        /// <param name="perObjectRenderSetup">Optional callback to allow for changing state per-object
-        /// (for example material properties) right before rendering.</param>
-        public static void RenderEmulatedEnvironment(RenderTexture renderTarget, Shader shaderToRenderWith,
-                                                     Vector3 renderPosition, Quaternion renderRotation,
-                                                     OnEmulatedMeshPreRender perObjectRenderSetup = null)
+        public static void RenderEmulatedEnvironment(RenderTexture renderTarget, EmulatedDataType dataTypeToRender,
+                                                     Vector3 renderCameraPosition, Quaternion renderCameraRotation)
         {
+            Material renderMaterial = null;
+            switch (dataTypeToRender)
+            {
+            case EmulatedDataType.DEPTH:
+                renderMaterial = m_emulatedDepthMaterial;
+                break;
+            case EmulatedDataType.COLOR_CAMERA:
+                renderMaterial = m_emulatedColorCameraMaterial;
+                break;
+            }
+
+            if (renderMaterial == null)
+            {
+                return;
+            }
+
             // Set up camera
-            m_emulationCamera.transform.position = renderPosition;
-            m_emulationCamera.transform.rotation = renderRotation;
+            m_emulationCamera.transform.position = renderCameraPosition;
+            m_emulationCamera.transform.rotation = renderCameraRotation;
             
             // Stash current render state
             Camera previousCamera = Camera.current;
@@ -122,21 +195,15 @@ namespace Tango
 
             Graphics.SetRenderTarget(renderTarget);
             GL.Clear(true, true, Color.black);
-            
-            // Render
-            foreach (EmulatedMeshRenderData renderObject in m_renderObjects)
-            {
-                renderObject.m_material.shader = shaderToRenderWith;
-                if (perObjectRenderSetup != null)
-                {
-                    perObjectRenderSetup(renderObject.m_material, renderObject.m_trsMatrix);
-                }
 
-                for (int i = 0; i < renderObject.m_material.passCount; i++)
+            // Render
+            if(m_renderObject != null)
+            {
+                for (int i = 0; i < renderMaterial.passCount; i++)
                 {
-                    if (renderObject.m_material.SetPass(i))
+                    if (renderMaterial.SetPass(i))
                     {
-                        Graphics.DrawMeshNow(renderObject.m_mesh, renderObject.m_trsMatrix);
+                        Graphics.DrawMeshNow(m_renderObject, Matrix4x4.identity);
                     }
                 }
             }
@@ -147,40 +214,30 @@ namespace Tango
         }
 
         /// <summary>
-        /// Everything we need to know to render an object ourselves: a Mesh, a Material,
-        /// and a world transform represented as a TRS matrix.
+        /// Find a shader needed for emulated environment rendering
+        /// and create a material based off of it.
         /// </summary>
-        private class EmulatedMeshRenderData
+        /// <returns><c>true</c>, if the specified shader could be 
+        /// found, <c>false</c> otherwise.</returns>
+        /// <param name="shaderName">Shader name.</param>
+        /// <param name="material">Material made from the shader (or, if the shader 
+        /// could not be found, a material that outputs a constant (0,0,0,0)).</param>
+        public static bool CreateMaterialFromShaderName(string shaderName,
+                                                        out Material material)
         {
-            /// <summary>
-            /// The mesh to render.
-            /// </summary>
-            public Mesh m_mesh;
+            Shader shader = Shader.Find(shaderName);
 
-            /// <summary>
-            /// The material to render the mesh with.
-            /// </summary>
-            public Material m_material;
-
-            /// <summary>
-            /// A matrix representing the translation, rotation, and scale
-            /// to render the object at.
-            /// </summary>
-            public Matrix4x4 m_trsMatrix;
-
-            /// <summary>
-            /// Initializes a new instance of the
-            /// <see cref="Tango.EmulatedEnvironmentRenderHelper+EmulatedMeshRenderData"/> class.
-            /// </summary>
-            /// <param name="mesh">Mesh to render.</param>
-            /// <param name="material">Material to render with.</param>
-            /// <param name="trsMatrix">Translation-Rotation-Scale matrix (as in Unity's
-            /// Transform.localToWorldMatrix).</param>
-            public EmulatedMeshRenderData(Mesh mesh, Material material, Matrix4x4 trsMatrix)
+            if (shader == null)
             {
-                m_mesh = mesh;
-                m_material = material;
-                m_trsMatrix = trsMatrix;
+                // If can't find shader, use a material that will output (0, 0, 0, 0)
+                material = new Material(Shader.Find("Hidden/Internal-Colored"));
+                material.color = Color.clear;
+                return false;
+            }
+            else
+            {
+                material = new Material(shader);
+                return true;
             }
         }
     }

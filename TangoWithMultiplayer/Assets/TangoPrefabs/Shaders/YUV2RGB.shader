@@ -1,4 +1,5 @@
-﻿Shader "Tango/YUV2RGB" {
+﻿Shader "Tango/YUV2RGB"
+{
 Properties 
 {
     _YTex ("Y channel texture", 2D) = "white" {}
@@ -22,53 +23,64 @@ SubShader
     Tags { "Queue" = "Background" }
     Pass 
     {
-        GLSLPROGRAM
+        CGPROGRAM
+        #pragma multi_compile _ DISTORTION_ON
         
-        #pragma multi_compile __ DISTORTION_ON
+        #pragma vertex vert
+        #pragma fragment frag
 
-        // The Y, U, V texture.
-        uniform sampler2D _YTex;
-        uniform sampler2D _UTex;
-        uniform sampler2D _VTex;
-
-        varying vec4 textureCoordinates; 
-
-        #ifdef VERTEX
-        void main()
+        struct appdata
         {
+            float4 vertex : POSITION;
+            float2 uv : TEXCOORD0;
+        };
+
+        struct v2f
+        {
+            float4 vertex : SV_POSITION;
+            float2 uv : TEXCOORD0;
+        };
+        
+        v2f vert (appdata v)
+        {
+            v2f o;
             // We don't apply any projection or view matrix here to make sure that
             // the geometry is rendered in the screen space.
-            textureCoordinates = gl_MultiTexCoord0;
-            gl_Position = gl_Vertex;
+            o.vertex = v.vertex;
+            o.uv = v.uv;
+            return o;
         }
-        
-        #endif
 
-        #ifdef FRAGMENT
+        // The Y, U, V texture.
+        // However, at present U and V textures are interleaved into the same texture,
+        // so we'll only sample from _YTex and _UTex.
+        sampler2D _YTex;
+        sampler2D _UTex;
+        
         // Width of the RGBA texture, this is for indexing the channel of color, not
         // for scaling.
-        uniform float _TexWidth;
-        uniform float _TexHeight;
-        uniform float _Fx;
-        uniform float _Fy;
-        uniform float _Cx;
-        uniform float _Cy;
-        uniform float _K0;
-        uniform float _K1;
-        uniform float _K2;
-
+        float _TexWidth;
+        float _TexHeight;
+        float _Fx;
+        float _Fy;
+        float _Cx;
+        float _Cy;
+        float _K0;
+        float _K1;
+        float _K2;
+        
         // Compute a modulo b.
         float custom_mod(float x, float y)
         {
-            return x - y * floor(x / y);
+            return x - (y * floor(x / y));
         }
         
-        void main()
+        fixed4 frag (v2f i) : SV_Target
         {
-            float undistored_x = textureCoordinates.s;
-            float undistored_y = textureCoordinates.t;
-            float x = textureCoordinates.s;
-            float y = textureCoordinates.t;
+            float undistored_x = i.uv.x;
+            float undistored_y = i.uv.y;
+            float x = i.uv.x;
+            float y = i.uv.y;
 
             #ifdef DISTORTION_ON
             x = (x * _TexWidth - _Cx) / _Fx;
@@ -93,10 +105,14 @@ SubShader
 
             float texel_x = undistored_x * _TexWidth;
 
-            // Compute the Y value.
-            int packed_offset = int(custom_mod(texel_x, 4.0));
+            // Compute packed-pixel offset for Y value.
+            float packed_offset = floor(custom_mod(texel_x, 4.0));
             
-            vec4 packed_y = texture2D(_YTex, vec2(undistored_x, (1.0 - undistored_y)));
+            // Avoid floating point precision problems: Make sure we're sampling from the 
+            // same pixel as we've computed packed_offset for. 
+            undistored_x = (floor(texel_x) + 0.5) / _TexWidth;
+            
+            float4 packed_y = tex2D(_YTex, float2(undistored_x, (1.0 - undistored_y)));
             if (packed_offset == 0)
             {
                 y_value = packed_y.r;
@@ -109,12 +125,12 @@ SubShader
             {
                 y_value = packed_y.b;
             }
-            else if (packed_offset == 3)
+            else
             {
                 y_value = packed_y.a;
             }
 
-            vec4 packed_uv = texture2D(_UTex, vec2(undistored_x, (1.0 - undistored_y)));
+            float4 packed_uv = tex2D(_UTex, float2(undistored_x, (1.0 - undistored_y)));
 
             if (packed_offset == 0 || packed_offset == 1)
             {
@@ -133,11 +149,9 @@ SubShader
             float g = y_value - 0.698001 * (v_value - 0.5) - (0.337633 * (u_value - 0.5));
             float b = y_value + 1.732446 * (u_value - 0.5);
 
-            gl_FragColor = vec4(r, g, b, 1.0);
+            return float4(r, g, b, 1.0);
         }
-        #endif
-
-        ENDGLSL
+        ENDCG
     }
 }
 }

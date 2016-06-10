@@ -22,24 +22,30 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// The post process distortion effect added on the virtual object.
+/// Controls a shader which uses camera intrinsics to correct lens distortion.
 /// 
-/// Enable/disable this script will turn on/off the distortion effect, leave it to disabled it's distortion is not
-/// crucial to your application.
+/// Enabling this script will turn on lens distortion correction on the Tango
+/// AR Camera prefab. Enabling the script will use more system resources, so
+/// only enable it if your application requires it.
+///
+/// Part of the Tango AR Camera prefab.
 /// </summary>
+[RequireComponent(typeof(TangoARScreen))]
 public class ARCameraPostProcess : MonoBehaviour
 {
     /// <summary>
-    /// The post process shader that is running on the camera.
+    /// Material of post process shader that is to be run on the camera.
     /// </summary>
     public Material m_postProcessMaterial;
 
     /// <summary>
     /// The AR screen material.
     /// 
-    /// Needed to dynamically turn on / off the undistortion effect on the AR image.
+    /// Needed to dynamically control the distortion correction effect on the AR 
+    /// image. Should be the same material as used by the Tango AR Screen script
+    /// of the Tango AR Camera.
     /// </summary>
-    public Material m_arScreenMaterial;
+    private Material m_arScreenMaterial;
 
     /// <summary>
     /// Pass the camera intrinsics to both PostProcess and ARScreen shader.
@@ -47,8 +53,11 @@ public class ARCameraPostProcess : MonoBehaviour
     /// The camera intrinsics are needed for undistortion or distortion.
     /// </summary>
     /// <param name="intrinsics">Color camera intrinsics.</param>
-    internal void SetupIntrinsic(TangoCameraIntrinsics intrinsics)
+    /// <param name="arScreenMaterial">AR screen material.</param>
+    internal void SetupIntrinsic(TangoCameraIntrinsics intrinsics, Material arScreenMaterial)
     {
+        m_arScreenMaterial = arScreenMaterial;
+
         m_postProcessMaterial.SetFloat("_Width", (float)intrinsics.width);
         m_postProcessMaterial.SetFloat("_Height", (float)intrinsics.height);
         m_postProcessMaterial.SetFloat("_Fx", (float)intrinsics.fx);
@@ -60,7 +69,7 @@ public class ARCameraPostProcess : MonoBehaviour
         m_postProcessMaterial.SetFloat("_K2", (float)intrinsics.distortion2);
         
         m_arScreenMaterial.SetFloat("_TexWidth", (float)intrinsics.width);
-        m_arScreenMaterial.SetFloat("_Height", (float)intrinsics.height);
+        m_arScreenMaterial.SetFloat("_TexHeight", (float)intrinsics.height);
         m_arScreenMaterial.SetFloat("_Fx", (float)intrinsics.fx);
         m_arScreenMaterial.SetFloat("_Fy", (float)intrinsics.fy);
         m_arScreenMaterial.SetFloat("_Cx", (float)intrinsics.cx);
@@ -72,9 +81,6 @@ public class ARCameraPostProcess : MonoBehaviour
 
     /// <summary>
     /// Unity OnEnable callback.
-    /// 
-    /// The distortion post process will be turned on after this script is enabled, at the same time, we need to
-    /// change the distortion flag in AR Screen shader to true as well.
     /// </summary>
     private void OnEnable()
     {
@@ -82,9 +88,7 @@ public class ARCameraPostProcess : MonoBehaviour
     }
 
     /// <summary>
-    /// Unity OnEnable callback.
-    /// 
-    /// The reversed operation from the OnEnable() call.
+    /// Unity OnDisable callback.
     /// </summary>
     private void OnDisable()
     {
@@ -93,8 +97,6 @@ public class ARCameraPostProcess : MonoBehaviour
 
     /// <summary>
     /// Unity OnRenderImage callback.
-    /// 
-    /// Our customized post process shader will be excuted.
     /// </summary>
     /// <param name="src">The source image before processing.</param>
     /// <param name="dest">The destination image after processing.</param>

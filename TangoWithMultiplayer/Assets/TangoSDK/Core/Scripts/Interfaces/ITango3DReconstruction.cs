@@ -28,7 +28,7 @@ using UnityEngine;
 public interface ITango3DReconstruction
 {
     /// <summary>
-    /// Called when the 3D reconstruction is dirty.
+    /// Called when the 3D Reconstruction is dirty.
     /// </summary>
     /// <param name="gridIndexList">List of GridIndex objects that are dirty and should be updated.</param>
     void OnTango3DReconstructionGridIndicesDirty(List<Tango3DReconstruction.GridIndex> gridIndexList);

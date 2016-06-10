@@ -30,7 +30,7 @@ using UnityEngine;
 /// shader, no computation is in this class, this class only passes the data to
 /// shader.
 /// </summary>
-[RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
+[RequireComponent(typeof(Camera))]
 public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoVideoOverlay
 {   
     /// <summary>
@@ -66,6 +66,17 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// Script that manages the postprocess distortiotn of the camera image.
     /// </summary>
     private ARCameraPostProcess m_arCameraPostProcess;
+    
+    /// <summary>
+    /// Screen-space mesh used to render the color camera image.
+    /// </summary>
+    private Mesh m_screenSpaceMesh;
+
+    /// <summary>
+    /// Camera the TangoARScreen is attached to,
+    /// to which the color camera image will be rendered.
+    /// </summary>
+    private Camera m_camera;
 
     /// <summary>
     /// U texture coordinate amount that the color camera image is being clipped on each side.
@@ -111,6 +122,9 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// </summary>
     public void Start()
     {
+        m_screenSpaceMesh = new Mesh();
+        m_camera = GetComponent<Camera>();
+
         TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
         m_arCameraPostProcess = gameObject.GetComponent<ARCameraPostProcess>();
         if (tangoApplication != null)
@@ -152,6 +166,18 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
             }
         }
     }
+    
+    /// <summary>
+    /// Submit AR Screen for drawing to the attached camera each frame.
+    /// </summary>
+    public void OnPreCull()
+    {
+        if (m_screenMaterial != null)
+        {
+            Graphics.DrawMesh(m_screenSpaceMesh, Matrix4x4.identity, m_screenMaterial, 
+                              _GetFirstValidRenderLayerForAttachedCamera(), m_camera);
+        }
+    }
 
     /// <summary>
     /// Unity callback when the component gets destroyed.
@@ -183,36 +209,35 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
         VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
         if (intrinsics.width != 0 && intrinsics.height != 0)
         {
-            Camera camera = GetComponent<Camera>();
-            if (camera != null)
+            // The camera to which this script is attached is an Augmented Reality camera.  The color camera
+            // image must fill that camera's viewport.  That means we must clip the color camera image to make
+            // its ratio the same as the Unity camera.  If we don't do this the color camera image will be
+            // stretched non-uniformly, making a circle into an ellipse.
+            float widthRatio = (float)m_camera.pixelWidth / (float)intrinsics.width;
+            float heightRatio = (float)m_camera.pixelHeight / (float)intrinsics.height;
+            if (widthRatio >= heightRatio)
             {
-                // If this script is attached to a camera, then the camera is an Augmented Reality camera.  The color
-                // camera image then must fill the viewport.  That means we must clip the color camera image to make
-                // its ratio the same as the Unity camera.  If we don't do this the color camera image will be
-                // stretched non-uniformly, making a circle into an ellipse.
-                float widthRatio = (float)camera.pixelWidth / (float)intrinsics.width;
-                float heightRatio = (float)camera.pixelHeight / (float)intrinsics.height;
-                if (widthRatio >= heightRatio)
-                {
-                    m_uOffset = 0;
-                    m_vOffset = (1 - (heightRatio / widthRatio)) / 2;
-                }
-                else
-                {
-                    m_uOffset = (1 - (widthRatio / heightRatio)) / 2;
-                    m_vOffset = 0;
-                }
-
-                m_arCameraPostProcess.SetupIntrinsic(intrinsics);
-                _MeshUpdateForIntrinsics(GetComponent<MeshFilter>().mesh, m_uOffset, m_vOffset);
-                _CameraUpdateForIntrinsics(camera, intrinsics, m_uOffset, m_vOffset);
+                m_uOffset = 0;
+                m_vOffset = (1 - (heightRatio / widthRatio)) / 2;
             }
+            else
+            {
+                m_uOffset = (1 - (widthRatio / heightRatio)) / 2;
+                m_vOffset = 0;
+            }
+
+            _MaterialUpdateForIntrinsics(m_screenMaterial, m_arCameraPostProcess, intrinsics);
+            _MeshUpdateForIntrinsics(m_screenSpaceMesh, m_uOffset, m_vOffset);
+            _CameraUpdateForIntrinsics(m_camera, intrinsics, m_uOffset, m_vOffset);
         }
         else
         {
             m_uOffset = 0;
             m_vOffset = 0;
-            m_arCameraPostProcess.enabled = false;
+            if (m_arCameraPostProcess != null)
+            {
+                m_arCameraPostProcess.enabled = false;
+            }
         }
     }
 
@@ -287,6 +312,29 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     }
 
     /// <summary>
+    /// Update AR screen material with camera texture size data 
+    /// (and distortion parameters if using distortion post-process filter).
+    /// </summary>
+    /// <param name="mat">Material to update.</param>
+    /// <param name="arPostProcess">ARCameraPostProcess script that handles distortion for this material instance 
+    /// (null if none).</param>
+    /// <param name="intrinsics">Tango camera intrinsics for the color camera.</param>
+    private static void _MaterialUpdateForIntrinsics(Material mat, ARCameraPostProcess arPostProcess, TangoCameraIntrinsics intrinsics)
+    {
+        if (arPostProcess != null)
+        {
+            // ARCameraPostProcess should take care of setting everything up for all materials involved.
+            arPostProcess.SetupIntrinsic(intrinsics, mat);
+        }
+        else
+        {
+            // If not handling distortion, all the material needs to know is camera image dimensions.
+            mat.SetFloat("_Width", (float)intrinsics.width);
+            mat.SetFloat("_Height", (float)intrinsics.height);
+        }
+    }
+
+    /// <summary>
     /// Update a camera so its perspective lines up with the color camera's perspective.
     /// </summary>
     /// <param name="cam">Camera to update.</param>
@@ -338,5 +386,30 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
         m.SetRow(2, new Vector4(0.0f,                          0.0f,                          -(zFar + zNear) / (zFar - zNear), -(2 * zFar * zNear) / (zFar - zNear)));
         m.SetRow(3, new Vector4(0.0f,                          0.0f,                          -1.0f,                            0.0f));
         return m;
+    }
+
+    /// <summary>
+    /// Get the first valid render layer for attached camera.
+    /// 
+    /// A necessary weasel to pretend that ARScreen renders regardless of layer, given that 
+    /// Graphics.DrawMesh() allows specifying a camera but still requires a layer. 
+    /// </summary>
+    /// <returns>The first valid render layer for attached camera.</returns>
+    private int _GetFirstValidRenderLayerForAttachedCamera()
+    {
+        int renderLayer = 0;
+        
+        while ((m_camera.cullingMask & (1 << renderLayer)) == 0 && renderLayer < 32)
+        {
+            renderLayer++;
+        }
+        
+        if (renderLayer >= 32)
+        {
+            Debug.LogError("AR Camera feed will not be visible because attached camera is not drawing any layers.");
+            renderLayer = 0;
+        }
+
+        return renderLayer;
     }
 }

@@ -1,4 +1,4 @@
-﻿Shader "Hidden/TangoDepthEmulation"
+﻿Shader "Hidden/Tango/DepthEmulation"
 {
     SubShader
     {

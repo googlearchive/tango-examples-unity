@@ -32,9 +32,71 @@ namespace Tango
     /// </summary>
     public class VideoOverlayProvider
     {
+#if UNITY_EDITOR
+        /// <summary>
+        /// INTERNAL USE: Flag set to true whenever emulated values have been updated.
+        /// </summary>
+        internal static bool m_emulationIsDirty;
+
+        private const int EMULATED_CAMERA_WIDTH = 1280;
+        private const int EMULATED_CAMERA_HEIGHT = 720;
+
+        private const int EMULATED_CAMERA_PACKED_WIDTH = 1280 / 4;
+        private const int EMULATED_CAMERA_PACKED_Y_HEIGHT = 720;
+        private const int EMULATED_CAMERA_PACKED_UV_HEIGHT = 720 / 2;
+
+        private const string EMULATED_RGB2YUV_Y_SHADERNAME = "Hidden/Tango/RGB2YUV_Y";
+        private const string EMULATED_RGB2YUV_CBCR_SHADERNAME = "Hidden/Tango/RGB2YUV_CbCr";
+#endif
+        
         private static readonly string CLASS_NAME = "VideoOverlayProvider";
         private static IntPtr callbackContext = IntPtr.Zero;
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Render target used to render environment for Tango emulation on PC.
+        /// </summary>
+        private static RenderTexture m_emulatedColorRenderTexture = null;
+
+        /// <summary>
+        /// Underlying Y texture when using experimental texture-ID method.
+        /// </summary>
+        private static RenderTexture m_emulatedExpId_Y = null;
+
+        /// <summary>
+        /// Underlying Y texture when using experimental texture-ID method.
+        /// </summary>
+        private static RenderTexture m_emulatedExpId_CbCr = null;
+        
+        /// <summary>
+        /// Textures used to capture emulated color feed from render target.
+        /// (First texture is Y component, second is CbCr).
+        /// </summary>
+        private static Texture2D[] m_emulationByteBufferCaptureTextures = null;
+
+        /// <summary>
+        /// Post-process filter used to turn an RGB texture into a texture
+        /// containing the Y-component data expected by experimental texture-ID method.
+        /// </summary>
+        private static Material m_yuvFilterY;
+
+        /// <summary>
+        /// Post-process filter used to turn an RGB texture into a texture
+        /// containing the Cb/Cr component data expected by experimental texture-ID method.
+        /// </summary>
+        private static Material m_yuvFilterCbCr;
+
+        /// <summary>
+        /// The theoretical capture time of most recent emulated color frame.
+        /// </summary>
+        private static float m_lastColorEmulationTime;
+
+        /// <summary>
+        /// Whether resources needed for emulation have been created.
+        /// </summary>
+        private static bool m_emulationIsInitialized = false;
+#endif
+        
         /// <summary>
         /// Tango video overlay C callback function signature.
         /// </summary>
@@ -88,6 +150,36 @@ namespace Tango
         /// </param>
         public static double RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
         {
+#if UNITY_EDITOR
+            if (m_emulatedExpId_Y != null && m_emulatedExpId_CbCr != null)
+            {
+                m_emulatedExpId_Y.DiscardContents();
+                m_emulatedExpId_CbCr.DiscardContents();
+                Graphics.Blit(m_emulatedColorRenderTexture, m_emulatedExpId_Y, m_yuvFilterY);
+                Graphics.Blit(m_emulatedColorRenderTexture, m_emulatedExpId_CbCr, m_yuvFilterCbCr);
+#if UNITY_EDITOR_WIN
+                // A crash occurs when assigning the pointer of a Unity RenderTexture to a Texture2D in a DirectX
+                // environment, so must use the slower technique of using normal Texture2D objects with ReadPixels().
+                // See emulation comments in ExperimentalConnectTexture().
+                RenderTexture.active = m_emulatedExpId_Y;
+                m_emulationTexIdCaptureTextures.m_videoOverlayTextureY.ReadPixels(new Rect(0, 0,
+                                                                                           m_emulatedExpId_Y.width,
+                                                                                           m_emulatedExpId_Y.height),
+                                                                                  0, 0, false);
+                m_emulationTexIdCaptureTextures.m_videoOverlayTextureY.Apply();
+                
+                RenderTexture.active = m_emulatedExpId_CbCr;
+                m_emulationTexIdCaptureTextures.m_videoOverlayTextureCb.ReadPixels(new Rect(0, 0,
+                                                                                            m_emulatedExpId_CbCr.width,
+                                                                                            m_emulatedExpId_CbCr.height),
+                                                                                   0, 0, false);
+                m_emulationTexIdCaptureTextures.m_videoOverlayTextureCb.Apply();
+#endif  // UNITY_EDITOR_WIN
+            }
+
+            return m_lastColorEmulationTime;
+#else
+
             double timestamp = 0.0;
             int returnValue = VideoOverlayAPI.TangoService_updateTexture(cameraId, ref timestamp);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
@@ -96,6 +188,7 @@ namespace Tango
             }
             
             return timestamp;
+#endif
         }
 
         /// <summary>
@@ -111,6 +204,31 @@ namespace Tango
         public static void GetIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
         {
             int returnValue = VideoOverlayAPI.TangoService_getCameraIntrinsics(cameraId, intrinsics);
+
+#if UNITY_EDITOR
+            // In editor, base 'intrinsics' off of properties of emulation camera.
+            if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR && EmulatedEnvironmentRenderHelper.m_emulationCamera != null)
+            {
+                // Instantiate any resources that we haven't yet.
+                if (!m_emulationIsInitialized)
+                {
+                    _InitializeResourcesForEmulation();
+                    m_emulationIsInitialized = true;
+                }
+
+                EmulatedEnvironmentRenderHelper.m_emulationCamera.targetTexture = m_emulatedColorRenderTexture;
+
+                intrinsics.width = (uint)EMULATED_CAMERA_WIDTH;
+                intrinsics.height = (uint)EMULATED_CAMERA_HEIGHT;
+
+                float height = Screen.height;
+                float fov = EmulatedEnvironmentRenderHelper.m_emulationCamera.fieldOfView;
+                float focalLengthInPixels = (1 / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad)) * (intrinsics.height * 0.5f);
+                intrinsics.fy = intrinsics.fx = focalLengthInPixels;
+                intrinsics.cx = intrinsics.width / 2f;
+                intrinsics.cy = intrinsics.height / 2f;
+            }
+#endif
             
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
@@ -141,6 +259,37 @@ namespace Tango
         /// <param name="onUnityFrameAvailable">Callback method.</param>
         internal static void ExperimentalConnectTexture(TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onUnityFrameAvailable onUnityFrameAvailable)
         {
+#if UNITY_EDITOR
+            if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
+            {
+                // Resize textures to to simulated width.
+                textures.ResizeAll(EMULATED_CAMERA_PACKED_WIDTH, EMULATED_CAMERA_PACKED_Y_HEIGHT,
+                                   EMULATED_CAMERA_PACKED_WIDTH, EMULATED_CAMERA_PACKED_UV_HEIGHT);
+
+                if(!m_emulationIsInitialized)
+                {
+                    _InitializeResourcesForEmulation();
+                    m_emulationIsInitialized = true;
+                }
+                
+#if !UNITY_EDITOR_WIN
+                // Rebind Texture2Ds to the underlying OpenGL texture ids of our render textures
+                // Which is more or less the inverse of what the acutal tango service does but has the same effect.
+                textures.m_videoOverlayTextureY.UpdateExternalTexture(m_emulatedExpId_Y.GetNativeTexturePtr());
+                textures.m_videoOverlayTextureCb.UpdateExternalTexture(m_emulatedExpId_CbCr.GetNativeTexturePtr());
+                textures.m_videoOverlayTextureCr.UpdateExternalTexture(m_emulatedExpId_CbCr.GetNativeTexturePtr());
+#else   // !UNITY_EDITOR_WIN
+                // A crash occurs when assigning the pointer of a Unity RenderTexture to a Texture2D (as above)
+                // in a DirectX environment. Instead, size the Texture2D's correctly and copy render targets
+                // with ReadPixels() when updating experimental textures. 
+                // Keeping separate paths because ReadPixels() is a significant performance hit.
+
+                textures.m_videoOverlayTextureY.Resize(m_emulatedExpId_Y.width, m_emulatedExpId_Y.height);
+                textures.m_videoOverlayTextureCb.Resize(m_emulatedExpId_CbCr.width, m_emulatedExpId_CbCr.height);
+#endif  // !UNITY_EDITOR_WIN
+            }
+#else
+
             int returnValue = VideoOverlayAPI.TangoService_Experimental_connectTextureIdUnity(
                 cameraId, 
                 (uint)textures.m_videoOverlayTextureY.GetNativeTexturePtr().ToInt64(), 
@@ -153,6 +302,7 @@ namespace Tango
             {
                 Debug.Log("VideoOverlayProvider.ConnectTexture() Texture was not connected to camera!");
             }
+#endif
         }
 
         /// <summary>
@@ -184,6 +334,163 @@ namespace Tango
                 Debug.Log(CLASS_NAME + ".SetCallback() Callback was not set!");
             }
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// INTERNAL USE: Update the Tango emulation state for color camera data.
+        /// </summary>
+        /// <param name="useByteBufferMethod">Whether to update emulation for byte-buffer method.</param>
+        internal static void UpdateTangoEmulation(bool useByteBufferMethod)
+        {
+            // Get emulated position and rotation in Unity space.
+            TangoPoseData poseData = new TangoPoseData();
+            TangoCoordinateFramePair pair;
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE; 
+
+            if (!PoseProvider.GetTimestampForColorEmulation(out m_lastColorEmulationTime))
+            {
+                Debug.LogError("Couldn't get a valid timestamp with which to emulate color camera. "
+                               + "Color camera emulation will be skipped this frame.");
+                return;
+            }
+
+            PoseProvider.GetPoseAtTime(poseData, m_lastColorEmulationTime, pair);
+            if (poseData.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+            {
+                return;
+            }
+            
+            Vector3 position;
+            Quaternion rotation;
+            TangoSupport.TangoPoseToWorldTransform(poseData, out position, out rotation);
+
+            // Instantiate any resources that we haven't yet.
+            if(!m_emulationIsInitialized)
+            {
+                _InitializeResourcesForEmulation();
+                m_emulationIsInitialized = true;
+            }
+
+            // Render. 
+            EmulatedEnvironmentRenderHelper.RenderEmulatedEnvironment(m_emulatedColorRenderTexture,
+                                                                      EmulatedEnvironmentRenderHelper.EmulatedDataType.COLOR_CAMERA,
+                                                                      position, rotation);
+
+            m_emulationIsDirty = true;
+        }
+        
+        /// <summary>
+        /// INTERNAL USE: Fill out most recent color data for Tango emulation.
+        /// NOTE: Does not emulate first line of metadata in color buffer.
+        /// </summary>
+        /// <param name="colorImageData">TangoUnityImageData structure to update with emulated data.</param>
+        internal static void GetTangoEmulation(TangoUnityImageData colorImageData)
+        {
+            int yDataSize = EMULATED_CAMERA_WIDTH * EMULATED_CAMERA_HEIGHT;
+            int cbCrDataSize = yDataSize / 2;
+            int dataSize = yDataSize + cbCrDataSize;
+            if (colorImageData.data == null || colorImageData.data.Length != dataSize)
+            {
+                colorImageData.data = new byte[dataSize];
+            }
+            
+            RenderTexture yRT = RenderTexture.GetTemporary(EMULATED_CAMERA_PACKED_WIDTH,
+                                                           EMULATED_CAMERA_PACKED_Y_HEIGHT, 
+                                                           0, RenderTextureFormat.ARGB32);
+            RenderTexture cbCrRT = RenderTexture.GetTemporary(EMULATED_CAMERA_PACKED_WIDTH, 
+                                                              EMULATED_CAMERA_PACKED_UV_HEIGHT, 
+                                                              0, RenderTextureFormat.ARGB32);
+            Graphics.Blit(m_emulatedColorRenderTexture, yRT, m_yuvFilterY);
+            m_emulationByteBufferCaptureTextures[0].ReadPixels(new Rect(0, 0, yRT.width, yRT.height), 0, 0);
+            Graphics.Blit(m_emulatedColorRenderTexture, cbCrRT, m_yuvFilterCbCr);
+            m_emulationByteBufferCaptureTextures[1].ReadPixels(new Rect(0, 0, cbCrRT.width, cbCrRT.height), 0, 0);
+
+            Color32[] colors = m_emulationByteBufferCaptureTextures[0].GetPixels32();
+            for (int i = 0; i < yDataSize / 4; i++)
+            {
+                colorImageData.data[(i * 4)] = colors[i].r;
+                colorImageData.data[(i * 4) + 1] = colors[i].g;
+                colorImageData.data[(i * 4) + 2] = colors[i].b;
+                colorImageData.data[(i * 4) + 3] = colors[i].a;
+            }
+
+            int startOffset = colors.Length * 4;
+            colors = m_emulationByteBufferCaptureTextures[1].GetPixels32();
+            for (int i = 0; i < cbCrDataSize / 4; i++)
+            {
+                colorImageData.data[(i * 4) + startOffset] = colors[i].r;
+                colorImageData.data[(i * 4) + startOffset + 1] = colors[i].g;
+                colorImageData.data[(i * 4) + startOffset + 2] = colors[i].b;
+                colorImageData.data[(i * 4) + startOffset + 3] = colors[i].a;
+            }
+
+            RenderTexture.ReleaseTemporary(yRT);
+            RenderTexture.ReleaseTemporary(cbCrRT);
+            
+            colorImageData.format = TangoEnums.TangoImageFormatType.TANGO_HAL_PIXEL_FORMAT_YV12;
+            colorImageData.width = EMULATED_CAMERA_WIDTH;
+            colorImageData.height = EMULATED_CAMERA_HEIGHT;
+            colorImageData.stride = EMULATED_CAMERA_WIDTH;
+            colorImageData.timestamp = m_lastColorEmulationTime;
+        }
+
+        /// <summary>
+        /// Create any resources needed for emulation.
+        /// </summary>
+        private static void _InitializeResourcesForEmulation()
+        {
+            // Create textures:
+
+            m_emulatedColorRenderTexture = new RenderTexture(EMULATED_CAMERA_WIDTH, 
+                                                             EMULATED_CAMERA_HEIGHT, 
+                                                             24, RenderTextureFormat.ARGB32);
+
+            m_emulationByteBufferCaptureTextures = new Texture2D[2];
+            m_emulationByteBufferCaptureTextures[0] = new Texture2D(EMULATED_CAMERA_PACKED_WIDTH,
+                                                                    EMULATED_CAMERA_PACKED_Y_HEIGHT, 
+                                                                    TextureFormat.ARGB32, false);
+            m_emulationByteBufferCaptureTextures[1] = new Texture2D(EMULATED_CAMERA_PACKED_WIDTH,
+                                                                    EMULATED_CAMERA_PACKED_UV_HEIGHT, 
+                                                                    TextureFormat.ARGB32, false);
+
+            m_emulatedExpId_Y = new RenderTexture(EMULATED_CAMERA_PACKED_WIDTH, 
+                                                  EMULATED_CAMERA_PACKED_Y_HEIGHT, 
+                                                  0, RenderTextureFormat.ARGB32);
+            m_emulatedExpId_CbCr = new RenderTexture(EMULATED_CAMERA_PACKED_WIDTH, 
+                                                     EMULATED_CAMERA_PACKED_UV_HEIGHT, 
+                                                     0, RenderTextureFormat.ARGB32);
+            m_emulatedExpId_Y.filterMode = FilterMode.Point;
+            m_emulatedExpId_CbCr.filterMode = FilterMode.Point;
+            m_emulatedExpId_Y.Create();
+            m_emulatedExpId_CbCr.Create();
+
+            // Find shaders by searching for them:
+            if (EmulatedEnvironmentRenderHelper.CreateMaterialFromShaderName(EMULATED_RGB2YUV_Y_SHADERNAME,
+                                                                             out m_yuvFilterY))
+            {
+                m_yuvFilterY.SetFloat("_TexWidth", EMULATED_CAMERA_WIDTH);
+            }
+            else
+            {
+                Debug.LogError("Could not find shader "
+                               + EMULATED_RGB2YUV_Y_SHADERNAME
+                               + ". Tango color camera emulation will not work correctly.");
+            }
+
+            if (EmulatedEnvironmentRenderHelper.CreateMaterialFromShaderName(EMULATED_RGB2YUV_CBCR_SHADERNAME, 
+                                                                              out m_yuvFilterCbCr))
+            {
+                m_yuvFilterCbCr.SetFloat("_TexWidth", EMULATED_CAMERA_WIDTH);
+            }
+            else
+            {
+                Debug.LogError("Could not find shader "
+                               + EMULATED_RGB2YUV_CBCR_SHADERNAME
+                               + ". Tango color camera emulation will not work correctly.");
+            }
+        }
+#endif
         
         #region NATIVE_FUNCTIONS
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
@@ -295,6 +602,11 @@ namespace Tango
                           int uvPlaneWidth, int uvPlaneHeight,
                           TextureFormat format, bool mipmap)
         {
+#if UNITY_EDITOR
+            // Format needs to be ARGB32 in editor to use Texture2D.ReadPixels() in emulation
+            // in Unity 4.6.
+            format = TextureFormat.ARGB32;
+#endif
             m_videoOverlayTextureY = new Texture2D(yPlaneWidth, yPlaneHeight, format, mipmap);
             m_videoOverlayTextureY.filterMode = FilterMode.Point;
             m_videoOverlayTextureCb = new Texture2D(uvPlaneWidth, uvPlaneHeight, format, mipmap);

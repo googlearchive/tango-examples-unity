@@ -32,8 +32,6 @@ namespace Tango
     /// </summary>
     internal sealed class TangoConfig : IDisposable
     {
-        private const string m_FailedConversionFormat = "Failed to convert object to generic type : {0}. Reverting to default.";
-        private const string m_ErrorLogFormat = "{0}.{1}() Was unable to set key: {2} with value: {3}";
         private const string m_ConfigErrorFormat = "{0}.{1}() Invalid TangoConfig, make sure Tango Config is initialized properly.";
         private static readonly string CLASS_NAME = "TangoConfig";
         private static readonly string NO_CONFIG_FOUND = "No config file found.";
@@ -262,7 +260,7 @@ namespace Tango
             value = stringBuilder.ToString();
             if (!wasSuccess)
             {
-                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
+                Debug.Log(string.Format("{0}.{1}() Was unable to get key: {2}", CLASS_NAME, tangoMethodName, key));
             }
 
             return wasSuccess;
@@ -276,7 +274,7 @@ namespace Tango
             bool wasSuccess = TangoConfigAPI.TangoService_setRuntimeConfig(m_configHandle) == Common.ErrorType.TANGO_SUCCESS;
             if (!wasSuccess)
             {
-                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, "SetRuntimeConfig"));
+                Debug.Log(string.Format("{0}.SetRuntimeConfig() Unable to set runtime config.", CLASS_NAME));
             }
         }
 
@@ -304,7 +302,8 @@ namespace Tango
             wasSuccess = apiCall(m_configHandle, key, value) == Common.ErrorType.TANGO_SUCCESS;
             if (!wasSuccess)
             {
-                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key, value));
+                Debug.Log(string.Format("{0}.{1}() Was unable to set key: {2} with value: {3}",
+                                        CLASS_NAME, tangoMethodName, key, value));
             }
 
             return wasSuccess;
@@ -332,7 +331,7 @@ namespace Tango
             wasSuccess = apiCall(m_configHandle, key, ref value) == Common.ErrorType.TANGO_SUCCESS;
             if (!wasSuccess)
             {
-                Debug.Log(string.Format(m_ErrorLogFormat, CLASS_NAME, tangoMethodName, key));
+                Debug.Log(string.Format("{0}.{1}() Was unable to get key: {2}", CLASS_NAME, tangoMethodName, key));
             }
 
             return wasSuccess;

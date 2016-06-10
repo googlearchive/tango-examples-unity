@@ -466,7 +466,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             xmlDataList.Add(temp);
         }
 
-        string path = Application.persistentDataPath + m_curAreaDescription.m_uuid + ".xml";
+        string path = Application.persistentDataPath + "/" + m_curAreaDescription.m_uuid + ".xml";
         var serializer = new XmlSerializer(typeof(List<MarkerData>));
         using (var stream = new FileStream(path, FileMode.Create))
         {
@@ -480,7 +480,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     private void _LoadMarkerFromDisk()
     {
         // Attempt to load the exsiting markers from storage.
-        string path = Application.persistentDataPath + m_curAreaDescription.m_uuid + ".xml";
+        string path = Application.persistentDataPath + "/" + m_curAreaDescription.m_uuid + ".xml";
 
         var serializer = new XmlSerializer(typeof(List<MarkerData>));
         var stream = new FileStream(path, FileMode.Open);
@@ -582,8 +582,8 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         Matrix4x4 uwTDevice = Matrix4x4.TRS(m_poseController.m_tangoPosition,
                                             m_poseController.m_tangoRotation,
                                             Vector3.one);
-        Matrix4x4 uwTMarker = Matrix4x4.TRS(planeCenter,
-                                            Quaternion.identity,
+        Matrix4x4 uwTMarker = Matrix4x4.TRS(newMarkObject.transform.position,
+                                            newMarkObject.transform.rotation,
                                             Vector3.one);
         markerScript.m_deviceTMarker = Matrix4x4.Inverse(uwTDevice) * uwTMarker;
         

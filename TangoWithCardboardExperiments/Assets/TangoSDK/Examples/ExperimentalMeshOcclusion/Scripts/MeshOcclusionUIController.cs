@@ -19,8 +19,9 @@
 //-----------------------------------------------------------------------
 using System.Collections;
 using System.IO;
-using System.Runtime.Serialization.Formatters.Binary; 
 using System.Threading;
+using System.Xml;
+using System.Xml.Serialization;
 using Tango;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -44,7 +45,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     public GameObject m_meshBuildPanel;
 
     /// <summary>
-    /// The canvas panel used for interaction after area description and mesh have been loaded.
+    /// The canvas panel used for interaction after Area Description and mesh have been loaded.
     /// </summary>
     public GameObject m_meshInteractionPanel;
 
@@ -59,27 +60,27 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     public GameObject m_hideMeshButton;
 
     /// <summary>
-    /// The image overlay shown while waiting to relocalize to ADF.
+    /// The image overlay shown while waiting to relocalize to Area Description.
     /// </summary>
     public Image m_relocalizeImage;
 
     /// <summary>
-    /// The text overlay that is shown when the area description or mesh is being saved.
+    /// The text overlay that is shown when the Area Description or mesh is being saved.
     /// </summary>
     public Text m_savingText;
 
     /// <summary>
-    /// The text of the create button, changed whether an area description is selected or not.
+    /// The button to create new mesh with selected Area Description, available only if an Area Description is selected.
     /// </summary>
-    public Text m_createButtonText;
+    public Button m_createSelectedButton;
 
     /// <summary>
-    /// The button to begin using an adf and mesh. Interactable only when an adf with mesh is selected.
+    /// The button to begin using an Area Description and mesh. Interactable only when an Area Description with mesh is selected.
     /// </summary>
     public Button m_startGameButton;
 
     /// <summary>
-    /// The parent panel that loads the selected area description.
+    /// The parent panel that loads the selected Area Description.
     /// </summary>
     [Header("Area Description Loader")]
     public GameObject m_areaDescriptionLoaderPanel;
@@ -139,7 +140,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     private TangoApplication m_tangoApplication;
 
     /// <summary>
-    /// The thread used to save the ADF.
+    /// The thread used to save the Area Description.
     /// </summary>
     private Thread m_saveThread;
 
@@ -162,21 +163,22 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     private bool m_menuOpen = true;
 
     /// <summary>
-    /// The UUID of the selected area description.
+    /// The UUID of the selected Area Description.
     /// </summary>
     private string m_savedUUID;
 
     /// <summary>
     /// The path where the generated meshes are saved.
     /// </summary>
-    private string m_adfMeshSavePath;
+    private string m_meshSavePath;
 
     /// <summary>
     /// Start is called on the frame when a script is enabled just before any of the Update methods is called the first time.
     /// </summary>
     public void Start()
     {
-        m_adfMeshSavePath = Application.persistentDataPath + "/ADFMeshes";
+        m_meshSavePath = Application.persistentDataPath + "/meshes";
+        Directory.CreateDirectory(m_meshSavePath);
 
         m_arPoseController = FindObjectOfType<TangoARPoseController>();
         m_tangoDynamicMesh = FindObjectOfType<TangoDynamicMesh>();
@@ -322,10 +324,11 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// <summary>
     /// From button press: start creating a mesh for occlusion.
     /// 
-    /// If an area description has been selected, use it and link it to the dynamic mesh.
-    /// If no area description selected, create one while meshing.
+    /// If an Area Description has been selected, use it and link it to the dynamic mesh.
+    /// If no Area Description selected, create one while meshing.
     /// </summary>
-    public void Button_CreateAreaDescriptionMesh()
+    /// <param name="createNew">If set to <c>true</c> create new mesh and new Area Description.</param>
+    public void Button_CreateAreaDescriptionMesh(bool createNew)
     {
         m_3dReconstruction = true;
         m_menuOpen = false;
@@ -333,7 +336,6 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         // Enable the pose controller, but disable the AR screen.
         m_arPoseController.gameObject.SetActive(true);
         m_arPoseController.gameObject.GetComponent<TangoARScreen>().enabled = false;
-        m_arPoseController.gameObject.GetComponent<MeshRenderer>().enabled = false;
 
         // Need to enable depth to build the mesh.
         m_tangoApplication.m_enableDepth = true;
@@ -343,30 +345,36 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_meshBuildPanel.SetActive(true);
         m_meshInteractionPanel.SetActive(false);
 
-        // Initialize tango application and pose controller depending on whether area description has been selected.
-        if (string.IsNullOrEmpty(m_savedUUID))
+        // Initialize tango application and pose controller depending on whether Area Description has been selected.
+        if (createNew)
         {
             m_curAreaDescription = null;
             m_tangoApplication.m_areaDescriptionLearningMode = true;
             m_arPoseController.m_useAreaDescriptionPose = false;
             m_relocalizeImage.gameObject.SetActive(false);
+            m_tangoApplication.Startup(null);
         }
         else
         {
-            m_curAreaDescription = AreaDescription.ForUUID(m_savedUUID);
-            m_tangoApplication.m_areaDescriptionLearningMode = false;
-            m_arPoseController.m_useAreaDescriptionPose = true;
-            m_relocalizeImage.gameObject.SetActive(true);
+            if (!string.IsNullOrEmpty(m_savedUUID))
+            {
+                m_curAreaDescription = AreaDescription.ForUUID(m_savedUUID);
+                m_tangoApplication.m_areaDescriptionLearningMode = false;
+                m_arPoseController.m_useAreaDescriptionPose = true;
+                m_relocalizeImage.gameObject.SetActive(true);
+                m_tangoApplication.Startup(m_curAreaDescription);
+            }
+            else
+            {
+                Debug.LogError("No Area Description loaded.");
+            }
         }
-
-        m_tangoApplication.Startup(m_curAreaDescription);
     }
 
     /// <summary>
-    /// From button press: start the game by loading the mesh and the adf.
+    /// From button press: start the game by loading the mesh and the Area Description.
     /// 
-    /// Generate a new mesh from the saved area definition mesh data linked to
-    /// the selected adf.
+    /// Generate a new mesh from the saved area definition mesh data linked to the selected Area Description.
     /// </summary>
     public void Button_StartAreaDescriptionMesh()
     {
@@ -376,7 +384,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
             return;
         }
 
-        if (!File.Exists(m_adfMeshSavePath + "/" + m_savedUUID))
+        if (!File.Exists(m_meshSavePath + "/" + m_savedUUID))
         {
             AndroidHelper.ShowAndroidToastMessage("Please choose an Area Description with mesh data.");
             return;
@@ -385,7 +393,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_3dReconstruction = false;
         m_menuOpen = false;
 
-        // Enable objects needed to use area description and mesh for occlusion.
+        // Enable objects needed to use Area Description and mesh for occlusion.
         m_arPoseController.gameObject.SetActive(true);
         m_arPoseController.m_useAreaDescriptionPose = true;
 
@@ -401,8 +409,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_meshInteractionPanel.SetActive(true);
 
         // Load mesh.
-        AreaDescriptionMesh adfMesh = _DeserializeAreaDescriptionMesh(m_savedUUID);
-        if (adfMesh == null)
+        AreaDescriptionMesh mesh = _DeserializeAreaDescriptionMesh(m_savedUUID);
+        if (mesh == null)
         {
             return;
         }
@@ -411,14 +419,14 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_meshFromFile = new GameObject();
         
         MeshFilter mf = m_meshFromFile.AddComponent<MeshFilter>();
-        mf.mesh = _AreaDescriptionMeshToUnityMesh(adfMesh);
+        mf.mesh = _AreaDescriptionMeshToUnityMesh(mesh);
         
         MeshRenderer mr = m_meshFromFile.AddComponent<MeshRenderer>();
         mr.material = m_depthMaskMat;
 
         m_meshFromFile.AddComponent<MeshCollider>();
 
-        // Load area description file.
+        // Load Area Description file.
         m_curAreaDescription = AreaDescription.ForUUID(m_savedUUID);
 
         m_tangoApplication.Startup(m_curAreaDescription);
@@ -429,13 +437,13 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// </summary>
     public void Button_DeleteAllAreaDescriptionMeshes()
     {
-        string[] filePaths = Directory.GetFiles(m_adfMeshSavePath);
+        string[] filePaths = Directory.GetFiles(m_meshSavePath);
         foreach (string filePath in filePaths)
         {
             File.Delete(filePath);
         }
 
-        AndroidHelper.ShowAndroidToastMessage("All area description meshes have been deleted.");
+        AndroidHelper.ShowAndroidToastMessage("All Area Description meshes have been deleted.");
 
         #pragma warning disable 618
         Application.LoadLevel(Application.loadedLevel);
@@ -516,13 +524,13 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     }
 
     /// <summary>
-    /// Populate a scrolling list with area descriptions. Each element will check if there is any associated
-    /// mesh data tied to the area description by UUID. The area description file and linked mesh data are 
+    /// Populate a scrolling list with Area Descriptions. Each element will check if there is any associated
+    /// mesh data tied to the Area Description by UUID. The Area Description file and linked mesh data are 
     /// loaded when starting the game.
     /// </summary>
     private void _PopulateAreaDescriptionUIList()
     {
-        // Load area descriptions.
+        // Load Area Descriptions.
         foreach (Transform t in m_listContentParent.transform)
         {
             Destroy(t.gameObject);
@@ -544,8 +552,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
             listElement.m_areaDescriptionName.text = areaDescription.GetMetadata().m_name;
             listElement.m_areaDescriptionUUID.text = areaDescription.m_uuid;
             
-            // Check if there is an associated area description mesh.
-            bool hasMeshData = File.Exists(m_adfMeshSavePath + "/" + areaDescription.m_uuid) ? true : false;
+            // Check if there is an associated Area Description mesh.
+            bool hasMeshData = File.Exists(m_meshSavePath + "/" + areaDescription.m_uuid) ? true : false;
             listElement.m_hasMeshData.gameObject.SetActive(hasMeshData);
             
             // Ensure the lambda makes a copy of areaDescription.
@@ -565,8 +573,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         if (value)
         {
             m_savedUUID = item.m_uuid;
-            m_createButtonText.text = "Create Mesh for ADF";
-            if (File.Exists(m_adfMeshSavePath + "/" + item.m_uuid))
+            m_createSelectedButton.interactable = true;
+            if (File.Exists(m_meshSavePath + "/" + item.m_uuid))
             {
                 m_startGameButton.interactable = true;
             }
@@ -578,7 +586,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         else
         {
             m_savedUUID = null;
-            m_createButtonText.text = "Create ADF and Mesh";
+            m_createSelectedButton.interactable = false;
             m_startGameButton.interactable = false;
         }
     }
@@ -596,12 +604,13 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
 
         // Disable interaction before saving.
         m_initialized = false;
+        m_savingText.text = "Saving Area Description...";
 
         if (string.IsNullOrEmpty(m_savedUUID)) 
         {
             m_saveThread = new Thread(delegate()
             {
-                // Save the area description to file.
+                // Save the Area Description to file.
                 m_curAreaDescription = AreaDescription.SaveCurrent();
                 AreaDescription.Metadata metadata = m_curAreaDescription.GetMetadata();
                 m_savedUUID = m_curAreaDescription.m_uuid;    
@@ -623,14 +632,15 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// Save the tango dynamic mesh.
     ///
     /// Process the mesh in 3 steps.
-    /// 1. Extract the whole mesh from tango 3d reconstruction.
+    /// 1. Extract the whole mesh from tango 3D Reconstruction.
     /// 2. Convert to a serializable format.
-    /// 3. Serialize to binary format on sdcard.
+    /// 3. Serialize with xml on sdcard.
     /// </summary>
     /// <returns>The coroutine Ienumerator.</returns>
     private IEnumerator _DoSaveTangoDynamicMesh()
     {
         m_savingText.gameObject.SetActive(true);
+        m_savingText.text = "Extracting Whole Mesh...";
 
         Tango3DReconstruction.Status status = Tango3DReconstruction.Status.INVALID;
         bool needsToGrow = false;
@@ -688,8 +698,9 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         extractedMesh.triangles = triangles;
 
         // Save the generated unity mesh.
-        AreaDescriptionMesh adfMesh = _UnityMeshToAreaDescriptionMesh(m_savedUUID, extractedMesh);
-        _SerializeAreaDescriptionMesh(adfMesh);
+        m_savingText.text = "Saving Area Description Mesh...";
+        AreaDescriptionMesh mesh = _UnityMeshToAreaDescriptionMesh(m_savedUUID, extractedMesh);
+        _SerializeAreaDescriptionMesh(mesh);
 
         // Restart scene after completion.
         #pragma warning disable 618
@@ -698,149 +709,84 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     }
 
     /// <summary>
-    /// Convert a unity mesh to an area description mesh.
+    /// Convert a unity mesh to an Area Description mesh.
     /// </summary>
-    /// <returns>The area description mesh.</returns>
-    /// <param name="uuid">The area description UUID.</param>
+    /// <returns>The Area Description mesh.</returns>
+    /// <param name="uuid">The Area Description UUID.</param>
     /// <param name="mesh">The Unity mesh.</param>
     private AreaDescriptionMesh _UnityMeshToAreaDescriptionMesh(string uuid, Mesh mesh)
     {
-        AreaDescriptionMesh adfMesh = new AreaDescriptionMesh();
-
-        // Convert Vector3 vertices to serializable format.
-        Vector3_Serializable[] adfVertices = new Vector3_Serializable[mesh.vertices.Length];
-        for (int i = 0; i < mesh.vertices.Length; i++)
-        {
-            Vector3 v = mesh.vertices[i];
-            adfVertices[i] = new Vector3_Serializable(v);
-        }
-
-        adfMesh.m_uuid = m_savedUUID;
-        adfMesh.m_vertices = adfVertices;
-        adfMesh.m_triangles = mesh.triangles;
-
-        return adfMesh;
+        AreaDescriptionMesh saveMesh = new AreaDescriptionMesh();
+        saveMesh.m_uuid = m_savedUUID;
+        saveMesh.m_vertices = mesh.vertices;
+        saveMesh.m_triangles = mesh.triangles;
+        return saveMesh;
     }
 
     /// <summary>
-    /// Convert an area description mesh to a unity mesh.
+    /// Convert an Area Description mesh to a unity mesh.
     /// </summary>
     /// <returns>The unity mesh.</returns>
-    /// <param name="adfMesh">The area description mesh.</param>
-    private Mesh _AreaDescriptionMeshToUnityMesh(AreaDescriptionMesh adfMesh)
+    /// <param name="saveMesh">The Area Description mesh.</param>
+    private Mesh _AreaDescriptionMeshToUnityMesh(AreaDescriptionMesh saveMesh)
     {
-        Vector3[] vertices = new Vector3[adfMesh.m_vertices.Length];
-        int[] triangles = new int[adfMesh.m_triangles.Length];
-
-        // Convert serialized vertices back to Unity Vector3.
-        for (int i = 0; i < adfMesh.m_vertices.Length; i++)
-        {
-            vertices[i] = adfMesh.m_vertices[i].ToVector3();
-        }
-
-        triangles = adfMesh.m_triangles;
-
         Mesh mesh = new Mesh();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
+        mesh.vertices = saveMesh.m_vertices;
+        mesh.triangles = saveMesh.m_triangles;
         mesh.RecalculateNormals();
-
         return mesh;
     }
 
     /// <summary>
-    /// Serialize an area description mesh to file.
+    /// Serialize an Area Description mesh to file.
     /// </summary>
-    /// <param name="adfMesh">The area description mesh to serialize.</param>
-    private void _SerializeAreaDescriptionMesh(AreaDescriptionMesh adfMesh)
+    /// <param name="saveMesh">The Area Description mesh to serialize.</param>
+    private void _SerializeAreaDescriptionMesh(AreaDescriptionMesh saveMesh)
     {
-        BinaryFormatter bf = new BinaryFormatter();
-        Directory.CreateDirectory(m_adfMeshSavePath);
-        FileStream file = File.Create(m_adfMeshSavePath + "/" + adfMesh.m_uuid);
-        bf.Serialize(file, adfMesh);
+        XmlSerializer serializer = new XmlSerializer(typeof(AreaDescriptionMesh));
+        FileStream file = File.Create(m_meshSavePath + "/" + saveMesh.m_uuid);
+        serializer.Serialize(file, saveMesh);
         file.Close();
     }
 
     /// <summary>
-    /// Deserialize an area description mesh from file.
+    /// Deserialize an Area Description mesh from file.
     /// </summary>
-    /// <returns>The loaded area description mesh.</returns>
-    /// <param name="uuid">The UUID of the associated area description.</param>
+    /// <returns>The loaded Area Description mesh.</returns>
+    /// <param name="uuid">The UUID of the associated Area Description.</param>
     private AreaDescriptionMesh _DeserializeAreaDescriptionMesh(string uuid)
     {
-        if (File.Exists(m_adfMeshSavePath + "/" + uuid))
+        if (File.Exists(m_meshSavePath + "/" + uuid))
         {
-            BinaryFormatter bf = new BinaryFormatter();
-            FileStream file = File.Open(m_adfMeshSavePath + "/" + uuid, FileMode.Open);
-            AreaDescriptionMesh adfMesh = (AreaDescriptionMesh)bf.Deserialize(file);
+            XmlSerializer serializer = new XmlSerializer(typeof(AreaDescriptionMesh));
+            FileStream file = File.Open(m_meshSavePath + "/" + uuid, FileMode.Open);
+            AreaDescriptionMesh saveMesh = serializer.Deserialize(file) as AreaDescriptionMesh;
             file.Close();
-            return adfMesh;
+            return saveMesh;
         }
 
         return null;
     }
 
     /// <summary>
-    /// Serializable container for vertices and triangles from tango dynamic mesh and linked area description.
+    /// Xml container for vertices and triangles from extracted mesh and linked Area Description.
     /// </summary>
-    [System.Serializable]
+    [XmlRoot("AreaDescriptionMesh")]
     public class AreaDescriptionMesh
     {
         /// <summary>
-        /// The UUID of the linked area description.
+        /// The UUID of the linked Area Description.
         /// </summary>
         public string m_uuid;
 
         /// <summary>
         /// The mesh vertices.
         /// </summary>
-        public Vector3_Serializable[] m_vertices;
+        public Vector3[] m_vertices;
 
         /// <summary>
         /// The mesh triangles.
         /// </summary>
         public int[] m_triangles;
-    }
-
-    /// <summary>
-    /// Serializable container converting to and from Unity Vector3.
-    /// </summary>
-    [System.Serializable]
-    public class Vector3_Serializable
-    {
-        /// <summary>
-        /// Vector3 x value.
-        /// </summary>
-        public float m_x;
-
-        /// <summary>
-        /// Vector3 y value.
-        /// </summary>
-        public float m_y;
-
-        /// <summary>
-        /// Vector3 z value.
-        /// </summary>
-        public float m_z;
-
-        /// <summary>
-        /// Constructor copying data from Unity Vector3.
-        /// </summary>
-        /// <param name="v">The source vector.</param>
-        public Vector3_Serializable(Vector3 v)
-        {
-            m_x = v.x;
-            m_y = v.y;
-            m_z = v.z;
-        }
-
-        /// <summary>
-        /// Convert back to Vector3.
-        /// </summary>
-        /// <returns>The Unity Vector3.</returns>
-        public Vector3 ToVector3()
-        { 
-            return new Vector3(m_x, m_y, m_z);
-        }
     }
 }
