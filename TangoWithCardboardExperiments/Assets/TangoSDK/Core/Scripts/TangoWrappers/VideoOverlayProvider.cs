@@ -58,6 +58,13 @@ namespace Tango
         /// </summary>
         private static RenderTexture m_emulatedColorRenderTexture = null;
 
+#if UNITY_EDITOR_WIN
+        /// <summary>
+        /// Most recent set of textures submitted from TangoApplication.
+        /// </summary>
+        private static YUVTexture m_emulationTexIdCaptureTextures;
+#endif // UNITY_EDITOR_WIN
+
         /// <summary>
         /// Underlying Y texture when using experimental texture-ID method.
         /// </summary>
@@ -286,6 +293,8 @@ namespace Tango
 
                 textures.m_videoOverlayTextureY.Resize(m_emulatedExpId_Y.width, m_emulatedExpId_Y.height);
                 textures.m_videoOverlayTextureCb.Resize(m_emulatedExpId_CbCr.width, m_emulatedExpId_CbCr.height);
+
+                m_emulationTexIdCaptureTextures = textures;
 #endif  // !UNITY_EDITOR_WIN
             }
 #else
