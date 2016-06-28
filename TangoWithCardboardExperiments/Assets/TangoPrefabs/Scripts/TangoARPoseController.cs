@@ -25,7 +25,7 @@ using UnityEngine;
 /// <summary>
 /// A movement controller that automatically sets the position and rotation of 
 /// the GameObject this is attached to. Movement matches what comes from Tango
-/// and is syncronized with the color camera. Used by the Tango AR Camera
+/// and is synchronized with the color camera. Used by the Tango AR Camera
 /// prefab to provide an augmented reality experience.
 /// </summary>
 [RequireComponent(typeof(TangoARScreen))]

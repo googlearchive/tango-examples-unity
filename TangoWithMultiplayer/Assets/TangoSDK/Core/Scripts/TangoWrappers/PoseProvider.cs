@@ -46,6 +46,12 @@ namespace Tango
         /// The amount of seconds to keep emulated poses around.
         /// </summary>
         private const float EMULATION_POSE_KEEP_TIME_SECS = 60 * 60;
+
+        /// <summary>
+        /// Amount of time before first relocalized emulated area description
+        /// should be sent (applicable only when an existing area description is loaded).
+        /// </summary>
+        private const double EMULATED_RELOCALIZATION_TIME = 0.5;
 #endif
 
         private static readonly string CLASS_NAME = "PoseProvider";
@@ -55,6 +61,11 @@ namespace Tango
         /// History of emulated poses.  Used for Tango emulation on PC.
         /// </summary>
         private static List<EmulatedPose> m_emulatedPoseHistory = new List<EmulatedPose>();
+
+        /// <summary>
+        /// Timestamp of the first pose of pose emulation.
+        /// </summary>
+        private static float m_beginningOfPoseEmulation = -1f;
 #endif
 
         /// <summary>
@@ -92,47 +103,7 @@ namespace Tango
                                          TangoCoordinateFramePair framePair)
         {
 #if UNITY_EDITOR
-            poseData.framePair = framePair;
-
-            bool pairIsValid = true;
-            Matrix4x4 baseToDevice;
-            Matrix4x4 targetToDevice;
-
-            double adjustedTimeStamp1;
-            double adjustedTimeStamp2;
-
-            if (!GetFrameToDeviceTransformation(framePair.baseFrame, timeStamp, out adjustedTimeStamp1, out baseToDevice)
-                || !GetFrameToDeviceTransformation(framePair.targetFrame, timeStamp, out adjustedTimeStamp2, out targetToDevice))
-            {
-                pairIsValid = false;
-            }
-
-            Matrix4x4 baseToTarget = baseToDevice * targetToDevice.inverse;
-            Quaternion rotation = Quaternion.LookRotation(baseToTarget.GetColumn(2), baseToTarget.GetColumn(1));
-            poseData.translation[0] = baseToTarget.m03;
-            poseData.translation[1] = baseToTarget.m13;
-            poseData.translation[2] = baseToTarget.m23;
-            poseData.orientation[0] = rotation.x;
-            poseData.orientation[1] = rotation.y;
-            poseData.orientation[2] = rotation.z;
-            poseData.orientation[3] = rotation.w;
-
-            if (pairIsValid)
-            {
-                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID;
-            }
-            else
-            {
-                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID;
-                Debug.Log(string.Format(
-                    CLASS_NAME + ".GetPoseAtTime() Could not get pose at time : ts={0}, framePair={1},{2}",
-                    timeStamp, framePair.baseFrame, framePair.targetFrame));
-            }
-
-            // Let most recent timestamp involved in the transformation be the timestamp 
-            // (relevant when using GetPoseAtTime(0)).
-            // Behaviour may need to be updated after implmenting Area Description emulation.
-            poseData.timestamp = System.Math.Max(adjustedTimeStamp1, adjustedTimeStamp2);
+            GetEmulatedPoseAtTime(poseData, timeStamp, framePair);
 #else
             int returnValue = PoseProviderAPI.TangoService_getPoseAtTime(timeStamp, framePair, poseData);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
@@ -185,6 +156,8 @@ namespace Tango
         internal static void UpdateTangoEmulation()
         {
             EmulatedPose pose;
+            float now = Time.realtimeSinceStartup;
+
             if (m_emulatedPoseHistory.Count > 0)
             {
                 pose = new EmulatedPose(m_emulatedPoseHistory[m_emulatedPoseHistory.Count - 1]);
@@ -192,27 +165,31 @@ namespace Tango
             else
             {
                 pose = new EmulatedPose();
+                m_beginningOfPoseEmulation = now;
             }
 
-            // Update the emulated rotation (do this first to make sure the position is rotated)
-            //
-            // Note: We need to use Input.GetAxis here because Unity3D does not provide a way to get the underlying
-            // mouse delta.
-            if (!Input.GetKey(KeyCode.LeftShift))
+            if (!Input.GetKey(KeyCode.LeftAlt) && !Input.GetKey(KeyCode.LeftCommand))
             {
-                pose.m_anglesFromForward.y -= Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
-                pose.m_anglesFromForward.x += Input.GetAxis("Mouse Y") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
-            }
-            else
-            {
-                pose.m_anglesFromForward.z -= Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+                // Update the emulated rotation (do this first to make sure the position is rotated)
+                //
+                // Note: We need to use Input.GetAxis here because Unity3D does not provide a way to get the underlying
+                // mouse delta.
+                if (!Input.GetKey(KeyCode.LeftShift))
+                {
+                    pose.m_angles.y += Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+                    pose.m_angles.x -= Input.GetAxis("Mouse Y") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+                }
+                else
+                {
+                    pose.m_angles.z -= Input.GetAxis("Mouse X") * MOUSE_LOOK_SENSITIVITY * Time.deltaTime;
+                }
             }
             
             // Update the emulated position
-            Quaternion poseRotation = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(pose.m_anglesFromForward);
-            Vector3 directionRight = poseRotation * new Vector3(1, 0, 0);
-            Vector3 directionForward = poseRotation * new Vector3(0, 0, -1);
-            Vector3 directionUp = poseRotation * new Vector3(0, 1, 0);
+            Quaternion poseRotation = Quaternion.Euler(pose.m_angles);
+            Vector3 directionRight = poseRotation * Vector3.right;
+            Vector3 directionForward = poseRotation * Vector3.forward;
+            Vector3 directionUp = poseRotation * Vector3.up;
             
             if (Input.GetKey(KeyCode.W))
             {
@@ -251,7 +228,6 @@ namespace Tango
             }
 
             // Record the current state
-            float now = Time.realtimeSinceStartup;
             pose.m_timestamp = now;
             while (m_emulatedPoseHistory.Count > 0 
                    && m_emulatedPoseHistory[0].m_timestamp < now - EMULATION_POSE_KEEP_TIME_SECS)
@@ -262,6 +238,118 @@ namespace Tango
             m_emulatedPoseHistory.Add(pose);
 
             m_emulationIsDirty = true;
+        }
+
+        /// <summary>
+        /// INTERNAL USE: Reset the Tango emulation state for pose data.
+        /// 
+        /// Used on Shutdown. Among other things, prevents GetPoseAtTime()
+        /// from returning valid frames when Tango isn't active.
+        /// </summary>
+        internal static void ResetTangoEmulation()
+        {
+            m_emulatedPoseHistory.Clear();
+        }
+
+        /// <summary>
+        /// Emulation for PoseProvider.GetPoseAtTime().
+        /// </summary>
+        /// <param name="poseData">Pose data.</param>
+        /// <param name="timeStamp">Requested time stamp.</param>
+        /// <param name="framePair">Requested frame pair.</param>
+        internal static void GetEmulatedPoseAtTime(TangoPoseData poseData, double timeStamp,
+                                                   TangoCoordinateFramePair framePair)
+        {
+            poseData.framePair = framePair;
+            
+            double adjustedTimeStamp1 = timeStamp;
+            double adjustedTimeStamp2 = timeStamp;
+            
+            Matrix4x4 baseToDevice;
+            Matrix4x4 targetToDevice;
+
+            TangoEnums.TangoPoseStatusType status1;
+            TangoEnums.TangoPoseStatusType status2;
+
+            _GetFrameToDevicePose(framePair.baseFrame, ref adjustedTimeStamp1, out baseToDevice, out status1);
+            _GetFrameToDevicePose(framePair.targetFrame, ref adjustedTimeStamp2, out targetToDevice, out status2);
+
+            // Composit base->device and target->device into base->target.
+            Matrix4x4 baseToTarget = baseToDevice * targetToDevice.inverse;
+            Quaternion rotation = Quaternion.LookRotation(baseToTarget.GetColumn(2), baseToTarget.GetColumn(1));
+            poseData.translation[0] = baseToTarget.m03;
+            poseData.translation[1] = baseToTarget.m13;
+            poseData.translation[2] = baseToTarget.m23;
+            poseData.orientation[0] = rotation.x;
+            poseData.orientation[1] = rotation.y;
+            poseData.orientation[2] = rotation.z;
+            poseData.orientation[3] = rotation.w;
+            
+            // Use the 'less successful' of the two statuses.
+            if (status1 == TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN 
+                || status2 == TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN)
+            {
+                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN;
+            }
+            else if (status1 == TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID 
+                     || status2 == TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID)
+            {
+                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID;
+            }
+            else if (status1 == TangoEnums.TangoPoseStatusType.TANGO_POSE_INITIALIZING 
+                     || status2 == TangoEnums.TangoPoseStatusType.TANGO_POSE_INITIALIZING)
+            {
+                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_INITIALIZING;
+            }
+            else if (status1 == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID 
+                     && status2 == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+            {
+                poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID;
+            }
+            else
+            {
+                poseData.status_code = TangoEnums.TangoPoseStatusType.NA;
+                Debug.Log(string.Format(
+                    CLASS_NAME + ".GetPoseAtTime() Could not get pose at time : ts={0}, framePair={1},{2}",
+                    timeStamp, framePair.baseFrame, framePair.targetFrame));
+            }
+            
+            // Let most recent timestamp involved in the transformation be the timestamp
+            // (relevant when using GetPoseAtTime(0)), 
+            // Except when getting relocalization pose (area description <-> start of service),
+            // in which case the timestamp should be the (theoretical) relocalization time.
+            if ((framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION
+                 && framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE)
+                || 
+                (framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE
+             && framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION))
+            {
+                if (poseData.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+                {
+                    // First assume that relocalization happens at start (e.g. Area Learning for new areas).
+                    poseData.timestamp = m_beginningOfPoseEmulation;
+                    
+                    if (!string.IsNullOrEmpty(EmulatedAreaDescriptionHelper.m_currentUUID))
+                    {
+                        // Then add EMULATED_RELOCALIZATION_TIME second if an area description was loaded.
+                        poseData.timestamp += EMULATED_RELOCALIZATION_TIME;
+                    }
+
+                    // The initially requested timestamp is only valid if it:
+                    //  A.) Is 0
+                    //  B.) Falls within the range of delivered relocalization frames 
+                    //      (and we only deliver one in emulation, so it must match that one exactly)
+                    bool validRelocalizationTimestamp = (timeStamp == 0) || (timeStamp == poseData.timestamp);
+                    if (!validRelocalizationTimestamp)
+                    {
+                        poseData.status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID;
+                    }
+                }
+            }
+            else
+            {
+                poseData.timestamp = System.Math.Max(adjustedTimeStamp1, adjustedTimeStamp2);
+            }
         }
 
         /// <summary>
@@ -317,158 +405,253 @@ namespace Tango
                 return false;
             }
         }
-        
-        /// <summary>
-        /// INTERNAL USE: Get the most recent values for Tango emulation.
-        /// </summary>
-        /// <returns><c>true</c>, if posePosition and poseRotation were filled in 
-        /// with a valid pose from emulation, <c>false</c> otherwise.</returns>
-        /// <param name="poseTimestamp">The new Tango emulation timestamp.</param> 
-        /// <param name="posePosition">The new Tango emulation position.</param>
-        /// <param name="poseRotation">The new Tango emulation rotation.</param>
-        private static bool GetTangoEmulationCurrent(
-            out float poseTimestamp, out Vector3 posePosition, out Quaternion poseRotation)
-        {
-            if (m_emulatedPoseHistory.Count > 0)
-            {
-                EmulatedPose pose = m_emulatedPoseHistory[m_emulatedPoseHistory.Count - 1];
-                poseTimestamp = pose.m_timestamp;
-                posePosition = pose.m_position;
-                poseRotation = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(pose.m_anglesFromForward);
-                return true;
-            }
-            else
-            {
-                poseTimestamp = 0;
-                posePosition = Vector3.zero;
-                poseRotation = Quaternion.identity;
-                return false;
-            }
-        }
 
         /// <summary>
-        /// INTERNAL USE: Get a historical value for Tango emulation.
+        /// INTERNAL USE: Gets a value indicating whether an artifical delay from service start
+        /// representing the time it takes to sync to an existing area description has passed.
         /// </summary>
-        /// <returns><c>true</c>, if a historical values was retrieved, <c>false</c> otherwise.</returns>
-        /// <param name="timestamp">Time of the historical value.</param>
-        /// <param name="posePosition">The emulated pose position if retrieved, <c>Vector3.Zero</c> otherwise.</param>
-        /// <param name="poseRotation">
-        /// The emulated pose rotation if retrieved, <c>Quaternion.Identity</c> otherwise.
-        /// </param>
-        private static bool GetTangoEmulationAtTime(
-            float timestamp, out Vector3 posePosition, out Quaternion poseRotation)
+        /// <returns><c>true</c>, if area description delay is over, <c>false</c> otherwise.</returns>
+        private static bool _GetAreaDescriptionSyncDelayIsOver()
         {
-            EmulatedPose timestampedPose = new EmulatedPose();
-            timestampedPose.m_timestamp = timestamp;
-            int index = m_emulatedPoseHistory.BinarySearch(timestampedPose, new CompareEmulatedPoseByTimestamp());
-
-            if (index >= 0)
+            if (m_emulatedPoseHistory.Count < 1)
             {
-                // Found an exact timestamp match
-                EmulatedPose pose = m_emulatedPoseHistory[index];
-                posePosition = pose.m_position;
-                poseRotation = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(pose.m_anglesFromForward);
-                return true;
-            }
-            else if (~index == m_emulatedPoseHistory.Count || ~index == 0)
-            {
-                // Out of bounds, no good pose
-                posePosition = Vector3.zero;
-                poseRotation = Quaternion.identity;
                 return false;
             }
             else
             {
-                // Timestamp is inbetween two pose histories
-                EmulatedPose earlierPose = m_emulatedPoseHistory[~index - 1];
-                EmulatedPose laterPose = m_emulatedPoseHistory[~index];
-                float t = Mathf.InverseLerp(earlierPose.m_timestamp, laterPose.m_timestamp, timestamp);
-
-                posePosition = Vector3.Lerp(earlierPose.m_position, laterPose.m_position, t);
-
-                Quaternion earlierRot = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(earlierPose.m_anglesFromForward);
-                Quaternion laterRot = Quaternion.Euler(90, 0, 0) * Quaternion.Euler(laterPose.m_anglesFromForward);
-                poseRotation = Quaternion.Slerp(earlierRot, laterRot, t);
-                return true;
+                float durationOfPlay = m_emulatedPoseHistory[m_emulatedPoseHistory.Count - 1].m_timestamp 
+                    - m_beginningOfPoseEmulation;
+                return durationOfPlay > EMULATED_RELOCALIZATION_TIME;
             }
         }
 
         /// <summary>
-        /// Get transformation from an arbitrary base frame to the Device frame.
-        /// Can be used to derive any particular frame-pair transformation.
+        /// GetEmulatedPoseAtTime functions by getting pose information for both base and target
+        /// frames relative to the Device frame; this handles compositing information for one of
+        /// those frames.
         /// </summary>
-        /// <returns><c>true</c>, if a valid transformation from the specified base to the 
-        /// device frame exists for the given time, <c>false</c> otherwise.</returns>
-        /// <param name="baseFrame">Base frame.</param>
-        /// <param name="timeStamp">Time stamp being queried.</param>
-        /// <param name="adjustedTimeStamp">Adjusted time stamp (e.g., when querying current
-        /// Start of Service -> Device with GetPoseAtTime(0), this will return the current pose's timestamp).</param>
-        /// <param name="transformation">The transformation from the specified base frame to the Device frame
-        /// at the specified time.</param>
-        private static bool GetFrameToDeviceTransformation(TangoEnums.TangoCoordinateFrameType baseFrame, double timeStamp,
-                                                           out double adjustedTimeStamp, out Matrix4x4 transformation)
+        /// <param name="frame">Frame to get frame -> device frame for.</param>
+        /// <param name="timeStamp">Time stamp; if 0 may be modified with most up-to-date timestamp.</param>
+        /// <param name="frameToDeviceTransformation">Specified frame to device frame transformation.</param>
+        /// <param name="status">Status of the given frame to device frame pose.
+        /// See comments on GetEmulatedPoseAtTime().</param>
+        private static void _GetFrameToDevicePose(TangoEnums.TangoCoordinateFrameType frame,
+                                                  ref double timeStamp,
+                                                  out Matrix4x4 frameToDeviceTransformation,
+                                                  out TangoEnums.TangoPoseStatusType status)
         {
-            adjustedTimeStamp = timeStamp;
+            frameToDeviceTransformation = Matrix4x4.identity;
+            status = TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID;
 
+            bool frameIsWorld = (frame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE)
+                || (frame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION);
+            
+            // Check that emulation supports this frame:
+            if (!_EmulationSupportsReferenceFrame(frame))
+            {
+                status = TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID;
+            }
+            
+            // Get mouse/keyboard-based emulation if appropriate.
+            if (frameIsWorld)
+            {
+                if (!_GetEmulatedMovementTransformAtTime(ref timeStamp, out frameToDeviceTransformation))
+                {
+                    status = TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN;
+                }
+                
+                if (frame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION)
+                {
+                    bool areaDescriptionFramesAreValid = 
+                        EmulatedAreaDescriptionHelper.m_usingEmulatedDescriptionFrames
+                        && (string.IsNullOrEmpty(EmulatedAreaDescriptionHelper.m_currentUUID)
+                            || _GetAreaDescriptionSyncDelayIsOver());
+
+                    if (areaDescriptionFramesAreValid)
+                    {
+                        frameToDeviceTransformation.m03 += EmulatedAreaDescriptionHelper.m_emulationAreaOffset.x;
+                        frameToDeviceTransformation.m13 += EmulatedAreaDescriptionHelper.m_emulationAreaOffset.y;
+                        frameToDeviceTransformation.m23 += EmulatedAreaDescriptionHelper.m_emulationAreaOffset.z;
+                    }
+                    else
+                    {
+                        status = TangoEnums.TangoPoseStatusType.TANGO_POSE_INVALID;
+                    }
+                }
+            }
+
+            _GetFrameToDeviceAxisSwaps(frame, ref frameToDeviceTransformation);
+        }
+
+        /// <summary>
+        /// Gets the refrence frames coordinate system swaps one would get on an actual device going from the specified 
+        /// base frame to a target Device reference frame.
+        /// 
+        /// For movement-related reference frames (e.g. Start of Service, Area Descriptions), applies the appropriate 
+        /// coordinate system conversion to the given Unity-space transformation.
+        /// 
+        /// For static extrinsic reference frames (e.g. IMU, camera positions), overwrites the given matrix with a matrix
+        /// representing the appropriate axis swaps for that coordinate system conversion.
+        /// </summary>
+        /// <param name="baseFrame">Specified base frame.</param>
+        /// <param name="transformation">Transformation to apply coordinate system swaps to.</param>
+        private static void _GetFrameToDeviceAxisSwaps(TangoEnums.TangoCoordinateFrameType baseFrame,
+                                                       ref Matrix4x4 transformation)
+        {
             switch (baseFrame)
             {
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE:
                 transformation = Matrix4x4.identity;
-                return true;
+                break;
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE:
-                if (timeStamp == 0)
-                {
-                    float poseTimestamp;
-                    Vector3 posePosition;
-                    Quaternion poseRotation;
-                    if (GetTangoEmulationCurrent(out poseTimestamp, out posePosition, out poseRotation))
-                    {
-                        adjustedTimeStamp = poseTimestamp;
-                        transformation = Matrix4x4.TRS(posePosition, poseRotation, Vector3.one);
-                        return true;
-                    }
-                }
-                else
-                {
-                    Vector3 posePosition;
-                    Quaternion poseRotation;
-                    if (GetTangoEmulationAtTime((float)timeStamp, out posePosition, out poseRotation))
-                    {
-                        transformation = Matrix4x4.TRS(posePosition, poseRotation, Vector3.one);
-                        return true;
-                    }
-                }
-
-                transformation = Matrix4x4.identity;
-                return false;
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION:
-                Debug.Log(CLASS_NAME + ".GetPoseAtTime() emulation does not support Area Descriptions.");
-                transformation = Matrix4x4.identity;
-                return false;
+                // Poses are emulated in Unity space, so we have to temporarily move across a handedness
+                // swap into tango space to reconstruct the transformation as being SoS -> Device.
+
+                // Constant matrix converting between start of service and Unity world axis conventions.
+                Matrix4x4 startOfService_T_unityWorld = new Matrix4x4();
+                startOfService_T_unityWorld.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+                startOfService_T_unityWorld.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
+                startOfService_T_unityWorld.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+                startOfService_T_unityWorld.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+                
+                // Constant matrix converting between Unity world frame and device axis conventions.
+                Matrix4x4 unityCamera_T_device = new Matrix4x4();
+                unityCamera_T_device.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
+                unityCamera_T_device.SetColumn(1, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
+                unityCamera_T_device.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
+                unityCamera_T_device.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
+
+                transformation = startOfService_T_unityWorld * transformation * unityCamera_T_device;
+                break;
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU:
-                transformation = new Matrix4x4();
                 transformation.SetRow(0, new Vector4(0, -1, 0, 0));
                 transformation.SetRow(1, new Vector4(1, 0, 0, 0));
                 transformation.SetRow(2, new Vector4(0, 0, 1, 0));
                 transformation.SetRow(3, new Vector4(0, 0, 0, 1));
-                return true;
+                break;
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH:
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR:
             case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_FISHEYE:
-                transformation = new Matrix4x4();
                 transformation.SetRow(0, new Vector4(1, 0, 0, 0));
                 transformation.SetRow(1, new Vector4(0, -1, 0, 0));
                 transformation.SetRow(2, new Vector4(0, 0, -1, 0));
                 transformation.SetRow(3, new Vector4(0, 0, 0, 1));
+                break;
+            default:
+                Debug.Log(baseFrame.ToString() + " reference frame not handled by pose emulation.");
+                break;
+            }
+        }
+
+        /// <summary>
+        /// Returns whether emulation supports the given reference frame.
+        /// </summary>
+        /// <returns><c>true</c> if emulation supports the given reference frame, <c>false</c> otherwise.</returns>
+        /// <param name="referenceFrame">The reference frame in question.</param>
+        private static bool _EmulationSupportsReferenceFrame(TangoEnums.TangoCoordinateFrameType referenceFrame)
+        {
+            switch (referenceFrame)
+            {
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR:
+            case TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_FISHEYE:
                 return true;
             default:
-                Debug.Log(CLASS_NAME + ".GetPoseAtTime() emulation does not support " 
-                          + baseFrame + " frame");
-                transformation = Matrix4x4.identity;
+                Debug.Log(CLASS_NAME + ".GetPoseAtTime() emulation does not support the "
+                          + referenceFrame + " reference frame");
                 return false;
             }
         }
 
+        /// <summary>
+        /// Get transformation from Start of Service to to the Device frame (minus axis swaps) at a specified time.
+        /// </summary>
+        /// <returns><c>true</c>, if transformation is valid at the given timestamp, <c>false</c> otherwise.</returns>
+        /// <param name="timestamp">Time stamp being queried. 
+        /// When querying with a timestamp of 0, this will be adjusted to the current pose's timestamp.</param>
+        /// <param name="transformation">The transformation Start of Service to the Device frame at the specified time.
+        /// If transformation is not valid, this is undefined.</param>
+        private static bool _GetEmulatedMovementTransformAtTime(ref double timestamp, out Matrix4x4 transformation)
+        {
+            bool poseIsValid;
+            Vector3 posePosition;
+            Quaternion poseRotation;
+            
+            // Get pose data.
+            if (timestamp == 0)
+            {
+                // Get the most recent value for Tango emulation.
+                if (m_emulatedPoseHistory.Count > 0)
+                {
+                    EmulatedPose pose = m_emulatedPoseHistory[m_emulatedPoseHistory.Count - 1];
+                    timestamp = pose.m_timestamp;
+                    posePosition = pose.m_position;
+                    poseRotation = Quaternion.Euler(pose.m_angles);
+                    poseIsValid = true;
+                }
+                else
+                {
+                    posePosition = Vector3.zero;
+                    poseRotation = Quaternion.identity;
+                    poseIsValid = false;
+                }
+            }
+            else
+            {
+                // Get a historical value for Tango emulation.
+                EmulatedPose timestampedPose = new EmulatedPose();
+                timestampedPose.m_timestamp = (float)timestamp;
+                int index = m_emulatedPoseHistory.BinarySearch(timestampedPose, new CompareEmulatedPoseByTimestamp());
+                
+                if (index >= 0)
+                {
+                    // Found an exact timestamp match
+                    EmulatedPose pose = m_emulatedPoseHistory[index];
+                    posePosition = pose.m_position;
+                    poseRotation = Quaternion.Euler(pose.m_angles);
+                    poseIsValid = true;
+                }
+                else if (~index == m_emulatedPoseHistory.Count || ~index == 0)
+                {
+                    // Out of bounds, no good pose
+                    posePosition = Vector3.zero;
+                    poseRotation = Quaternion.identity;
+                    poseIsValid = false;
+                }
+                else
+                {
+                    // Timestamp is inbetween two pose histories
+                    EmulatedPose earlierPose = m_emulatedPoseHistory[~index - 1];
+                    EmulatedPose laterPose = m_emulatedPoseHistory[~index];
+                    float t = Mathf.InverseLerp(earlierPose.m_timestamp, laterPose.m_timestamp, (float)timestamp);
+                    
+                    posePosition = Vector3.Lerp(earlierPose.m_position, laterPose.m_position, t);
+                    
+                    Quaternion earlierRot = Quaternion.Euler(earlierPose.m_angles);
+                    Quaternion laterRot = Quaternion.Euler(laterPose.m_angles);
+                    poseRotation = Quaternion.Slerp(earlierRot, laterRot, t);
+                    poseIsValid = true;
+                }
+            }
+            
+            // Compose matrix.
+            if (poseIsValid)
+            {
+                transformation = Matrix4x4.TRS(posePosition, poseRotation, Vector3.one);
+            }
+            else
+            {
+                transformation = Matrix4x4.identity;
+            }
+            
+            return poseIsValid;
+        }
+        
         /// <summary>
         /// All the details needed for an individual emulated pose.  These are kept around to emulate GetPoseAtTime.
         /// </summary>
@@ -487,7 +670,7 @@ namespace Tango
             /// <summary>
             /// Emulated rotation stored as euler angles of a rotation from forward.
             /// </summary>
-            public Vector3 m_anglesFromForward;
+            public Vector3 m_angles;
             
             /// <summary>
             /// Initializes a new instance of the <see cref="Tango.PoseProvider+EmulatedPose"/> class.
@@ -496,7 +679,7 @@ namespace Tango
             {
                 m_timestamp = 0;
                 m_position = Vector3.zero;
-                m_anglesFromForward = Vector3.zero;
+                m_angles = Vector3.zero;
             }
 
             /// <summary>
@@ -507,7 +690,7 @@ namespace Tango
             {
                 m_timestamp = other.m_timestamp;
                 m_position = other.m_position;
-                m_anglesFromForward = other.m_anglesFromForward;
+                m_angles = other.m_angles;
             }
         }
 

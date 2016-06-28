@@ -34,7 +34,7 @@ using UnityEngine;
 public class ARCameraPostProcess : MonoBehaviour
 {
     /// <summary>
-    /// Material of post process shader that is to be run on the camera.
+    /// Material of post-process shader that is to be run on the camera.
     /// </summary>
     public Material m_postProcessMaterial;
 

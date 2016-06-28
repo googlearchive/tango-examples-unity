@@ -23,6 +23,7 @@ namespace Tango
     using System;
     using System.Collections;
     using System.Collections.Generic;
+    using System.IO;
     using System.Runtime.InteropServices;
     using System.Text;
     using UnityEngine;
@@ -51,6 +52,25 @@ namespace Tango
         /// Conversion factor between DateTime ticks and milliseconds.
         /// </summary>
         private const int DATETIME_TICKS_PER_MS = 10000;
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Extension used to identify the fake area description files
+        /// used to aid in area description interface tests in the Editor.
+        /// 
+        /// Functions as a sanity check to avoid trying to load
+        /// miscellaneous files (e.g. generated .DS_Store files on Macs). 
+        /// </summary>
+        private const string EMULATED_ADF_EXTENSION = ".ead";
+
+        /// <summary>
+        /// Path to where the fake area description files useed to aid in
+        /// area description interface tests in the Editor are to be kept.
+        /// </summary>
+        private static readonly string EMULATED_ADF_SAVE_PATH = 
+            UnityEngine.Application.persistentDataPath
+                + "/TangoEmulation/AreaDescriptions/";
+#endif
         
         /// <summary>
         /// The date-time epoch for Tango Metadata.
@@ -58,6 +78,15 @@ namespace Tango
         /// This is the same as the Unix epoch, 00:00:00 UTC on January 1st, 1970.
         /// </summary>
         private static readonly DateTime METADATA_EPOCH = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Xml serializer used for reading and writing metadata
+        /// for fake area descriptions in the Editor.
+        /// </summary>
+        private static System.Xml.Serialization.XmlSerializer metadataXmlSerializer = 
+            new System.Xml.Serialization.XmlSerializer(typeof(Metadata));
+#endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.AreaDescription"/> class.
@@ -82,9 +111,7 @@ namespace Tango
                 Debug.Log("No UUID specified.\n" + Environment.StackTrace);
                 return null;
             }
-#if UNITY_EDITOR
-            return new AreaDescription(uuid);
-#else
+
             string[] uuids = _GetUUIDList();
             if (uuids != null && !Array.Exists(uuids, p => p == uuid))
             {
@@ -94,7 +121,6 @@ namespace Tango
             }
 
             return new AreaDescription(uuid);
-#endif
         }
 
         /// <summary>
@@ -103,9 +129,6 @@ namespace Tango
         /// <returns>A list of area descriptions, or <c>null</c> if the list could not be queried.</returns>
         public static AreaDescription[] GetList()
         {
-#if UNITY_EDITOR
-            return null;
-#else
             string[] uuids = _GetUUIDList();
             if (uuids == null || uuids.Length == 0)
             {
@@ -119,7 +142,6 @@ namespace Tango
             }
 
             return adfs;
-#endif
         }
 
         /// <summary>
@@ -138,6 +160,53 @@ namespace Tango
         /// </returns>
         public static AreaDescription SaveCurrent()
         {
+#if UNITY_EDITOR
+            if (!EmulatedAreaDescriptionHelper.m_usingEmulatedDescriptionFrames)
+            {
+                Debug.LogError("Error in Area Description save emulation:\nNo current emulated area description.");
+                return null;
+            }
+
+            // If we don't have an existing UUID, this is a 'new' Area Description, so we'll have to create it.
+            if (string.IsNullOrEmpty(EmulatedAreaDescriptionHelper.m_currentUUID))
+            {
+                // Just use a .net GUID for the UUID.
+                string uuid = Guid.NewGuid().ToString();
+
+                EmulatedAreaDescriptionHelper.m_currentUUID = uuid;
+
+                try 
+                {
+                    Directory.CreateDirectory(EMULATED_ADF_SAVE_PATH);
+
+                    using (StreamWriter streamWriter = 
+                           new StreamWriter(File.Open(EMULATED_ADF_SAVE_PATH + uuid + EMULATED_ADF_EXTENSION,
+                                                      FileMode.Create)))
+                    {
+                        Metadata metadata = new Metadata();
+                        metadata.m_name = "Unnamed";
+                        metadata.m_dateTime = DateTime.Now;
+                        metadata.m_transformationPosition = new double[3];
+                        metadata.m_transformationRotation = new double[] { 0, 0, 0, 1 };
+                        metadataXmlSerializer.Serialize(streamWriter, metadata);
+                    }
+                }
+                catch (IOException ioException)
+                {
+                    Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                                   + ioException.Message);
+                    return null;
+                }
+
+                return AreaDescription.ForUUID(uuid);
+            }
+            else
+            {
+                // Since we don't actually save any description of the area in emulation,
+                // if we're using an existing UUID, we don't have to do anything but return it.
+                return AreaDescription.ForUUID(EmulatedAreaDescriptionHelper.m_currentUUID);
+            }
+#else
             byte[] rawUUID = new byte[Common.UUID_LENGTH];
             if (AreaDescriptionAPI.TangoService_saveAreaDescription(rawUUID) != Common.ErrorType.TANGO_SUCCESS)
             {
@@ -149,6 +218,7 @@ namespace Tango
             string uuid = Encoding.UTF8.GetString(rawUUID, 0, Common.UUID_LENGTH - 1);
 
             return AreaDescription.ForUUID(uuid);
+#endif
         }
         
         /// <summary>
@@ -158,6 +228,12 @@ namespace Tango
         /// <param name="filePath">File path of the area descrption to be imported.</param>
         public static bool ImportFromFile(string filePath)
         {
+#if UNITY_EDITOR
+            Debug.LogWarning("Area description import and export are not supported in Unity Editor"
+                             + " because editor area description files are all but meaningless"
+                             + " (and mostly exist for the sole purpose of faster UI testing).");
+            return false;
+#else
             if (string.IsNullOrEmpty(filePath))
             {
                 Debug.Log("No file path specified.\n" + Environment.StackTrace);
@@ -166,6 +242,7 @@ namespace Tango
 
             AndroidHelper.StartImportADFActivity(filePath);
             return true;
+#endif
         }
 
         /// <summary>
@@ -177,6 +254,12 @@ namespace Tango
         /// <param name="filePath">Destination file directory.</param>
         public bool ExportToFile(string filePath)
         {
+#if UNITY_EDITOR
+            Debug.LogWarning("Area description import and export are not supported in Unity Editor"
+                             + " because editor area description files are all but meaningless"
+                             + " (and mostly exist for the sole purpose of faster UI testing).");
+            return false;
+#else
             if (string.IsNullOrEmpty(filePath))
             {
                 Debug.Log("No file path specified.\n" + Environment.StackTrace);
@@ -186,6 +269,7 @@ namespace Tango
             AndroidHelper.StartExportADFActivity(m_uuid, filePath);
 
             return true;
+#endif
         }
 
         /// <summary>
@@ -196,6 +280,23 @@ namespace Tango
         /// </returns>
         public bool Delete()
         {
+#if UNITY_EDITOR
+            try
+            {
+                if (File.Exists(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION))
+                {
+                    File.Delete(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION);
+                    return true;
+                }
+            }
+            catch (IOException ioException)
+            {
+                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                               + ioException.Message);
+            }
+
+            return false;
+#else
             int returnValue = AreaDescriptionAPI.TangoService_deleteAreaDescription(m_uuid);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
@@ -204,6 +305,7 @@ namespace Tango
             }
 
             return true;
+#endif
         }
 
         /// <summary>
@@ -215,6 +317,55 @@ namespace Tango
         /// <returns>The metadata, or <c>null</c> if that Area Description does not exist.</returns>
         public Metadata GetMetadata()
         {
+#if UNITY_EDITOR
+            Metadata metadata = new Metadata();
+
+            try
+            {
+                if (!File.Exists(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION))
+                {
+                    return null;
+                }
+
+                using (StreamReader streamReader = 
+                       new StreamReader(File.OpenRead(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION)))
+                {
+                    metadata = (Metadata)metadataXmlSerializer.Deserialize(streamReader);
+                }
+            }
+            catch (IOException ioException)
+            {
+                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                               + ioException.Message);
+                return null;
+            }
+            catch (System.Xml.XmlException xmlException)
+            {
+                Debug.LogError("XML error in Area Description save/load emulation"
+                               + " (corrupt file contents?); returning blank metadata (for file: "
+                               + EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION + ")\n" 
+                               + "Error: " + xmlException.Message);
+            }
+
+            // Make sure there are no fields left atypically uninitialized
+            // in emulation even if some fields are missing from or corrupted in XML:
+            if (metadata.m_name == null)
+            {
+                metadata.m_name = string.Empty;
+            }
+
+            if (metadata.m_transformationPosition == null)
+            {
+                metadata.m_transformationPosition = new double[3];
+            }
+
+            if (metadata.m_transformationRotation == null)
+            {
+                metadata.m_transformationRotation = new double[] { 0, 0, 0, 1 };
+            }
+
+            return metadata;
+#else
             IntPtr rawMetadata = _GetMetadataPtr();
             if (rawMetadata == IntPtr.Zero)
             {
@@ -247,6 +398,7 @@ namespace Tango
 
             _FreeMetadataPtr(rawMetadata);
             return newData;
+#endif
         }
 
         /// <summary>
@@ -256,6 +408,25 @@ namespace Tango
         /// <param name="metadata">Metadata to save.</param>
         public bool SaveMetadata(Metadata metadata)
         {
+#if UNITY_EDITOR
+            try
+            {
+                using (StreamWriter streamWriter = 
+                       new StreamWriter(File.Open(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION,
+                                                  FileMode.Create)))
+                {
+                    metadataXmlSerializer.Serialize(streamWriter, metadata);
+                }
+            }
+            catch (IOException ioException)
+            {
+                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                               + ioException.Message);
+                return false;
+            }
+            
+            return true;
+#else
             IntPtr rawMetadata = _GetMetadataPtr();
             if (rawMetadata == IntPtr.Zero)
             {
@@ -299,6 +470,7 @@ namespace Tango
 
             _FreeMetadataPtr(rawMetadata);
             return !anyErrors;
+#endif
         }
 
         /// <summary>
@@ -307,6 +479,33 @@ namespace Tango
         /// <returns>List of string UUIDs.</returns>
         private static string[] _GetUUIDList()
         {
+#if UNITY_EDITOR
+            try 
+            {
+                DirectoryInfo directory = new DirectoryInfo(EMULATED_ADF_SAVE_PATH);
+                if (directory.Exists)
+                {
+                    FileInfo[] fileInfo = directory.GetFiles();
+                    List<string> uuids = new List<String>();
+                    for (int i = 0; i < fileInfo.Length; i++)
+                    {
+                        if (fileInfo[i].Extension == EMULATED_ADF_EXTENSION)
+                        {
+                            uuids.Add(Path.GetFileNameWithoutExtension(fileInfo[i].Name));
+                        }
+                    }
+
+                    return uuids.ToArray();
+                }
+            }
+            catch (IOException ioException)
+            {
+                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                               + ioException.Message);
+            }
+
+            return new string[0];
+#else
             IntPtr rawListString = IntPtr.Zero;
             int returnValue = AreaDescriptionAPI.TangoService_getAreaDescriptionUUIDList(ref rawListString);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
@@ -317,6 +516,7 @@ namespace Tango
             
             string listString = _ReadUTF8String(rawListString);
             return listString.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+#endif
         }
 
         /// <summary>
