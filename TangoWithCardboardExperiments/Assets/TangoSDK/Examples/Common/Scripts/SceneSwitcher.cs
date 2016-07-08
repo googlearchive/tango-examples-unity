@@ -40,7 +40,9 @@ public class SceneSwitcher : MonoBehaviour
         "MotionTracking",
         "PointCloud",
         "AreaLearning",
-        "AreaDescriptionManagement"
+        "AreaDescriptionManagement",
+        "SimpleAugmentedReality",
+        "PointToPoint"
     };
 
     /// <summary>

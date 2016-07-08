@@ -141,6 +141,26 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     /// </summary>
     private Thread m_saveThread;
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// If true, text input for naming new saved Area Description is displayed.
+    /// </summary>
+    private bool m_displayGuiTextInput;
+    
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// Contains text data for naming new saved Area Descriptions.
+    /// </summary>
+    private string m_guiTextInputContents;
+    
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// Indicates whether last text input was ended with confirmation or cancellation.
+    /// </summary>
+    private bool m_guiTextInputResult;
+#endif
+
     /// <summary>
     /// Update is called once per frame.
     /// </summary>
@@ -209,6 +229,50 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         }
     }
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// Unity OnGUI.
+    /// 
+    /// Handles text input when there is no device keyboard in the editor.
+    /// </summary>
+    public void OnGUI()
+    {
+        if (m_displayGuiTextInput)
+        {
+            Rect textBoxRect = new Rect(100,
+                                        Screen.height - 200,
+                                        Screen.width - 200,
+                                        100);
+            
+            Rect okButtonRect = textBoxRect;
+            okButtonRect.y += 100;
+            okButtonRect.width /= 2;
+            
+            Rect cancelButtonRect = okButtonRect;
+            cancelButtonRect.x = textBoxRect.center.x;
+            
+            GUI.SetNextControlName("TextField");
+            GUIStyle customTextFieldStyle = new GUIStyle(GUI.skin.textField);
+            customTextFieldStyle.alignment = TextAnchor.MiddleCenter;
+            m_guiTextInputContents = 
+                GUI.TextField(textBoxRect, m_guiTextInputContents, customTextFieldStyle);
+            GUI.FocusControl("TextField");
+            
+            if (GUI.Button(okButtonRect, "OK")
+                || (Event.current.type == EventType.keyDown && Event.current.character == '\n'))
+            {
+                m_displayGuiTextInput = false;
+                m_guiTextInputResult = true;
+            }
+            else if (GUI.Button(cancelButtonRect, "Cancel"))
+            {
+                m_displayGuiTextInput = false;
+                m_guiTextInputResult = false;
+            }
+        }
+    }
+#endif
+    
     /// <summary>
     /// This is called when the permission granting process is finished.
     /// </summary>
@@ -489,6 +553,20 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     /// <returns>Coroutine IEnumerator.</returns>
     private IEnumerator _DoSaveCurrentAreaDescription()
     {
+#if UNITY_EDITOR
+        // Work around lack of on-screen keyboard in editor:
+        if (m_displayGuiTextInput || m_saveThread != null)
+        {
+            yield break;
+        }
+        
+        m_displayGuiTextInput = true;
+        m_guiTextInputContents = "Unnamed";
+        while (m_displayGuiTextInput)
+        {
+            yield return null;
+        }
+#else
         if (TouchScreenKeyboard.visible || m_saveThread != null)
         {
             yield break;
@@ -499,6 +577,7 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         {
             yield return null;
         }
+#endif
 
         // Save the text in a background thread.
         m_savingTextParent.gameObject.SetActive(true);
@@ -507,7 +586,11 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
             // Save the name put in with the Area Description.
             AreaDescription areaDescription = AreaDescription.SaveCurrent();
             AreaDescription.Metadata metadata = areaDescription.GetMetadata();
+#if UNITY_EDITOR
+            metadata.m_name = m_guiTextInputContents;
+#else
             metadata.m_name = kb.text;
+#endif
             areaDescription.SaveMetadata(metadata);
         });
         m_saveThread.Start();

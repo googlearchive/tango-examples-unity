@@ -278,30 +278,40 @@ public class TangoInspector : Editor
     /// <param name="tangoApplication">Tango application.</param>
     private void _DrawEmulationOptions(TangoApplication tangoApplication)
     {
-        GUILayout.Label("Editor Emulation", GUILayout.ExpandWidth(true));
-        EditorGUI.indentLevel++;
-        tangoApplication.m_doSlowEmulation = EditorGUILayout.Toggle(
-            new GUIContent("Depth and Video",
-                           "Simulate depth and color camera data based on a specified mesh. Disable for editor performance."),
-            tangoApplication.m_doSlowEmulation);
-        
-        if (tangoApplication.m_doSlowEmulation)
+        tangoApplication.m_showEmulationOptionsInInspector =
+            EditorGUILayout.Foldout(tangoApplication.m_showEmulationOptionsInInspector, "Editor Emulation");
+
+        if (tangoApplication.m_showEmulationOptionsInInspector)
         {
             EditorGUI.indentLevel++;
-            tangoApplication.m_emulationEnvironment = (Mesh)EditorGUILayout.ObjectField(
-                new GUIContent("Mesh For Emulation", "Mesh to use as the world when simulating color camera and depth data."),
-                m_tangoApplication.m_emulationEnvironment, typeof(Mesh), false);
-            tangoApplication.m_emulationEnvironmentTexture = (Texture)EditorGUILayout.ObjectField(
-                new GUIContent("Texture for Emulation", "(Optional) Texture to use on emulated environment mesh."),
-                m_tangoApplication.m_emulationEnvironmentTexture, typeof(Texture), false);
-            m_tangoApplication.m_emulationVideoOverlaySimpleLighting = EditorGUILayout.Toggle(
-                new GUIContent("Simulate Lighting", "Use simple lighting in simulating camera feed"),
-                m_tangoApplication.m_emulationVideoOverlaySimpleLighting);
-            EditorGUI.indentLevel--;
+            tangoApplication.m_doSlowEmulation = EditorGUILayout.Toggle(
+                new GUIContent("Depth and Video",
+                               "Simulate depth and color camera data based on a specified mesh. Disable for editor performance."),
+                tangoApplication.m_doSlowEmulation);
             
-            EditorGUILayout.Space();
-        }
+            if (tangoApplication.m_doSlowEmulation)
+            {
+                EditorGUI.indentLevel++;
+                tangoApplication.m_emulationEnvironment = (Mesh)EditorGUILayout.ObjectField(
+                    new GUIContent("Mesh For Emulation", "Mesh to use as the world when simulating color camera and depth data."),
+                    m_tangoApplication.m_emulationEnvironment, typeof(Mesh), false);
+                tangoApplication.m_emulationEnvironmentTexture = (Texture)EditorGUILayout.ObjectField(
+                    new GUIContent("Texture for Emulation", "(Optional) Texture to use on emulated environment mesh."),
+                    m_tangoApplication.m_emulationEnvironmentTexture, typeof(Texture), false);
+                m_tangoApplication.m_emulationVideoOverlaySimpleLighting = EditorGUILayout.Toggle(
+                    new GUIContent("Simulate Lighting", "Use simple lighting in simulating camera feed"),
+                    m_tangoApplication.m_emulationVideoOverlaySimpleLighting);
+                EditorGUI.indentLevel--;
+                
+                EditorGUILayout.Space();
+            }
 
-        EditorGUI.indentLevel--;
+            tangoApplication.m_emulatedAreaDescriptionStartOffset = EditorGUILayout.Vector3Field(
+                new GUIContent("Area Description Offset",
+                           "Simulate difference between Start of Service and Area Description origins with a simple positional offset"),
+                tangoApplication.m_emulatedAreaDescriptionStartOffset);
+
+            EditorGUI.indentLevel--;
+        }
     }
 }

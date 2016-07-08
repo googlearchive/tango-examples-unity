@@ -37,7 +37,6 @@ Pass
         v2f o;
         o.uv = v.uv;
         o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
-        o.vertex = float4(o.vertex.x * 1.03, o.vertex.y * 1.03, 0, 1);
         return o;
     }
     
@@ -63,9 +62,9 @@ Pass
                 normalized_coords.y * normalized_coords.y;
         float4 normalized_distorted_coords;
         normalized_distorted_coords.x =
-            normalized_coords.x * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
+            normalized_coords.x / (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
         normalized_distorted_coords.y =
-            normalized_coords.y * (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
+            normalized_coords.y / (1.0 + r_u2 * (_K0 + r_u2 * (_K1 + r_u2 * _K2)));
         
         float4 distorted_coords;
         distorted_coords.x = normalized_distorted_coords.x * _Fx + _Cx;

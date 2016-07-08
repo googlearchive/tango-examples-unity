@@ -87,8 +87,7 @@ SubShader
             y = (y * _TexHeight - _Cy) / _Fy;
 
             float r2 = x * x + y * y;
-            float denom = 1.0 + r2 * (_K0 + r2 * (_K1 + r2 * _K2));
-            float icdist = 1.0 / denom;
+            float icdist = 1.0 + r2 * (_K0 + r2 * (_K1 + r2 * _K2));
             undistored_x = x * icdist;
             undistored_y = y * icdist;
 

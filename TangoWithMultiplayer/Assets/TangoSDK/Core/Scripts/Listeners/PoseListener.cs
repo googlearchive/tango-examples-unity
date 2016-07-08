@@ -50,6 +50,10 @@ namespace Tango
         private bool m_isRelocalizaitonPoseAvailable = false;
         private object m_lockObject = new object();
 
+#if UNITY_EDITOR
+        private double m_mostRecentEmulatedRelocalizationTimestamp = -1.0;
+#endif
+
         /// <summary>
         /// Gets or sets a value indicating whether this <see cref="PoseListener"/> is using auto reset.
         /// </summary>
@@ -87,7 +91,20 @@ namespace Tango
                             framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
                             framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
                             PoseProvider.GetPoseAtTime(m_areaLearningData, 0, framePair);
-                            m_isAreaLearningPoseAvailable = true;
+                            if (m_areaLearningData.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+                            {
+                                m_isAreaLearningPoseAvailable = true;
+                            }
+
+                            framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                            framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+                            PoseProvider.GetPoseAtTime(m_relocalizationData, 0, framePair);
+                            if (m_relocalizationData.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID
+                                && m_relocalizationData.timestamp != m_mostRecentEmulatedRelocalizationTimestamp)
+                            {
+                                m_mostRecentEmulatedRelocalizationTimestamp = m_mostRecentEmulatedRelocalizationTimestamp;
+                                m_isRelocalizaitonPoseAvailable = true;
+                            }
                         }
                     }
                 }

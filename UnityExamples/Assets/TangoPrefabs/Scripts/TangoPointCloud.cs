@@ -43,7 +43,8 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// <summary>
     /// The points of the point cloud, in world space.
     /// 
-    /// Note that not every member of this array will be filled out, see m_pointsCount.
+    /// Note that not every member of this array will be filled out. See
+    /// m_pointsCount.
     /// </summary>
     [HideInInspector]
     public Vector3[] m_points;
@@ -316,7 +317,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// <summary>
     /// Finds the closest point from a point cloud to a position on screen.
     /// 
-    /// This function is slow, as looks at every single point in the point
+    /// This function is slow, as it looks at every single point in the point
     /// cloud. Avoid calling this more than once a frame.
     /// </summary>
     /// <returns>The index of the closest point, or -1 if not found.</returns>
@@ -353,11 +354,11 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// Given a screen coordinate, finds a plane that most closely fits the
     /// depth values in that area.
     /// 
-    /// This function is slow, as looks at every single point in the point
+    /// This function is slow, as it looks at every single point in the point
     /// cloud. Avoid calling this more than once a frame. This also assumes the
     /// Unity camera intrinsics match the device's color camera.
     /// </summary>
-    /// <returns><c>true</c>, if plane was found; <c>false</c> otherwise.</returns>
+    /// <returns><c>true</c>, if a plane was found; <c>false</c> otherwise.</returns>
     /// <param name="cam">The Unity camera.</param>
     /// <param name="pos">The point in screen space to perform detection on.</param>
     /// <param name="planeCenter">Filled in with the center of the plane in Unity world space.</param>

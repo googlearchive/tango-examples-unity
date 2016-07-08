@@ -1,110 +1,96 @@
-//-----------------------------------------------------------------------
-// <copyright file="ZTestBlur.shader" company="Google">
-//
-// Copyright 2016 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// </copyright>
-//-----------------------------------------------------------------------
+/*
+ * Copyright 2016 Google Inc. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+ 
 Shader "Custom/ZTestBlur"
 {
     Properties
     {
         _CameraDepthTexture ("Camera Depth Texture", 2D) = "white" {}
         _MainTex ("Main Texture", 2D) = "white" {}
-        _OcclusionColor ("Occlusion Color", Color) = (1, 1, 1, 1)
+        _BumpMap ("Normal", 2D) = "bump" {}
+        _GlossMap ("Gloss (R)", 2D) = "black" {}
+        _GlossScale ("GlossScale", Range(0, 100)) = 0
+        _Specular ("Specular", Range(0, 1)) = 0
         _BlurThresholdMax("Highlight Threshold Max", Range (0.001, 0.01)) = 0.01
+        _RimColor ("Rim Color", Color) = (1, 1, 1, 1)
         _RimPower ("Rim Power", Float) = 1.0
     }
     SubShader
     {
-        Tags { "Queue" = "Transparent" "RenderType"="Transparent" }
- 
+        Tags { "Queue"="Geometry-10" "RenderType"="Opaque" }
+        LOD 200
+        
+        // Non-convex meshes can have draw-order problems when dealing with transparency.
+        // Perform a pass that forces an initial render to the depth buffer, and then offset
+        // to deal with z-fighting when writing color.
         Pass
         {
-            Blend SrcAlpha OneMinusSrcAlpha
-            ZWrite Off
-            ZTest Always
- 
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-            #include "UnityCG.cginc"
- 
-            uniform sampler2D _CameraDepthTexture;
-            uniform sampler2D _MainTex;
-            uniform float4 _OcclusionColor;
-            uniform float _BlurThresholdMax;
-            uniform float _RimPower;
-            
-            float4 _MainTex_ST;
- 
-            struct v2f
-            {
-                float4 pos : SV_POSITION;
-                float4 projPos : TEXCOORD0;
-                float2 uv : TEXCOORD1;
-                float3 normal : TEXCOORD2;
-                float3 viewDir : TEXCOORD3;
-            };
- 
-            v2f vert(appdata_base v)
-            {
-                v2f o;
-                o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
-                o.projPos = ComputeScreenPos(o.pos);
-                o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
-                o.normal = normalize(v.normal);
-                o.viewDir = normalize(ObjSpaceViewDir(v.vertex));
- 
-                return o;
-            }
- 
-            half4 frag(v2f i) : COLOR
-            {
-                float4 finalColor = tex2D(_MainTex,i.uv);
-
-                // Get the value in the depth texture.
-                float depthZ = LinearEyeDepth(tex2Dproj(_CameraDepthTexture, UNITY_PROJ_COORD(i.projPos)).r);
-
-                // Get the distance z value from the camera.
-                float cameraDistZ = i.projPos.z + (_ProjectionParams.y * 2);
-
-                float sampleScale = 0;
-
-                #define GRABPIXEL(weight,kernel) (LinearEyeDepth(tex2Dproj(_CameraDepthTexture, UNITY_PROJ_COORD(i.projPos + float4(kernel * _BlurThresholdMax, kernel * _BlurThresholdMax, 0, 0))).r) < cameraDistZ) * weight
-
-                sampleScale += GRABPIXEL(0.05, -4.0);
-                sampleScale += GRABPIXEL(0.09, -3.0);
-                sampleScale += GRABPIXEL(0.12, -2.0);
-                sampleScale += GRABPIXEL(0.15, -1.0);
-                sampleScale += GRABPIXEL(0.18,  0.0);
-                sampleScale += GRABPIXEL(0.15, +1.0);
-                sampleScale += GRABPIXEL(0.12, +2.0);
-                sampleScale += GRABPIXEL(0.09, +3.0);
-                sampleScale += GRABPIXEL(0.05, +4.0);
-
-                // Get the alpha to be drawn based on the dot of the normal and camera directions.
-                half Rim = 1 - saturate(dot(normalize(i.viewDir), i.normal));
-                half4 RimOut = _OcclusionColor * pow(Rim, _RimPower);
-
-                finalColor = (sampleScale * RimOut) + ((1 - sampleScale) * finalColor);
-
-                return half4 (finalColor);
-            }
- 
-            ENDCG
+            ZWrite On
+            ColorMask 0
+            Offset 1, 1
         }
-    }
+        
+        CGPROGRAM
+        #pragma surface surf Lambert alpha:blend
+
+        // Use shader model 3.0 target, to get nicer looking lighting
+        #pragma target 3.0
+        
+        sampler2D _CameraDepthTexture;
+        sampler2D _MainTex;
+        sampler2D _BumpMap;
+        sampler2D _GlossMap;
+        float _GlossScale;
+        float _Specular;
+        float _BlurThresholdMax;
+        float4 _RimColor;
+        float _RimPower;
+
+        struct Input
+        {
+            float2 uv_MainTex;
+            float2 uv_GlossMap;
+            float2 uv_BumpMap;
+            float3 viewDir;
+            float4 screenPos;
+            float3 worldPos;
+        };
+        
+        #include "TangoOcclusion.cginc"
+        
+        void surf(Input IN, inout SurfaceOutput o)
+        {
+            // Get the non-occluded color from the texture.
+            float4 c = tex2D(_MainTex, IN.uv_MainTex);
+            
+            // Get the occluded color with by coloring the rim.
+            o.Normal = UnpackNormal(tex2D (_BumpMap, IN.uv_BumpMap));
+            float rim = 1 - saturate(dot(IN.viewDir, o.Normal));
+            float4 rimOut = _RimColor * pow(rim, _RimPower);
+            
+            // Find the final color by blending the occluded and non-occluded colors.
+            float occ = TangoOcclusionCertainty(_CameraDepthTexture, IN.screenPos, _BlurThresholdMax);
+            c = (occ * rimOut) + ((1 - occ) * c);
+            
+            o.Albedo = c.rgb;
+            o.Alpha = c.a;
+            o.Specular = _Specular;
+            o.Gloss = tex2D(_GlossMap, IN.uv_GlossMap).r * _GlossScale;
+        }
+        ENDCG
+    } 
+    FallBack "Diffuse"
 }

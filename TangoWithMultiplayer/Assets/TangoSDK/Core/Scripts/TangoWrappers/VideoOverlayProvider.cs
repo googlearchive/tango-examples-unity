@@ -34,16 +34,27 @@ namespace Tango
     {
 #if UNITY_EDITOR
         /// <summary>
+        /// INTERNAL USE: Dimension of simulated color camera textures.
+        /// </summary>
+        internal const int EMULATED_CAMERA_PACKED_WIDTH = 1280 / 4;
+
+        /// <summary>
+        /// INTERNAL USE: Dimension of simulated color camera Y texture.
+        /// </summary>
+        internal const int EMULATED_CAMERA_PACKED_Y_HEIGHT = 720;
+
+        /// <summary>
+        /// INTERNAL USE: Dimension of simulated color camera CbCr texture.
+        /// </summary>
+        internal const int EMULATED_CAMERA_PACKED_UV_HEIGHT = 720 / 2;
+        
+        /// <summary>
         /// INTERNAL USE: Flag set to true whenever emulated values have been updated.
         /// </summary>
         internal static bool m_emulationIsDirty;
 
         private const int EMULATED_CAMERA_WIDTH = 1280;
         private const int EMULATED_CAMERA_HEIGHT = 720;
-
-        private const int EMULATED_CAMERA_PACKED_WIDTH = 1280 / 4;
-        private const int EMULATED_CAMERA_PACKED_Y_HEIGHT = 720;
-        private const int EMULATED_CAMERA_PACKED_UV_HEIGHT = 720 / 2;
 
         private const string EMULATED_RGB2YUV_Y_SHADERNAME = "Hidden/Tango/RGB2YUV_Y";
         private const string EMULATED_RGB2YUV_CBCR_SHADERNAME = "Hidden/Tango/RGB2YUV_CbCr";
@@ -57,13 +68,6 @@ namespace Tango
         /// Render target used to render environment for Tango emulation on PC.
         /// </summary>
         private static RenderTexture m_emulatedColorRenderTexture = null;
-
-#if UNITY_EDITOR_WIN
-        /// <summary>
-        /// Most recent set of textures submitted from TangoApplication.
-        /// </summary>
-        private static YUVTexture m_emulationTexIdCaptureTextures;
-#endif // UNITY_EDITOR_WIN
 
         /// <summary>
         /// Underlying Y texture when using experimental texture-ID method.
@@ -164,24 +168,6 @@ namespace Tango
                 m_emulatedExpId_CbCr.DiscardContents();
                 Graphics.Blit(m_emulatedColorRenderTexture, m_emulatedExpId_Y, m_yuvFilterY);
                 Graphics.Blit(m_emulatedColorRenderTexture, m_emulatedExpId_CbCr, m_yuvFilterCbCr);
-#if UNITY_EDITOR_WIN
-                // A crash occurs when assigning the pointer of a Unity RenderTexture to a Texture2D in a DirectX
-                // environment, so must use the slower technique of using normal Texture2D objects with ReadPixels().
-                // See emulation comments in ExperimentalConnectTexture().
-                RenderTexture.active = m_emulatedExpId_Y;
-                m_emulationTexIdCaptureTextures.m_videoOverlayTextureY.ReadPixels(new Rect(0, 0,
-                                                                                           m_emulatedExpId_Y.width,
-                                                                                           m_emulatedExpId_Y.height),
-                                                                                  0, 0, false);
-                m_emulationTexIdCaptureTextures.m_videoOverlayTextureY.Apply();
-                
-                RenderTexture.active = m_emulatedExpId_CbCr;
-                m_emulationTexIdCaptureTextures.m_videoOverlayTextureCb.ReadPixels(new Rect(0, 0,
-                                                                                            m_emulatedExpId_CbCr.width,
-                                                                                            m_emulatedExpId_CbCr.height),
-                                                                                   0, 0, false);
-                m_emulationTexIdCaptureTextures.m_videoOverlayTextureCb.Apply();
-#endif  // UNITY_EDITOR_WIN
             }
 
             return m_lastColorEmulationTime;
@@ -269,33 +255,8 @@ namespace Tango
 #if UNITY_EDITOR
             if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
             {
-                // Resize textures to to simulated width.
-                textures.ResizeAll(EMULATED_CAMERA_PACKED_WIDTH, EMULATED_CAMERA_PACKED_Y_HEIGHT,
-                                   EMULATED_CAMERA_PACKED_WIDTH, EMULATED_CAMERA_PACKED_UV_HEIGHT);
-
-                if(!m_emulationIsInitialized)
-                {
-                    _InitializeResourcesForEmulation();
-                    m_emulationIsInitialized = true;
-                }
-                
-#if !UNITY_EDITOR_WIN
-                // Rebind Texture2Ds to the underlying OpenGL texture ids of our render textures
-                // Which is more or less the inverse of what the acutal tango service does but has the same effect.
-                textures.m_videoOverlayTextureY.UpdateExternalTexture(m_emulatedExpId_Y.GetNativeTexturePtr());
-                textures.m_videoOverlayTextureCb.UpdateExternalTexture(m_emulatedExpId_CbCr.GetNativeTexturePtr());
-                textures.m_videoOverlayTextureCr.UpdateExternalTexture(m_emulatedExpId_CbCr.GetNativeTexturePtr());
-#else   // !UNITY_EDITOR_WIN
-                // A crash occurs when assigning the pointer of a Unity RenderTexture to a Texture2D (as above)
-                // in a DirectX environment. Instead, size the Texture2D's correctly and copy render targets
-                // with ReadPixels() when updating experimental textures. 
-                // Keeping separate paths because ReadPixels() is a significant performance hit.
-
-                textures.m_videoOverlayTextureY.Resize(m_emulatedExpId_Y.width, m_emulatedExpId_Y.height);
-                textures.m_videoOverlayTextureCb.Resize(m_emulatedExpId_CbCr.width, m_emulatedExpId_CbCr.height);
-
-                m_emulationTexIdCaptureTextures = textures;
-#endif  // !UNITY_EDITOR_WIN
+                m_emulatedExpId_Y = (RenderTexture)textures.m_videoOverlayTextureY;
+                m_emulatedExpId_CbCr = (RenderTexture)textures.m_videoOverlayTextureCb;
             }
 #else
 
@@ -463,17 +424,6 @@ namespace Tango
                                                                     EMULATED_CAMERA_PACKED_UV_HEIGHT, 
                                                                     TextureFormat.ARGB32, false);
 
-            m_emulatedExpId_Y = new RenderTexture(EMULATED_CAMERA_PACKED_WIDTH, 
-                                                  EMULATED_CAMERA_PACKED_Y_HEIGHT, 
-                                                  0, RenderTextureFormat.ARGB32);
-            m_emulatedExpId_CbCr = new RenderTexture(EMULATED_CAMERA_PACKED_WIDTH, 
-                                                     EMULATED_CAMERA_PACKED_UV_HEIGHT, 
-                                                     0, RenderTextureFormat.ARGB32);
-            m_emulatedExpId_Y.filterMode = FilterMode.Point;
-            m_emulatedExpId_CbCr.filterMode = FilterMode.Point;
-            m_emulatedExpId_Y.Create();
-            m_emulatedExpId_CbCr.Create();
-
             // Find shaders by searching for them:
             if (EmulatedEnvironmentRenderHelper.CreateMaterialFromShaderName(EMULATED_RGB2YUV_Y_SHADERNAME,
                                                                              out m_yuvFilterY))
@@ -578,7 +528,7 @@ namespace Tango
         /// Rows        720
         /// This size is for a 1280x720 screen.
         /// </summary>
-        public Texture2D m_videoOverlayTextureY;
+        public readonly Texture m_videoOverlayTextureY;
         
         /// <summary>
         /// The m_video overlay texture cb.
@@ -586,7 +536,7 @@ namespace Tango
         /// Rows        360
         /// This size is for a 1280x720 screen.
         /// </summary>
-        public Texture2D m_videoOverlayTextureCb;
+        public readonly Texture m_videoOverlayTextureCb;
         
         /// <summary>
         /// The m_video overlay texture cr.
@@ -594,7 +544,7 @@ namespace Tango
         /// Rows        360
         /// This size is for a 1280x720 screen.
         /// </summary>
-        public Texture2D m_videoOverlayTextureCr;
+        public readonly Texture m_videoOverlayTextureCr;
         
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.YUVTexture"/> class.
@@ -612,15 +562,29 @@ namespace Tango
                           TextureFormat format, bool mipmap)
         {
 #if UNITY_EDITOR
+            // We always know the simulated 'camera resolution' in the Editor, so we can also do away with the width/height options:
+            yPlaneWidth = VideoOverlayProvider.EMULATED_CAMERA_PACKED_WIDTH;
+            yPlaneHeight = VideoOverlayProvider.EMULATED_CAMERA_PACKED_Y_HEIGHT;
+            uvPlaneWidth = VideoOverlayProvider.EMULATED_CAMERA_PACKED_WIDTH;
+            uvPlaneHeight = VideoOverlayProvider.EMULATED_CAMERA_PACKED_UV_HEIGHT;
+
             // Format needs to be ARGB32 in editor to use Texture2D.ReadPixels() in emulation
             // in Unity 4.6.
-            format = TextureFormat.ARGB32;
-#endif
+            RenderTexture Y = new RenderTexture(yPlaneWidth, yPlaneHeight, 0, RenderTextureFormat.ARGB32);
+            RenderTexture CbCr = new RenderTexture(uvPlaneWidth, uvPlaneHeight, 0, RenderTextureFormat.ARGB32);
+            Y.Create();
+            CbCr.Create();
+
+            m_videoOverlayTextureY = Y;
+            m_videoOverlayTextureCb = CbCr;
+            m_videoOverlayTextureCr = CbCr;
+#else
             m_videoOverlayTextureY = new Texture2D(yPlaneWidth, yPlaneHeight, format, mipmap);
-            m_videoOverlayTextureY.filterMode = FilterMode.Point;
             m_videoOverlayTextureCb = new Texture2D(uvPlaneWidth, uvPlaneHeight, format, mipmap);
-            m_videoOverlayTextureCb.filterMode = FilterMode.Point;
             m_videoOverlayTextureCr = new Texture2D(uvPlaneWidth, uvPlaneHeight, format, mipmap);
+#endif
+            m_videoOverlayTextureY.filterMode = FilterMode.Point;
+            m_videoOverlayTextureCb.filterMode = FilterMode.Point;
             m_videoOverlayTextureCr.filterMode = FilterMode.Point;
         }
         
@@ -634,9 +598,11 @@ namespace Tango
         public void ResizeAll(int yPlaneWidth, int yPlaneHeight,
                               int uvPlaneWidth, int uvPlaneHeight)
         {
-            m_videoOverlayTextureY.Resize(yPlaneWidth, yPlaneHeight);
-            m_videoOverlayTextureCb.Resize(uvPlaneWidth, uvPlaneHeight);
-            m_videoOverlayTextureCr.Resize(uvPlaneWidth, uvPlaneHeight);
+#if !UNITY_EDITOR
+            ((Texture2D)m_videoOverlayTextureY).Resize(yPlaneWidth, yPlaneHeight);
+            ((Texture2D)m_videoOverlayTextureCb).Resize(uvPlaneWidth, uvPlaneHeight);
+            ((Texture2D)m_videoOverlayTextureCr).Resize(uvPlaneWidth, uvPlaneHeight);
+#endif
         }
     }
 }

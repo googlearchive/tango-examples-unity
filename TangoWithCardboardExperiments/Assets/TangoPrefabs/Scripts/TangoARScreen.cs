@@ -22,22 +22,24 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// TangoARScreen takes the YUV image from the API, resize the image plane and passes
-/// the YUV data and vertices data to the YUV2RGB shader to produce a properly
-/// sized RGBA image.
+/// TangoARScreen takes the YUV image from the API, resizes the image plane, and
+/// passes the YUV data and vertices data to the YUV2RGB shader to produce a
+/// properly sized RGBA image.
 /// 
 /// Please note that all the YUV to RGB conversion is done through the YUV2RGB
-/// shader, no computation is in this class, this class only passes the data to
+/// shader. No computation is in this class, it only passes the data to the
 /// shader.
 /// </summary>
 [RequireComponent(typeof(Camera))]
 public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoVideoOverlay
 {   
     /// <summary>
-    /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud material's renderqueue is set to 
-    /// background-1 so that PointCloud data gets written to Z buffer for Depth test with virtual
-    /// objects in scene. Note 1: This is a very rudimentary way of doing occlusion and limited by the capabilities of
-    /// depth camera. Note 2: To enable occlusion TangoPointCloud prefab must be present in the scene as well.
+    /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud 
+    /// material's render queue is set to background-1 so that PointCloud data
+    /// gets written to Z buffer for Depth test with virtual objects in scene.
+    /// Note 1: This is a very rudimentary way of doing occlusion and limited by
+    /// the capabilities of depth camera. Note 2: To enable occlusion
+    /// TangoPointCloud prefab must be present in the scene as well.
     /// </summary>
     public bool m_enableOcclusion;
 

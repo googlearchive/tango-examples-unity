@@ -66,6 +66,26 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     [HideInInspector]
     public AreaDescription m_curAreaDescription;
 
+#if UNITY_EDITOR
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// If true, text input for naming new saved Area Description is displayed.
+    /// </summary>
+    private bool m_displayGuiTextInput;
+
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// Contains text data for naming new saved Area Descriptions.
+    /// </summary>
+    private string m_guiTextInputContents;
+
+    /// <summary>
+    /// Handles GUI text input in Editor where there is no device keyboard.
+    /// Indicates whether last text input was ended with confirmation or cancellation.
+    /// </summary>
+    private bool m_guiTextInputResult;
+#endif
+
     /// <summary>
     /// If set, then the depth camera is on and we are waiting for the next depth update.
     /// </summary>
@@ -262,6 +282,43 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         {
             m_selectedRect = new Rect();
         }
+
+#if UNITY_EDITOR
+        // Handle text input when there is no device keyboard in the editor.
+        if (m_displayGuiTextInput)
+        {
+            Rect textBoxRect = new Rect(100,
+                                        Screen.height - 200,
+                                        Screen.width - 200,
+                                        100);
+
+            Rect okButtonRect = textBoxRect;
+            okButtonRect.y += 100;
+            okButtonRect.width /= 2;
+
+            Rect cancelButtonRect = okButtonRect;
+            cancelButtonRect.x = textBoxRect.center.x;
+
+            GUI.SetNextControlName("TextField");
+            GUIStyle customTextFieldStyle = new GUIStyle(GUI.skin.textField);
+            customTextFieldStyle.alignment = TextAnchor.MiddleCenter;
+            m_guiTextInputContents = 
+                GUI.TextField(textBoxRect, m_guiTextInputContents, customTextFieldStyle);
+            GUI.FocusControl("TextField");
+
+            if (GUI.Button(okButtonRect, "OK")
+                || (Event.current.type == EventType.keyDown && Event.current.character == '\n'))
+            {
+                m_displayGuiTextInput = false;
+                m_guiTextInputResult = true;
+            }
+            else if (GUI.Button(cancelButtonRect, "Cancel"))
+            {
+                m_displayGuiTextInput = false;
+                m_guiTextInputResult = false;
+            }
+        }
+#endif
     }
 
     /// <summary>
@@ -373,6 +430,22 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// <returns>Coroutine IEnumerator.</returns>
     private IEnumerator _DoSaveCurrentAreaDescription()
     {
+#if UNITY_EDITOR
+        // Work around lack of on-screen keyboard in editor:
+        if (m_displayGuiTextInput || m_saveThread != null)
+        {
+            yield break;
+        }
+
+        m_displayGuiTextInput = true;
+        m_guiTextInputContents = "Unnamed";
+        while (m_displayGuiTextInput)
+        {
+            yield return null;
+        }
+
+        bool saveConfirmed = m_guiTextInputResult;
+#else
         if (TouchScreenKeyboard.visible || m_saveThread != null)
         {
             yield break;
@@ -384,7 +457,9 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             yield return null;
         }
 
-        if (kb.done)
+        bool saveConfirmed = kb.done;
+#endif
+        if (saveConfirmed)
         {
             // Disable interaction before saving.
             m_initialized = false;
@@ -396,7 +471,11 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
                     // Start saving process in another thread.
                     m_curAreaDescription = AreaDescription.SaveCurrent();
                     AreaDescription.Metadata metadata = m_curAreaDescription.GetMetadata();
+#if UNITY_EDITOR
+                    metadata.m_name = m_guiTextInputContents;
+#else
                     metadata.m_name = kb.text;
+#endif
                     m_curAreaDescription.SaveMetadata(metadata);
                 });
                 m_saveThread.Start();

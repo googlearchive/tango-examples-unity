@@ -401,9 +401,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_tangoApplication.m_areaDescriptionLearningMode = false;
         m_tangoApplication.m_enableDepth = false;
 
-        m_relocalizeImage.gameObject.SetActive(true);
-
         // Set UI panel to the mesh interaction panel.
+        m_relocalizeImage.gameObject.SetActive(true);
         m_areaDescriptionLoaderPanel.SetActive(false);
         m_meshBuildPanel.SetActive(false);
         m_meshInteractionPanel.SetActive(true);
@@ -417,14 +416,12 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         
         // Create GameObject container with mesh components for the loaded mesh.
         m_meshFromFile = new GameObject();
-        
         MeshFilter mf = m_meshFromFile.AddComponent<MeshFilter>();
         mf.mesh = _AreaDescriptionMeshToUnityMesh(mesh);
-        
         MeshRenderer mr = m_meshFromFile.AddComponent<MeshRenderer>();
         mr.material = m_depthMaskMat;
-
         m_meshFromFile.AddComponent<MeshCollider>();
+        m_meshFromFile.layer = LayerMask.NameToLayer("Occlusion");
 
         // Load Area Description file.
         m_curAreaDescription = AreaDescription.ForUUID(m_savedUUID);

@@ -25,10 +25,10 @@ using UnityEngine;
 /// <summary>
 /// An advanced movement controller which updates the position and rotation of a
 /// GameObject's transform by applying deltas based on the poses returned from
-/// Tango. This allows you to control movement using movement deltas, e.g. with
-/// a CharacterController or physics. The Tango Delta Camera prefab uses this
-/// controller with an optional Character Controller to control the Unity camera
-/// with a Tango device's movement.
+/// Tango. This allows you to control movement using movement deltas; for
+/// example, with a CharacterController or physics. The Tango Delta Camera
+/// prefab uses this controller with an optional Character Controller to control
+/// the Unity camera with a Tango device's movement.
 /// </summary>
 public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
 {

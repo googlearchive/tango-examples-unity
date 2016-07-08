@@ -64,6 +64,12 @@ namespace Tango
         public bool m_allowOutOfDateTangoAPI = false;
 #if UNITY_EDITOR
         /// <summary>
+        /// Whether to show emulation options for TangoApplication
+        /// via the TangoInspector custom editor GUI.
+        /// </summary>
+        public bool m_showEmulationOptionsInInspector = false;
+
+        /// <summary>
         /// Mesh used in emulating the physical world 
         /// (e.g. depth and color camera data).
         /// </summary>
@@ -87,6 +93,8 @@ namespace Tango
         /// lighting).
         /// </summary>
         public bool m_emulationVideoOverlaySimpleLighting;
+
+        public Vector3 m_emulatedAreaDescriptionStartOffset;
 #endif
 
         public bool m_enableMotionTracking = true;
@@ -1172,6 +1180,11 @@ namespace Tango
                 Debug.Log("An AreaDescription UUID was passed in, but motion tracking and area descriptions are not "
                           + "both enabled." + Environment.StackTrace);
             }
+
+#if UNITY_EDITOR
+            EmulatedAreaDescriptionHelper.InitEmulationForUUID(uuid, m_enableAreaDescriptions, m_areaDescriptionLearningMode,
+                                                               m_emulatedAreaDescriptionStartOffset);
+#endif
         }
 
         /// <summary>
@@ -1262,6 +1275,9 @@ namespace Tango
                 Debug.Log("Disconnect from Cloud Service.");
                 AndroidHelper.UnbindTangoCloudService();
             }
+#if UNITY_EDITOR
+            PoseProvider.ResetTangoEmulation();
+#endif
         }
 
         /// <summary>

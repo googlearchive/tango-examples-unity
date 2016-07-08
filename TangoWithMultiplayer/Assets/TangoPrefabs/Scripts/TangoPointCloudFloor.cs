@@ -23,7 +23,10 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// Find the floor from the TangoPointCloud. Set this position to the found floor's y position.
+/// If this script is attached to a game object, its y position will be set to
+/// the real world's floor height. The floor height is found by TangoPointCloud.
+/// To use this script, TangoPointCloud must be in the scene and depth must be
+/// enabled on the TangoApplication script/TangoManager prefab.
 /// </summary>
 public class TangoPointCloudFloor : MonoBehaviour 
 {
@@ -53,6 +56,7 @@ public class TangoPointCloudFloor : MonoBehaviour
     /// </summary>
     private bool m_depthTriggered = false;
 
+    /// @cond
     /// <summary>
     /// Use this for initialization.
     /// </summary>
@@ -99,4 +103,6 @@ public class TangoPointCloudFloor : MonoBehaviour
             m_depthTriggered = false;
         }
     }
+
+    /// @endcond
 }
