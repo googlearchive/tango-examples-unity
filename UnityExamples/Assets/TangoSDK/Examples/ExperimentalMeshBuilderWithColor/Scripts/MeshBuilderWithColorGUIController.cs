@@ -27,6 +27,11 @@ using UnityEngine;
 public class MeshBuilderWithColorGUIController : MonoBehaviour
 {
     /// <summary>
+    /// If set, grid indices will stop meshing when they have been sufficiently observed.
+    /// </summary>
+    public bool m_enableSelectiveMeshing;
+
+    /// <summary>
     /// Debug info: If the mesh is being updated.
     /// </summary>
     private bool m_isEnabled = true;
@@ -41,6 +46,7 @@ public class MeshBuilderWithColorGUIController : MonoBehaviour
     {
         m_tangoApplication = FindObjectOfType<TangoApplication>();
         m_dynamicMesh = FindObjectOfType<TangoDynamicMesh>();
+        m_dynamicMesh.m_enableSelectiveMeshing = m_enableSelectiveMeshing;
     }
 
     /// <summary>
@@ -71,6 +77,13 @@ public class MeshBuilderWithColorGUIController : MonoBehaviour
         {
             m_isEnabled = !m_isEnabled;
             m_tangoApplication.Set3DReconstructionEnabled(m_isEnabled);
+        }
+
+        if (GUI.Button(new Rect(Screen.width - 160, 220, 140, 80), "<size=30>Export</size>"))
+        {
+            string filepath = "/sdcard/DemoMesh.obj";
+            m_dynamicMesh.ExportMeshToObj(filepath);
+            Debug.Log(filepath);
         }
     }
 }

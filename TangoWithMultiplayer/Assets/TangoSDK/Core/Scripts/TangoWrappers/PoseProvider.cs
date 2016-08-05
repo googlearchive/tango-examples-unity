@@ -329,7 +329,7 @@ namespace Tango
                     // First assume that relocalization happens at start (e.g. Area Learning for new areas).
                     poseData.timestamp = m_beginningOfPoseEmulation;
                     
-                    if (!string.IsNullOrEmpty(EmulatedAreaDescriptionHelper.m_currentUUID))
+                    if (!EmulatedAreaDescriptionHelper.m_areaDescriptionFramesAvailableAtStart)
                     {
                         // Then add EMULATED_RELOCALIZATION_TIME second if an area description was loaded.
                         poseData.timestamp += EMULATED_RELOCALIZATION_TIME;
@@ -464,7 +464,7 @@ namespace Tango
                 {
                     bool areaDescriptionFramesAreValid = 
                         EmulatedAreaDescriptionHelper.m_usingEmulatedDescriptionFrames
-                        && (string.IsNullOrEmpty(EmulatedAreaDescriptionHelper.m_currentUUID)
+                        && (EmulatedAreaDescriptionHelper.m_areaDescriptionFramesAvailableAtStart
                             || _GetAreaDescriptionSyncDelayIsOver());
 
                     if (areaDescriptionFramesAreValid)
@@ -719,21 +719,21 @@ namespace Tango
         private struct PoseProviderAPI
         { 
 #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_connectOnPoseAvailable(int count,
                                                                          TangoCoordinateFramePair[] framePairs,
                                                                          TangoService_onPoseAvailable onPoseAvailable);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_getPoseAtTime(double timestamp,
                                                                 TangoCoordinateFramePair framePair,
                                                                 [In, Out] TangoPoseData pose);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_setPoseListenerFrames(int count,
                                                                         ref TangoCoordinateFramePair frames);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern void TangoService_resetMotionTracking();
 #else
             public static int TangoService_connectOnPoseAvailable(int count,

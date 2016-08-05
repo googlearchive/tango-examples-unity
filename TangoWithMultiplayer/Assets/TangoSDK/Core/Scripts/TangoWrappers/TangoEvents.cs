@@ -60,7 +60,7 @@ namespace Tango
         private struct EventsAPI
         {
             #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_connectOnTangoEvent(TangoService_onEventAvailable onEventAvaialable);
             #else
             public static int TangoService_connectOnTangoEvent(TangoService_onEventAvailable onEventAvaialable)

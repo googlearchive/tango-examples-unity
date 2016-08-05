@@ -178,7 +178,7 @@ public class TangoPoseController : MonoBehaviour, ITangoPose
                 Matrix4x4 matrixssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
 
                 // Converting from Tango coordinate frame to Unity coodinate frame.
-                Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
+                Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc * TangoSupport.m_devicePoseRotation;
 
                 // Extract new local position
                 transform.position = matrixuwTuc.GetColumn(3);

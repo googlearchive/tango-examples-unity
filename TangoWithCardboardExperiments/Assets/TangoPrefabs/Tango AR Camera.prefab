@@ -14,6 +14,7 @@ GameObject:
   - 114: {fileID: 11482468}
   - 114: {fileID: 11488288}
   - 114: {fileID: 11402180}
+  - 114: {fileID: 11469732}
   m_Layer: 0
   m_Name: Tango AR Camera
   m_TagString: MainCamera
@@ -61,6 +62,7 @@ Camera:
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
+  m_TargetEye: 3
   m_HDR: 0
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
@@ -86,7 +88,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_postProcessMaterial: {fileID: 2100000, guid: ccd39aeaff7fe4b629a797eb73526e36,
     type: 2}
-  m_arScreenMaterial: {fileID: 2100000, guid: aaf9e2fe0204a438aaff24a73507f2b8, type: 2}
+--- !u!114 &11469732
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 103230}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eceaee97dab004cd6bd15e38bcc17e1b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &11482468
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -98,8 +110,47 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dac225c1aca3140fea87a8c8644eecc1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_useAreaDescriptionPose: 0
+  m_syncToARScreen: 1
   m_poseCount: 0
   m_poseStatus: 0
+  m_poseTimestamp: 0
+  m_tangoPosition: {x: 0, y: 0, z: 0}
+  m_tangoRotation: {x: 0, y: 0, z: 0, w: 0}
+  m_dTuc:
+    e00: 0
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 0
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 0
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 0
+  m_uwTss:
+    e00: 0
+    e01: 0
+    e02: 0
+    e03: 0
+    e10: 0
+    e11: 0
+    e12: 0
+    e13: 0
+    e20: 0
+    e21: 0
+    e22: 0
+    e23: 0
+    e30: 0
+    e31: 0
+    e32: 0
+    e33: 0
 --- !u!114 &11488288
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -112,8 +163,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_enableOcclusion: 0
-  m_screenMaterial: {fileID: 2100000, guid: aaf9e2fe0204a438aaff24a73507f2b8, type: 2}
-  m_screenUpdateTime: 0
+  m_occlusionShader: {fileID: 4800000, guid: f196a49a50fca482db453a9646bc81f1, type: 3}
 --- !u!124 &12494314
 Behaviour:
   m_ObjectHideFlags: 1

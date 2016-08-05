@@ -39,25 +39,13 @@ public class ARCameraPostProcess : MonoBehaviour
     public Material m_postProcessMaterial;
 
     /// <summary>
-    /// The AR screen material.
-    /// 
-    /// Needed to dynamically control the distortion correction effect on the AR 
-    /// image. Should be the same material as used by the Tango AR Screen script
-    /// of the Tango AR Camera.
-    /// </summary>
-    private Material m_arScreenMaterial;
-
-    /// <summary>
     /// Pass the camera intrinsics to both PostProcess and ARScreen shader.
     /// 
     /// The camera intrinsics are needed for undistortion or distortion.
     /// </summary>
     /// <param name="intrinsics">Color camera intrinsics.</param>
-    /// <param name="arScreenMaterial">AR screen material.</param>
-    internal void SetupIntrinsic(TangoCameraIntrinsics intrinsics, Material arScreenMaterial)
+    internal void SetupIntrinsic(TangoCameraIntrinsics intrinsics)
     {
-        m_arScreenMaterial = arScreenMaterial;
-
         m_postProcessMaterial.SetFloat("_Width", (float)intrinsics.width);
         m_postProcessMaterial.SetFloat("_Height", (float)intrinsics.height);
         m_postProcessMaterial.SetFloat("_Fx", (float)intrinsics.fx);
@@ -67,16 +55,6 @@ public class ARCameraPostProcess : MonoBehaviour
         m_postProcessMaterial.SetFloat("_K0", (float)intrinsics.distortion0);
         m_postProcessMaterial.SetFloat("_K1", (float)intrinsics.distortion1);
         m_postProcessMaterial.SetFloat("_K2", (float)intrinsics.distortion2);
-        
-        m_arScreenMaterial.SetFloat("_TexWidth", (float)intrinsics.width);
-        m_arScreenMaterial.SetFloat("_TexHeight", (float)intrinsics.height);
-        m_arScreenMaterial.SetFloat("_Fx", (float)intrinsics.fx);
-        m_arScreenMaterial.SetFloat("_Fy", (float)intrinsics.fy);
-        m_arScreenMaterial.SetFloat("_Cx", (float)intrinsics.cx);
-        m_arScreenMaterial.SetFloat("_Cy", (float)intrinsics.cy);
-        m_arScreenMaterial.SetFloat("_K0", (float)intrinsics.distortion0);
-        m_arScreenMaterial.SetFloat("_K1", (float)intrinsics.distortion1);
-        m_arScreenMaterial.SetFloat("_K2", (float)intrinsics.distortion2);
     }
 
     /// <summary>
@@ -84,7 +62,7 @@ public class ARCameraPostProcess : MonoBehaviour
     /// </summary>
     private void OnEnable()
     {
-        m_arScreenMaterial.EnableKeyword("DISTORTION_ON");
+        VideoOverlayProvider.SetARScreenDistortion(true);
     }
 
     /// <summary>
@@ -92,7 +70,7 @@ public class ARCameraPostProcess : MonoBehaviour
     /// </summary>
     private void OnDisable()
     {
-        m_arScreenMaterial.DisableKeyword("DISTORTION_ON");
+        VideoOverlayProvider.SetARScreenDistortion(false);
     }
 
     /// <summary>

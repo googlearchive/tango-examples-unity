@@ -783,42 +783,42 @@ namespace Tango
         private class AreaDescriptionAPI
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_getAreaDescriptionMetadata(string uuid, ref IntPtr metadata);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_getAreaDescriptionUUIDList(ref IntPtr uuid_list);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_saveAreaDescription(byte[] rawUUID);
             
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_saveAreaDescriptionMetadata(
                 [MarshalAs(UnmanagedType.LPStr)] string uuid, IntPtr metadata);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_deleteAreaDescription([MarshalAs(UnmanagedType.LPStr)] string uuid);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_free(IntPtr metadata);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_get(IntPtr metadata,
                                                                       [MarshalAs(UnmanagedType.LPStr)] string key, 
                                                                       ref UInt32 value_size, ref IntPtr value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_set(IntPtr metadata,
                                                                       [MarshalAs(UnmanagedType.LPStr)] string key,
                                                                       UInt32 value_size,
                                                                       [MarshalAs(UnmanagedType.LPStr)] string value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_set(IntPtr metadata,
                                                                       [MarshalAs(UnmanagedType.LPStr)] string key,
                                                                       UInt32 value_size, ref Int64 value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_set(IntPtr metadata,
                                                                       [MarshalAs(UnmanagedType.LPStr)] string key,
                                                                       UInt32 value_size, double[] value);

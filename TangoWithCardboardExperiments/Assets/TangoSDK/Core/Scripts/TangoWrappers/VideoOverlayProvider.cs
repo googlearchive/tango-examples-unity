@@ -26,6 +26,7 @@ namespace Tango
     using System.Runtime.InteropServices;
     using Tango;
     using UnityEngine;
+    using UnityEngine.Rendering;
 
     /// <summary>
     /// C API wrapper for the Tango video overlay interface.
@@ -58,10 +59,10 @@ namespace Tango
 
         private const string EMULATED_RGB2YUV_Y_SHADERNAME = "Hidden/Tango/RGB2YUV_Y";
         private const string EMULATED_RGB2YUV_CBCR_SHADERNAME = "Hidden/Tango/RGB2YUV_CbCr";
+        private const string EMULATED_RGB_ARSCREEN_SHADERNAME = "Hidden/Tango/RGB_ARScreen";
 #endif
-        
+
         private static readonly string CLASS_NAME = "VideoOverlayProvider";
-        private static IntPtr callbackContext = IntPtr.Zero;
 
 #if UNITY_EDITOR
         /// <summary>
@@ -78,6 +79,11 @@ namespace Tango
         /// Underlying Y texture when using experimental texture-ID method.
         /// </summary>
         private static RenderTexture m_emulatedExpId_CbCr = null;
+
+        /// <summary>
+        /// Underlying RGB texture for the AR Screen.
+        /// </summary>
+        private static RenderTexture m_emulatedARScreenTexture = null;
         
         /// <summary>
         /// Textures used to capture emulated color feed from render target.
@@ -98,6 +104,11 @@ namespace Tango
         private static Material m_yuvFilterCbCr;
 
         /// <summary>
+        /// Simple material that emulates the AR Screen.
+        /// </summary>
+        private static Material m_emulationArScreenMaterial;
+
+        /// <summary>
         /// The theoretical capture time of most recent emulated color frame.
         /// </summary>
         private static float m_lastColorEmulationTime;
@@ -111,53 +122,28 @@ namespace Tango
         /// <summary>
         /// Tango video overlay C callback function signature.
         /// </summary>
-        /// <param name="callbackContext">Callback context.</param>
+        /// <param name="context">Callback context.</param>
         /// <param name="cameraId">Camera ID.</param>
         /// <param name="image">Image buffer.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onImageAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId, [In, Out] TangoImageBuffer image);
+        internal delegate void TangoService_onImageAvailable(
+            IntPtr context, TangoEnums.TangoCameraId cameraId, [In, Out] TangoImageBuffer image);
 
         /// <summary>
-        /// Experimental API only, subject to change.  Tango depth C callback function signature.
+        /// Tango camera texture C callback function signature.
         /// </summary>
-        /// <param name="callbackContext">Callback context.</param>
+        /// <param name="context">Callback context.</param>
         /// <param name="cameraId">Camera ID.</param>
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onUnityFrameAvailable(IntPtr callbackContext, Tango.TangoEnums.TangoCameraId cameraId);
+        internal delegate void TangoService_onTextureAvailable(IntPtr context, TangoEnums.TangoCameraId cameraId);
 
         /// <summary>
-        /// Connect a Texture ID to a camera; the camera is selected by specifying a TangoCameraId.
-        /// 
-        /// Currently only TANGO_CAMERA_COLOR and TANGO_CAMERA_FISHEYE are supported. The texture must be the ID of a
-        /// texture that has been allocated and initialized by the calling application.
-        /// 
-        /// The first scan-line of the color image is reserved for metadata instead of image pixels.
-        /// </summary>
-        /// <param name="cameraId">
-        /// The ID of the camera to connect this texture to. Only TANGO_CAMERA_COLOR and TANGO_CAMERA_FISHEYE are
-        /// supported.
-        /// </param>
-        /// <param name="textureId">
-        /// The texture ID of the texture to connect the camera to. Must be a valid texture in the applicaton.
-        /// </param>
-        public static void ConnectTexture(TangoEnums.TangoCameraId cameraId, int textureId)
-        {
-            int returnValue = VideoOverlayAPI.TangoService_connectTextureId(cameraId, textureId);
-            
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log("VideoOverlayProvider.ConnectTexture() Texture was not connected to camera!");
-            }
-        }
-
-        /// <summary>
-        /// Update the texture that has been connected to camera referenced by TangoCameraId with the latest image
+        /// DEPRECATED: Update the texture that has been connected to camera referenced by TangoCameraId with the latest image
         /// from the camera.
         /// </summary>
         /// <returns>The timestamp of the image that has been pushed to the connected texture.</returns>
         /// <param name="cameraId">
-        /// The ID of the camera to connect this texture to.  Only <code>TANGO_CAMERA_COLOR</code> and
-        /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
+        /// The ID of the camera to connect this texture to.  Only <c>TANGO_CAMERA_COLOR</c> is supported.
         /// </param>
         public static double RenderLatestFrame(TangoEnums.TangoCameraId cameraId)
         {
@@ -174,7 +160,7 @@ namespace Tango
 #else
 
             double timestamp = 0.0;
-            int returnValue = VideoOverlayAPI.TangoService_updateTexture(cameraId, ref timestamp);
+            int returnValue = API.TangoService_updateTexture(cameraId, ref timestamp);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("VideoOverlayProvider.UpdateTexture() Texture was not updated by camera!");
@@ -182,6 +168,161 @@ namespace Tango
             
             return timestamp;
 #endif
+        }
+
+        /// <summary>
+        /// Create a command buffer that renders the AR screen full screen at the right time.
+        /// </summary>
+        /// <returns>The AR screen command buffer.</returns>
+        public static CommandBuffer CreateARScreenCommandBuffer()
+        {
+            CommandBuffer buf = new CommandBuffer();
+#if UNITY_EDITOR
+            _InternResourcesForEmulation();
+
+            buf.Blit((Texture)m_emulatedARScreenTexture, BuiltinRenderTextureType.CurrentActive, 
+                     m_emulationArScreenMaterial);
+#else
+            IntPtr func = API.TangoUnity_getRenderTextureFunction();
+            buf.IssuePluginEvent(func, 0);
+#endif
+            return buf;
+        }
+
+        /// <summary>
+        /// Set the AR screen rendering UVs.  This affects how much of the screen is visible.
+        /// </summary>
+        /// <param name="uv">
+        /// Array of four UV coordinates in order: bottom left, top left, bottom right, top right.
+        /// </param> 
+        public static void SetARScreenUVs(Vector2[] uv)
+        {
+#if UNITY_EDITOR
+            if (m_emulationArScreenMaterial != null)
+            {
+                m_emulationArScreenMaterial.SetVector("_UVBottomLeft", new Vector4(uv[0].x, uv[0].y, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVTopLeft", new Vector4(uv[1].x, uv[1].y, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVBottomRight", new Vector4(uv[2].x, uv[2].y, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVTopRight", new Vector4(uv[3].x, uv[3].y, 0, 0));
+            }
+#else
+            API.TangoUnity_setRenderTextureUVs(uv);
+#endif
+        }
+
+        /// <summary>
+        /// Set the AR screen rendering distortion parameters.  This affects correcting for the curvature of the lens.
+        /// </summary>
+        /// <param name="rectifyImage">If <c>true</c>, rectify the AR screen image when rendering.</param>
+        public static void SetARScreenDistortion(bool rectifyImage)
+        {
+#if UNITY_EDITOR
+            // There is no distortion in emulation.
+#else
+            if (!rectifyImage)
+            {
+                API.TangoUnity_setRenderTextureDistortion(null);
+            }
+            else
+            {
+                TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+                GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+                API.TangoUnity_setRenderTextureDistortion(intrinsics);
+            }
+#endif
+        }
+
+        /// <summary>
+        /// Update the AR screen's texture to the most recent state of the specified camera.
+        /// </summary>
+        /// <returns>The timestamp of the image that has been pushed to the AR screen's texture.</returns>
+        /// <param name="cameraId">
+        /// The ID of the camera to connect this texture to.  Only <c>TANGO_CAMERA_COLOR</c> is supported.
+        /// </param>
+        public static double UpdateARScreen(TangoEnums.TangoCameraId cameraId)
+        {
+#if UNITY_EDITOR
+            if (m_emulatedARScreenTexture != null)
+            {
+                m_emulatedARScreenTexture.DiscardContents();
+                Graphics.Blit(m_emulatedColorRenderTexture, m_emulatedARScreenTexture);
+            }
+
+            return m_lastColorEmulationTime;
+#else
+            double timestamp = 0.0;
+            uint tex = API.TangoUnity_getArTexture();
+            int returnValue = API.TangoService_updateTextureExternalOes(cameraId, tex, out timestamp);
+            
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log("Unable to update texture. " + Environment.StackTrace);
+            }
+
+            // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL 
+            // state.
+            GL.InvalidateState();
+
+            return timestamp;
+#endif
+        }
+
+        /// <summary>
+        /// Get the intrinsic calibration parameters for a given camera, this also aligns the camera intrinsics based
+        /// on device orientation. 
+        /// 
+        /// For example, if the device orientation is portrait and camera intrinsics is in
+        /// landscape. This function will inverse the intrinsic x and y, and report intrinsics in portrait mode.
+        /// 
+        /// The intrinsics are as specified by the TangoCameraIntrinsics struct.  Intrinsics are read from the
+        /// on-device intrinsics file (typically <code>/sdcard/config/calibration.xml</code>, but to ensure 
+        /// compatibility applications should only access these parameters via the API), or default internal model 
+        /// parameters corresponding to the device are used if the calibration.xml file is not found.
+        /// </summary>
+        /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
+        /// <param name="alignedIntrinsics">
+        /// A TangoCameraIntrinsics filled with calibration intrinsics for the camera, this intrinsics is also
+        /// aligned with device orientation.
+        /// </param>
+        public static void GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId cameraId,
+                                                                TangoCameraIntrinsics alignedIntrinsics)
+        {
+            TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+            GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+
+            float intrinsicsRatio = (float)intrinsics.width / (float)intrinsics.height;
+
+            bool isLandscape = (AndroidHelper.GetDefaultOrientation() +
+                                (int)AndroidHelper.GetDisplayRotation()) % 2 == 0;
+
+            // If the intrinsics ratio and camera render ratio don't agree with each other, we invert the intrinsics
+            // reading to align to camera render orientation.
+            if ((!isLandscape && intrinsicsRatio > 1.0f) || (isLandscape && intrinsicsRatio < 1.0f))
+            {
+                alignedIntrinsics.cx = intrinsics.cy;
+                alignedIntrinsics.cy = intrinsics.cx;
+                alignedIntrinsics.fx = intrinsics.fy;
+                alignedIntrinsics.fy = intrinsics.fx;
+                alignedIntrinsics.height = intrinsics.width;
+                alignedIntrinsics.width = intrinsics.height;
+            }
+            else
+            {
+                alignedIntrinsics.cx = intrinsics.cx;
+                alignedIntrinsics.cy = intrinsics.cy;
+                alignedIntrinsics.fx = intrinsics.fx;
+                alignedIntrinsics.fy = intrinsics.fy;
+                alignedIntrinsics.height = intrinsics.height;
+                alignedIntrinsics.width = intrinsics.width;
+            }
+
+            alignedIntrinsics.distortion0 = intrinsics.distortion0;
+            alignedIntrinsics.distortion1 = intrinsics.distortion1;
+            alignedIntrinsics.distortion2 = intrinsics.distortion2;
+            alignedIntrinsics.distortion3 = intrinsics.distortion3;
+            alignedIntrinsics.distortion4 = intrinsics.distortion4;
+            alignedIntrinsics.camera_id = intrinsics.camera_id;
+            alignedIntrinsics.calibration_type = intrinsics.calibration_type;
         }
 
         /// <summary>
@@ -194,27 +335,22 @@ namespace Tango
         /// </summary>
         /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
         /// <param name="intrinsics">A TangoCameraIntrinsics filled with calibration intrinsics for the camera.</param>
-        public static void GetIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
+        public static void GetIntrinsics(TangoEnums.TangoCameraId cameraId, TangoCameraIntrinsics intrinsics)
         {
-            int returnValue = VideoOverlayAPI.TangoService_getCameraIntrinsics(cameraId, intrinsics);
+            int returnValue = API.TangoService_getCameraIntrinsics(cameraId, intrinsics);
 
 #if UNITY_EDITOR
             // In editor, base 'intrinsics' off of properties of emulation camera.
             if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR && EmulatedEnvironmentRenderHelper.m_emulationCamera != null)
             {
                 // Instantiate any resources that we haven't yet.
-                if (!m_emulationIsInitialized)
-                {
-                    _InitializeResourcesForEmulation();
-                    m_emulationIsInitialized = true;
-                }
+                _InternResourcesForEmulation();
 
                 EmulatedEnvironmentRenderHelper.m_emulationCamera.targetTexture = m_emulatedColorRenderTexture;
 
                 intrinsics.width = (uint)EMULATED_CAMERA_WIDTH;
                 intrinsics.height = (uint)EMULATED_CAMERA_HEIGHT;
 
-                float height = Screen.height;
                 float fov = EmulatedEnvironmentRenderHelper.m_emulationCamera.fieldOfView;
                 float focalLengthInPixels = (1 / Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad)) * (intrinsics.height * 0.5f);
                 intrinsics.fy = intrinsics.fx = focalLengthInPixels;
@@ -230,7 +366,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Experimental API only, subject to change.  Connect a Texture IDs to a camera.
+        /// DEPRECATED: Connect a Texture IDs to a camera.
         /// 
         /// The camera is selected via TangoCameraId.  Currently only TANGO_CAMERA_COLOR is supported.  The texture
         /// handles will be regenerated by the API on startup after which the application can use them, and will be
@@ -249,8 +385,9 @@ namespace Tango
         /// supported.
         /// </param>
         /// <param name="textures">The texture IDs to use for the Y, Cb, and Cr planes.</param>
-        /// <param name="onUnityFrameAvailable">Callback method.</param>
-        internal static void ExperimentalConnectTexture(TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onUnityFrameAvailable onUnityFrameAvailable)
+        /// <param name="callback">Callback method.</param>
+        internal static void ExperimentalConnectTexture(
+            TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onTextureAvailable callback)
         {
 #if UNITY_EDITOR
             if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
@@ -259,14 +396,13 @@ namespace Tango
                 m_emulatedExpId_CbCr = (RenderTexture)textures.m_videoOverlayTextureCb;
             }
 #else
-
-            int returnValue = VideoOverlayAPI.TangoService_Experimental_connectTextureIdUnity(
+            int returnValue = API.TangoService_Experimental_connectTextureIdUnity(
                 cameraId, 
                 (uint)textures.m_videoOverlayTextureY.GetNativeTexturePtr().ToInt64(), 
                 (uint)textures.m_videoOverlayTextureCb.GetNativeTexturePtr().ToInt64(), 
                 (uint)textures.m_videoOverlayTextureCr.GetNativeTexturePtr().ToInt64(), 
-                callbackContext, 
-                onUnityFrameAvailable);
+                IntPtr.Zero, 
+                callback);
             
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
@@ -291,17 +427,38 @@ namespace Tango
         /// The ID of the camera to connect this texture to.  Only <code>TANGO_CAMERA_COLOR</code> and
         /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
         /// </param>
-        /// <param name="onImageAvailable">Function called when a new frame is available from the camera.</param>
-        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, TangoService_onImageAvailable onImageAvailable)
+        /// <param name="callback">Function called when a new frame is available from the camera.</param>
+        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, TangoService_onImageAvailable callback)
         {
-            int returnValue = VideoOverlayAPI.TangoService_connectOnFrameAvailable(cameraId, callbackContext, onImageAvailable);
-            if (returnValue == Tango.Common.ErrorType.TANGO_SUCCESS)
+            int returnValue = API.TangoService_connectOnFrameAvailable(cameraId, IntPtr.Zero, callback);
+            if (returnValue == Common.ErrorType.TANGO_SUCCESS)
             {
-                Debug.Log(CLASS_NAME + ".SetCallback() Callback was set.");
+                Debug.Log(CLASS_NAME + ".SetCallback(OnImageAvailable) Callback was set.");
             }
             else
             {
-                Debug.Log(CLASS_NAME + ".SetCallback() Callback was not set!");
+                Debug.Log(CLASS_NAME + ".SetCallback(OnImageAvailable) Callback was not set!");
+            }
+        }
+
+        /// <summary>
+        /// Connect a callback to a camera for texture updates.
+        /// </summary>
+        /// <param name="cameraId">
+        /// The ID of the camera to connect this texture to.  Only <code>TANGO_CAMERA_COLOR</code> and
+        /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
+        /// </param>
+        /// <param name="callback">Function called when a new frame is available from the camera.</param>
+        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, TangoService_onTextureAvailable callback)
+        {
+            int returnValue = API.TangoService_connectOnTextureAvailable(cameraId, IntPtr.Zero, callback);
+            if (returnValue == Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".SetCallback(OnTextureAvailable) Callback was set.");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".SetCallback(OnTextureAvailable) Callback was not set!");
             }
         }
 
@@ -336,11 +493,7 @@ namespace Tango
             TangoSupport.TangoPoseToWorldTransform(poseData, out position, out rotation);
 
             // Instantiate any resources that we haven't yet.
-            if(!m_emulationIsInitialized)
-            {
-                _InitializeResourcesForEmulation();
-                m_emulationIsInitialized = true;
-            }
+            _InternResourcesForEmulation();
 
             // Render. 
             EmulatedEnvironmentRenderHelper.RenderEmulatedEnvironment(m_emulatedColorRenderTexture,
@@ -408,13 +561,19 @@ namespace Tango
         /// <summary>
         /// Create any resources needed for emulation.
         /// </summary>
-        private static void _InitializeResourcesForEmulation()
+        private static void _InternResourcesForEmulation()
         {
+            if(m_emulationIsInitialized)
+            {
+                return;
+            }
+
             // Create textures:
 
-            m_emulatedColorRenderTexture = new RenderTexture(EMULATED_CAMERA_WIDTH, 
-                                                             EMULATED_CAMERA_HEIGHT, 
-                                                             24, RenderTextureFormat.ARGB32);
+            m_emulatedColorRenderTexture = new RenderTexture(EMULATED_CAMERA_WIDTH, EMULATED_CAMERA_HEIGHT, 24, 
+                                                             RenderTextureFormat.ARGB32);
+            m_emulatedARScreenTexture = new RenderTexture(EMULATED_CAMERA_WIDTH, EMULATED_CAMERA_HEIGHT, 0, 
+                                                          RenderTextureFormat.ARGB32);
 
             m_emulationByteBufferCaptureTextures = new Texture2D[2];
             m_emulationByteBufferCaptureTextures[0] = new Texture2D(EMULATED_CAMERA_PACKED_WIDTH,
@@ -448,77 +607,131 @@ namespace Tango
                                + EMULATED_RGB2YUV_CBCR_SHADERNAME
                                + ". Tango color camera emulation will not work correctly.");
             }
+
+            if (EmulatedEnvironmentRenderHelper.CreateMaterialFromShaderName(EMULATED_RGB_ARSCREEN_SHADERNAME,
+                                                                             out m_emulationArScreenMaterial))
+            {
+                m_emulationArScreenMaterial.SetVector("_UVBottomLeft", new Vector4(0, 0, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVBottomRight", new Vector4(0, 1, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVTopLeft", new Vector4(1, 0, 0, 0));
+                m_emulationArScreenMaterial.SetVector("_UVTopRight", new Vector4(1, 1, 0, 0));
+            }
+            else
+            {
+                Debug.LogError("Could not find shader "
+                               + EMULATED_RGB_ARSCREEN_SHADERNAME
+                               + ". Tango color camera emulation will not work correctly.");
+            }
+
+            m_emulationIsInitialized = true;
         }
 #endif
-        
-        #region NATIVE_FUNCTIONS
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
                                                          "SA1600:ElementsMustBeDocumented",
                                                          Justification = "C API Wrapper.")]
-        private struct VideoOverlayAPI
+        private struct API
         {
-            #if UNITY_ANDROID && !UNITY_EDITOR
+#if UNITY_ANDROID && !UNITY_EDITOR
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_connectOnFrameAvailable(
+                TangoEnums.TangoCameraId cameraId, IntPtr context, 
+                [In, Out] TangoService_onImageAvailable onImageAvailable);
+
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_updateTexture(
+                TangoEnums.TangoCameraId cameraId, ref double timestamp);
+
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_updateTextureExternalOes(
+                TangoEnums.TangoCameraId cameraId, UInt32 glTextureId, out double timestamp);
+            
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_getCameraIntrinsics(
+                TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics);
+
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_connectOnTextureAvailable(
+                TangoEnums.TangoCameraId cameraId, IntPtr ContextMenu, TangoService_onTextureAvailable callback);
+
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_Experimental_connectTextureIdUnity(
+                TangoEnums.TangoCameraId id, UInt32 texture_y, UInt32 texture_Cb, UInt32 texture_Cr, IntPtr context, 
+                TangoService_onTextureAvailable onUnityFrameAvailable);
+
+            [DllImport(Common.TANGO_UNITY_DLL)]
+            public static extern UInt32 TangoUnity_getArTexture();
             
             [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_connectTextureId(TangoEnums.TangoCameraId cameraId, int textureHandle);
-            
+            public static extern void TangoUnity_setRenderTextureUVs(Vector2[] uv);
+
             [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_connectOnFrameAvailable(TangoEnums.TangoCameraId cameraId,
-                                                                          IntPtr context,
-                                                                          [In, Out] TangoService_onImageAvailable onImageAvailable);
+            public static extern void TangoUnity_setRenderTextureDistortion(TangoCameraIntrinsics intrinsics);
+
             [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_updateTexture(TangoEnums.TangoCameraId cameraId, ref double timestamp);
-            
-            [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_getCameraIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics);
-            
-            [DllImport(Common.TANGO_UNITY_DLL)]
-            public static extern int TangoService_Experimental_connectTextureIdUnity(TangoEnums.TangoCameraId id, 
-                                                                                     uint texture_y,
-                                                                                     uint texture_Cb,
-                                                                                     uint texture_Cr,
-                                                                                     IntPtr context, 
-                                                                                     TangoService_onUnityFrameAvailable onUnityFrameAvailable);
-            
-            #else
-            public static int TangoService_connectTextureId(TangoEnums.TangoCameraId cameraId, int textureHandle)
-            {
-                return Tango.Common.ErrorType.TANGO_SUCCESS;
-            }
-            
+            public static extern IntPtr TangoUnity_getRenderTextureFunction();
+#else
             public static int TangoService_updateTexture(TangoEnums.TangoCameraId cameraId, ref double timestamp)
-            {
-                return Tango.Common.ErrorType.TANGO_SUCCESS;
-            }
-            
-            public static int TangoService_getCameraIntrinsics(TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
-            
-            public static int TangoService_connectOnFrameAvailable(TangoEnums.TangoCameraId cameraId,
-                                                                   IntPtr context,
-                                                                   [In, Out] TangoService_onImageAvailable onImageAvailable)
+
+            public static int TangoService_updateTextureExternalOes(
+                TangoEnums.TangoCameraId cameraId, UInt32 glTextureId, out double timestamp)
             {
-                return Tango.Common.ErrorType.TANGO_SUCCESS;
+                timestamp = 0;
+                return Common.ErrorType.TANGO_SUCCESS;
             }
-            
-            public static int TangoService_Experimental_connectTextureIdUnity(TangoEnums.TangoCameraId id, 
-                                                                              uint texture_y,
-                                                                              uint texture_Cb,
-                                                                              uint texture_Cr,
-                                                                              IntPtr context, 
-                                                                              TangoService_onUnityFrameAvailable onUnityFrameAvailable)
+
+            public static int TangoService_getCameraIntrinsics(
+                TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics)
             {
-                return Tango.Common.ErrorType.TANGO_SUCCESS;
+                return Common.ErrorType.TANGO_SUCCESS;
             }
-            #endif
-            #endregion
+
+            public static int TangoService_connectOnFrameAvailable(
+                TangoEnums.TangoCameraId cameraId, IntPtr context, 
+                [In, Out] TangoService_onImageAvailable onImageAvailable)
+            {
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoService_connectOnTextureAvailable(
+                TangoEnums.TangoCameraId cameraId, IntPtr context, TangoService_onTextureAvailable callback)
+            {
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoService_Experimental_connectTextureIdUnity(
+                TangoEnums.TangoCameraId id, UInt32 texture_y, UInt32 texture_Cb, UInt32 texture_Cr, IntPtr context,
+                TangoService_onTextureAvailable onUnityFrameAvailable)
+            {
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static UInt32 TangoUnity_getArTexture()
+            {
+                return 0;
+            }
+
+            public static void TangoUnity_setRenderTextureUVs(Vector2[] uv)
+            {
+            }
+
+            public static void TangoUnity_setRenderTextureDistortion(TangoCameraIntrinsics intrinsics)
+            {
+            }
+
+            public static IntPtr TangoUnity_getRenderTextureFunction()
+            {
+                return IntPtr.Zero;
+            }
+#endif
         }
     }
 
     /// <summary>
-    /// Wraps separate textures for Y, U, and V planes.
+    /// DEPRECATED: Wraps separate textures for Y, U, and V planes.
     /// </summary>
     public class YUVTexture
     {
@@ -547,7 +760,7 @@ namespace Tango
         public readonly Texture m_videoOverlayTextureCr;
         
         /// <summary>
-        /// Initializes a new instance of the <see cref="Tango.YUVTexture"/> class.
+        /// Initializes a new instance of the <see cref="YUVTexture"/> class.
         /// NOTE : Texture resolutions will be reset by the API. The sizes passed
         /// into the constructor are not guaranteed to persist when running on device.
         /// </summary>

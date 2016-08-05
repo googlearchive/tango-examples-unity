@@ -45,6 +45,16 @@ namespace Tango
     public delegate void OnTangoDisconnectEventHandler();
 
     /// <summary>
+    /// Delegate for service disconnection.
+    /// </summary>
+    /// <param name="displayRotation">Rotation of current display. Index enum is same same as Android screen
+    /// rotation standard.</param>
+    /// <param name="colorCameraRotation">Rotation of current color camera sensor. Index enum is same as Android
+    /// camera rotation standard.</param>
+    public delegate void OnDisplayChangedEventHandler(OrientationManager.Rotation displayRotation,
+                                                      OrientationManager.Rotation colorCameraRotation);
+
+    /// <summary>
     /// Main entry point for the Tango Service.
     /// 
     /// This component handles nearly all communication with the underlying TangoService.  You must have one of these
@@ -63,6 +73,12 @@ namespace Tango
 
         public bool m_allowOutOfDateTangoAPI = false;
 #if UNITY_EDITOR
+        /// <summary>
+        /// Whether to show performance-related options for
+        /// TangoApplication via the TangoInspector custom editor GUI.
+        /// </summary>
+        public bool m_showPerformanceOptionsInInspector = true;
+
         /// <summary>
         /// Whether to show emulation options for TangoApplication
         /// via the TangoInspector custom editor GUI.
@@ -105,6 +121,20 @@ namespace Tango
         [FormerlySerializedAs("m_enableAreaLearning")]
         public bool m_areaDescriptionLearningMode = false;
 
+        /// <summary>
+        /// Toggle for experimental drift correction.
+        /// 
+        /// Drift-corrected frames come through the Area Description reference
+        /// frame and currently cannot be used when an Area Description is loaded
+        /// or when Area Learning is enabled.
+        /// 
+        /// There will be a period after Startup during which drift-corrected frames
+        /// are not available.
+        /// 
+        /// Behaviour is likely to change in the future.
+        /// </summary>
+        public bool m_enableDriftCorrection = false;
+
         public bool m_enableDepth = true;
 
         public bool m_enableAreaLearning = false;
@@ -117,16 +147,65 @@ namespace Tango
         public bool m_3drGenerateTexCoord = false;
         public bool m_3drSpaceClearing = false;
         public bool m_3drUseAreaDescriptionPose = false;
+        public int m_3drMinNumVertices = 20;
+        public Tango3DReconstruction.UpdateMethod m_3drUpdateMethod = Tango3DReconstruction.UpdateMethod.PROJECTIVE;
 
         public bool m_enableVideoOverlay = false;
-        [FormerlySerializedAs("m_useExperimentalVideoOverlay")]
-        public bool m_videoOverlayUseTextureIdMethod = true;
+        public bool m_videoOverlayUseTextureMethod = true;
+
+        /// <summary>
+        /// DEPRECATED. Will be removed in a future SDK.
+        /// </summary>
+        public bool m_videoOverlayUseYUVTextureIdMethod = false;
+
         public bool m_videoOverlayUseByteBufferMethod = false;
+        
+        /// <summary>
+        /// Whether to adjust the size of the application's main render buffer
+        /// for performance reasons (Some Tango devices have very high-resolution
+        /// displays, so this option exists as a hint that this may be necessary).
+        /// </summary>
+        public bool m_adjustScreenResolution = false;
+
+        /// <summary>
+        /// Target resolution to reduce resolution to when m_adjustScreenResolution is
+        /// enabled. Specifies the lesser of the two dimensions (i.e. height in landscape
+        /// or width in portrait mode).
+        /// </summary>
+        public int m_targetResolution = 1080;
+
+        /// <summary>
+        /// If true, resolution adjustment will allow adjusting to a resolution
+        /// larger than the display of the current device.
+        /// 
+        /// This is generally discouraged.
+        /// </summary>
+        public bool m_allowOversizedScreenResolutions = false;
+
+        /// <summary>
+        /// Inspector value for initial max point cloud size.
+        /// To set point cloud max size at runtime, use SetMaxDepthPoints().
+        /// 
+        /// A value of 0 disables the feature.
+        /// </summary>
+        public int m_initialPointCloudMaxPoints = 0;
+
+        /// <summary>
+        /// Event of display rotation change.
+        /// </summary>
+        public OnDisplayChangedEventHandler OnDisplayChanged;
 
         internal bool m_enableCloudADF = false;
 
         private const string CLASS_NAME = "TangoApplication";
         private static string m_tangoServiceVersion = string.Empty;
+
+        /// <summary>
+        /// Ratio of the screen's larger dimension (e.g. Screen.Width in landscape)
+        /// to the screen's smaller dimension. Measured once, on the first time 
+        /// TangoApplication awakes.
+        /// </summary>
+        private static float m_screenLandscapeAspectRatio = -1;
 
         /// <summary>
         /// If RequestPermissions() has been called automatically.
@@ -147,7 +226,7 @@ namespace Tango
         private bool m_shouldReconnectService = false;
         private bool m_sendPermissions = false;
         private bool m_permissionsSuccessful = false;
-        private bool m_screenOrientationChanged = false;
+        private bool m_displayChanged = false;
         private PoseListener m_poseListener;
         private DepthListener m_depthListener;
         private VideoOverlayListener m_videoOverlayListener;
@@ -222,14 +301,14 @@ namespace Tango
         {
             if (m_tangoServiceVersion == string.Empty)
             {
-                m_tangoServiceVersion = AndroidHelper.GetVersionName("com.projecttango.tango");
+                m_tangoServiceVersion = AndroidHelper.GetTangoCoreVersionName();
             }
             
             return m_tangoServiceVersion;
         }
 
         /// <summary>
-        /// Get the video overlay texture.
+        /// DEPRECATED: Get the video overlay texture.
         /// </summary>
         /// <returns>The video overlay texture.</returns>
         public YUVTexture GetVideoOverlayTextureYUV()
@@ -304,29 +383,38 @@ namespace Tango
                 }
             }
             
-            if (m_enableVideoOverlay)
+            if (m_enableVideoOverlay && m_videoOverlayListener != null)
             {
-                if (m_videoOverlayUseTextureIdMethod)
+                if (m_videoOverlayUseTextureMethod)
                 {
-                    IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
-                    if (videoOverlayHandler != null)
+                    ITangoCameraTexture handler = tangoObject as ITangoCameraTexture;
+                    if (handler != null)
                     {
-                        _RegisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
+                        m_videoOverlayListener.RegisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
+                    }
+                }
+
+                if (m_videoOverlayUseYUVTextureIdMethod)
+                {
+                    IExperimentalTangoVideoOverlay handler = tangoObject as IExperimentalTangoVideoOverlay;
+                    if (handler != null)
+                    {
+                        m_videoOverlayListener.RegisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
                     }
                 }
 
                 if (m_videoOverlayUseByteBufferMethod)
                 {
-                    ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
-                    if (videoOverlayHandler != null)
+                    ITangoVideoOverlay handler = tangoObject as ITangoVideoOverlay;
+                    if (handler != null)
                     {
-                        _RegisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
+                        m_videoOverlayListener.RegisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
                     }
 
-                    ITangoVideoOverlayMultithreaded videoOverlayMultithreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
-                    if (videoOverlayMultithreadedHandler != null && m_videoOverlayListener != null)
+                    ITangoVideoOverlayMultithreaded multithreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
+                    if (multithreadedHandler != null && m_videoOverlayListener != null)
                     {
-                        m_videoOverlayListener.RegisterOnTangoImageMultithreadedAvailable(videoOverlayMultithreadedHandler.OnTangoImageMultithreadedAvailable);
+                        m_videoOverlayListener.RegisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
                     }
                 }
             }
@@ -406,29 +494,38 @@ namespace Tango
                 }
             }
 
-            if (m_enableVideoOverlay)
+            if (m_enableVideoOverlay && m_videoOverlayListener != null)
             {
-                if (m_videoOverlayUseTextureIdMethod)
+                if (m_videoOverlayUseTextureMethod)
                 {
-                    IExperimentalTangoVideoOverlay videoOverlayHandler = tangoObject as IExperimentalTangoVideoOverlay;
-                    if (videoOverlayHandler != null)
+                    ITangoCameraTexture handler = tangoObject as ITangoCameraTexture;
+                    if (handler != null)
                     {
-                        _UnregisterOnExperimentalTangoVideoOverlay(videoOverlayHandler.OnExperimentalTangoImageAvailable);
+                        m_videoOverlayListener.UnregisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
+                    }
+                }
+
+                if (m_videoOverlayUseYUVTextureIdMethod)
+                {
+                    IExperimentalTangoVideoOverlay handler = tangoObject as IExperimentalTangoVideoOverlay;
+                    if (handler != null)
+                    {
+                        m_videoOverlayListener.UnregisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
                     }
                 }
 
                 if (m_videoOverlayUseByteBufferMethod)
                 {
-                    ITangoVideoOverlay videoOverlayHandler = tangoObject as ITangoVideoOverlay;
-                    if (videoOverlayHandler != null)
+                    ITangoVideoOverlay handler = tangoObject as ITangoVideoOverlay;
+                    if (handler != null)
                     {
-                        _UnregisterOnTangoVideoOverlay(videoOverlayHandler.OnTangoImageAvailableEventHandler);
+                        m_videoOverlayListener.UnregisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
                     }
 
-                    ITangoVideoOverlayMultithreaded videoOverlayMulitthreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
-                    if (videoOverlayHandler != null && m_videoOverlayListener != null)
+                    ITangoVideoOverlayMultithreaded multithreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
+                    if (multithreadedHandler != null)
                     {
-                        m_videoOverlayListener.UnregisterOnTangoImageMultithreadedAvailable(videoOverlayMulitthreadedHandler.OnTangoImageMultithreadedAvailable);
+                        m_videoOverlayListener.UnregisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
                     }
                 }
             }
@@ -485,13 +582,17 @@ namespace Tango
                 return;
             }
 
-            _CheckTangoVersion();
+            if (!_CheckTangoVersion())
+            {
+                // Error logged in _CheckTangoVersion function.
+                return;
+            }
 
             // Setup configs.
             m_tangoConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_DEFAULT);
             m_tangoRuntimeConfig = new TangoConfig(TangoEnums.TangoConfigType.TANGO_CONFIG_RUNTIME);
 
-            if (m_enableVideoOverlay && m_videoOverlayUseTextureIdMethod)
+            if (m_enableVideoOverlay && m_videoOverlayUseYUVTextureIdMethod)
             {
                 int yTextureWidth = 0;
                 int yTextureHeight = 0;
@@ -591,8 +692,26 @@ namespace Tango
             case TangoEnums.TangoDepthCameraRate.MAXIMUM:
                 // Set the depth frame rate to a sufficiently high number, it will get rounded down.  There is no 
                 // way to actually get the maximum value to pass in.
-                SetDepthCameraRate(9000);
+                SetDepthCameraRate(5);
                 break;
+            }
+        }
+
+        /// <summary>
+        /// A cap on the number of points allowable in a point cloud; the point cloud will be reduced to this size if
+        /// it exceeds it. 
+        /// 
+        /// Reducing the point cloud density will not reduce the time it takes for the native Tango process to
+        /// produce depth data (and may in fact incur a small penalty). Performance gains come strictly from operations 
+        /// downstream of point cloud creation (e.g. converting the depth cloud points into Unity coordinates, 
+        /// point cloud rendering, plane-finding, etc).
+        /// </summary>
+        /// <param name="maxDepthPoints">Maximum number of depth points. A value of 0 means no limit.</param>
+        public void SetMaxDepthPoints(int maxDepthPoints)
+        {
+            if (m_depthListener != null)
+            {
+                m_depthListener.SetPointCloudLimit(maxDepthPoints);
             }
         }
 
@@ -858,60 +977,6 @@ namespace Tango
         }
 
         /// <summary>
-        /// Register to get Tango video overlay callbacks.
-        /// 
-        /// See TangoApplication.Register for details.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
-        {
-            if (m_videoOverlayListener != null)
-            {
-                m_videoOverlayListener.RegisterOnTangoImageAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango video overlay callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnTangoVideoOverlay(OnTangoImageAvailableEventHandler handler)
-        {
-            if (m_videoOverlayListener != null)
-            {
-                m_videoOverlayListener.UnregisterOnTangoImageAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Experimental API only, subject to change.  Register to get Tango video overlay callbacks.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
-        {
-            if (m_videoOverlayListener != null)
-            {
-                m_videoOverlayListener.RegisterOnExperimentalTangoImageAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Experimental API only, subject to change.  Unregister from the Tango video overlay callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnExperimentalTangoVideoOverlay(OnExperimentalTangoImageAvailableEventHandler handler)
-        {
-            if (m_videoOverlayListener != null)
-            {
-                m_videoOverlayListener.UnregisterOnExperimentalTangoImageAvailable(handler);
-            }
-        }
-
-        /// <summary>
         /// Register to get Tango event callbacks.
         /// 
         /// See TangoApplication.Register for details.
@@ -1099,15 +1164,19 @@ namespace Tango
 
             if (m_videoOverlayListener != null)
             {
-                if (m_videoOverlayUseTextureIdMethod)
+                if (m_videoOverlayUseTextureMethod)
                 {
-                    m_videoOverlayListener.SetCallbackTextureIdMethod(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
-                                                                      m_yuvTexture);
+                    m_videoOverlayListener.SetCallbackTextureMethod();
+                }
+
+                if (m_videoOverlayUseYUVTextureIdMethod)
+                {
+                    m_videoOverlayListener.SetCallbackYUVTextureIdMethod(m_yuvTexture);
                 }
 
                 if (m_videoOverlayUseByteBufferMethod)
                 {
-                    m_videoOverlayListener.SetCallbackByteBufferMethod(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
+                    m_videoOverlayListener.SetCallbackByteBufferMethod();
                 }
             }
         }
@@ -1132,17 +1201,26 @@ namespace Tango
 
                 if (m_enableAreaDescriptions)
                 {
-                    if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_areaDescriptionLearningMode) && m_areaDescriptionLearningMode)
+                    if (!m_enableDriftCorrection)
                     {
-                        Debug.Log("Area Learning is enabled.");
-                    }
-
-                    if (!string.IsNullOrEmpty(uuid))
-                    {
-                        if (m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid))
+                        if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL,
+                                                  m_areaDescriptionLearningMode) && m_areaDescriptionLearningMode)
                         {
-                            usedUUID = true;
+                            Debug.Log("Area Learning is enabled.");
                         }
+
+                        if (!string.IsNullOrEmpty(uuid))
+                        {
+                            if (m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, uuid))
+                            {
+                                usedUUID = true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        m_tangoConfig.SetBool(TangoConfig.Keys.EXPERIMENTAL_ENABLE_DRIFT_CORRECTION_BOOL,
+                                              m_enableDriftCorrection);
                     }
 
                     TangoCoordinateFramePair areaDescription;
@@ -1183,27 +1261,35 @@ namespace Tango
 
 #if UNITY_EDITOR
             EmulatedAreaDescriptionHelper.InitEmulationForUUID(uuid, m_enableAreaDescriptions, m_areaDescriptionLearningMode,
-                                                               m_emulatedAreaDescriptionStartOffset);
+                                                               m_enableDriftCorrection, m_emulatedAreaDescriptionStartOffset);
 #endif
         }
 
         /// <summary>
         /// Validate the TangoService version is supported.
         /// </summary>
-        private void _CheckTangoVersion()
+        /// <returns>Returns <c>true</c> if Tango version is compatible, otherwise not.</returns>
+        private bool _CheckTangoVersion()
         {
             if (!AndroidHelper.IsTangoCoreUpToDate())
             {
                 Debug.Log(string.Format(CLASS_NAME + ".Initialize() Invalid API version. Please update Project Tango Core to at least {0}.", AndroidHelper.TANGO_MINIMUM_VERSION_CODE));
                 if (!m_allowOutOfDateTangoAPI)
                 {
-                    AndroidHelper.ShowAndroidToastMessage("Please update Tango Core");
-                    return;
+                    TangoUx ux = GetComponent<TangoUx>();
+
+                    if (ux != null && ux.isActiveAndEnabled)
+                    {
+                        ux.ShowTangoOutOfDate();
+                    }
+
+                    return false;
                 }
             }
 
             m_isServiceInitialized = true;
             Debug.Log(CLASS_NAME + ".Initialize() Tango was initialized!");
+            return true;
         }
         
         /// <summary>
@@ -1222,7 +1308,7 @@ namespace Tango
             {
                 m_isServiceConnected = true;
                 AndroidHelper.PerformanceLog("Unity _TangoConnect start");
-                if (TangoServiceAPI.TangoService_connect(m_callbackContext, m_tangoConfig.GetHandle()) != Common.ErrorType.TANGO_SUCCESS)
+                if (API.TangoService_connect(m_callbackContext, m_tangoConfig.GetHandle()) != Common.ErrorType.TANGO_SUCCESS)
                 {
                     AndroidHelper.ShowAndroidToastMessage("Failed to connect to Tango Service.");
                     Debug.Log(CLASS_NAME + ".Connect() Could not connect to the Tango Service!");
@@ -1256,7 +1342,7 @@ namespace Tango
 
             Debug.Log(CLASS_NAME + ".Disconnect() Disconnecting from the Tango Service");
             m_isServiceConnected = false;
-            if (TangoServiceAPI.TangoService_disconnect() != Common.ErrorType.TANGO_SUCCESS)
+            if (API.TangoService_disconnect() != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".Disconnect() Could not disconnect from the Tango Service!");
             }
@@ -1360,15 +1446,6 @@ namespace Tango
         }
 
         /// <summary>
-        /// Delegate for the Android screen orientation changed.
-        /// </summary>
-        /// <param name="newOrientation">The index of new orientation.</param>
-        private void _androidOnScreenOrientationChanged(AndroidScreenRotation newOrientation)
-        {
-            m_screenOrientationChanged = true;
-        }
-
-        /// <summary>
         /// Delegate for when connected to the Tango Android service.
         /// </summary>
         /// <param name="binder">Binder for the service.</param>
@@ -1396,6 +1473,14 @@ namespace Tango
         }
 
         /// <summary>
+        /// Delegate for the Android display rotation changed.
+        /// </summary>
+        private void _androidOnDisplayChanged()
+        {      
+            m_displayChanged = true;
+        }
+
+        /// <summary>
         /// Awake this instance.
         /// </summary>
         private void Awake()
@@ -1409,7 +1494,7 @@ namespace Tango
             AndroidHelper.RegisterPauseEvent(_androidOnPause);
             AndroidHelper.RegisterResumeEvent(_androidOnResume);
             AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
-            AndroidHelper.RegisterOnScreenOrientationChangedEvent(_androidOnScreenOrientationChanged);
+            AndroidHelper.RegisterOnDisplayChangedEvent(_androidOnDisplayChanged);
             AndroidHelper.RegisterOnTangoServiceConnected(_androidOnTangoServiceConnected);
             AndroidHelper.RegisterOnTangoServiceDisconnected(_androidOnTangoServiceDisconnected);
 
@@ -1430,6 +1515,8 @@ namespace Tango
             if (m_enableDepth)
             {
                 m_depthListener = new DepthListener();
+
+                m_depthListener.SetPointCloudLimit(m_initialPointCloudMaxPoints);
             }
 
             if (m_enableVideoOverlay)
@@ -1445,12 +1532,23 @@ namespace Tango
 
             if (m_enable3DReconstruction)
             {
-                m_tango3DReconstruction = new Tango3DReconstruction(m_3drResolutionMeters, m_3drGenerateColor, m_3drSpaceClearing);
+                m_tango3DReconstruction = new Tango3DReconstruction(
+                    resolution: m_3drResolutionMeters,
+                    generateColor: m_3drGenerateColor,
+                    spaceClearing: m_3drSpaceClearing,
+                    minNumVertices: m_3drMinNumVertices,
+                    updateMethod: m_3drUpdateMethod);
                 m_tango3DReconstruction.m_useAreaDescriptionPose = m_3drUseAreaDescriptionPose;
                 m_tango3DReconstruction.m_sendColorToUpdate = m_3drGenerateColor;
             }
 
-            TangoSupport.UpdateCurrentRotationIndex();
+            TangoSupport.UpdatePoseMatrixFromDeviceRotation(AndroidHelper.GetDisplayRotation(),
+                                                            AndroidHelper.GetColorCameraRotation());
+
+            if (m_adjustScreenResolution)
+            {
+                _ChangeResolutionForPerformance();
+            }
 
 #if UNITY_EDITOR
             if (m_doSlowEmulation && (m_enableDepth || m_enableVideoOverlay))
@@ -1480,7 +1578,7 @@ namespace Tango
 #else
             if (m_requiredPermissions == PermissionsTypes.NONE)
             {
-                m_requiredPermissions |= m_enableAreaDescriptions ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
+                m_requiredPermissions |= (m_enableAreaDescriptions && !m_enableDriftCorrection) ? PermissionsTypes.AREA_LEARNING : PermissionsTypes.NONE;
             }
 
             // It is always required to rebind to the service.
@@ -1575,6 +1673,40 @@ namespace Tango
         }
 
         /// <summary>
+        /// Handle resolution-limiting option for performance.
+        /// </summary>
+        private void _ChangeResolutionForPerformance()
+        {
+            if (m_targetResolution < Mathf.Min(Screen.width, Screen.height) || m_allowOversizedScreenResolutions)
+            {
+                // Record aspect only once so that it can't get corrupted through 
+                // rounding across successive resolution changes.
+                if (m_screenLandscapeAspectRatio == -1)
+                {
+                    float bigDimension = Mathf.Max(Screen.width, Screen.height);
+                    float littleDimension = Mathf.Min(Screen.width, Screen.height);
+
+                    m_screenLandscapeAspectRatio = bigDimension / littleDimension;
+                }
+
+                int targetWidth, targetHeight;
+
+                if (Screen.width > Screen.height)
+                {
+                    targetWidth = Mathf.RoundToInt(m_targetResolution * m_screenLandscapeAspectRatio);
+                    targetHeight = m_targetResolution;
+                }
+                else
+                {
+                    targetWidth = m_targetResolution;
+                    targetHeight = Mathf.RoundToInt(m_targetResolution * m_screenLandscapeAspectRatio);
+                }
+                
+                Screen.SetResolution(targetWidth, targetHeight, Screen.fullScreen);
+            }
+        }
+
+        /// <summary>
         /// Disperse any events related to Tango functionality.
         /// </summary>
         private void Update()
@@ -1662,10 +1794,13 @@ namespace Tango
                 m_tango3DReconstruction.SendEventIfAvailable();
             }
 
-            if (m_screenOrientationChanged)
+            if (m_displayChanged && m_isServiceConnected)
             {
-                TangoSupport.UpdateCurrentRotationIndex();
-                m_screenOrientationChanged = false;
+                OrientationManager.Rotation displayRotation = AndroidHelper.GetDisplayRotation();
+                OrientationManager.Rotation colorCameraRotation = AndroidHelper.GetColorCameraRotation();
+                TangoSupport.UpdatePoseMatrixFromDeviceRotation(displayRotation, colorCameraRotation);
+                OnDisplayChanged(displayRotation, colorCameraRotation);
+                m_displayChanged = false;
             }
         }
 
@@ -1697,16 +1832,16 @@ namespace Tango
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
                                                          "SA1600:ElementsMustBeDocumented",
                                                          Justification = "C API Wrapper.")]
-        private struct TangoServiceAPI
+        private struct API
         {
-            #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+#if UNITY_ANDROID && !UNITY_EDITOR
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_initialize(IntPtr jniEnv, IntPtr appContext);
             
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_connect(IntPtr callbackContext, IntPtr config);
             
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_disconnect();
             #else
             public static int TangoService_initialize(IntPtr jniEnv, IntPtr appContext)
@@ -1723,7 +1858,7 @@ namespace Tango
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
-            #endif
+#endif
         }
         #endregion // NATIVE_FUNCTIONS
     }

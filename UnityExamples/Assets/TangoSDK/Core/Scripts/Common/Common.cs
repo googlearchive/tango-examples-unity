@@ -36,7 +36,12 @@ namespace Tango
         /// <summary>
         /// Name of the Tango C-API library.
         /// </summary>
-        internal const string TANGO_UNITY_DLL = "tango_client_api";
+        internal const string TANGO_CLIENT_API_DLL = "tango_client_api";
+
+        /// <summary>
+        /// Name of the Tango Unity library.
+        /// </summary>
+        internal const string TANGO_UNITY_DLL = "tango_unity_lib";
 
         /// <summary>
         /// Motion Tracking permission intent string.

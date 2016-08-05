@@ -128,11 +128,7 @@ namespace Tango
             TangoSupport.TangoPoseToWorldTransform(poseData, out position, out rotation);
 
             // Instantiate any resources that we haven't yet.
-            if(!m_emulationIsInitialized)
-            {
-                _InitializeResourcesForEmulation();
-                m_emulationIsInitialized = true;
-            }
+            _InternResourcesForEmulation();
 
             // Render emulated depth camera data.
             EmulatedEnvironmentRenderHelper.RenderEmulatedEnvironment(m_emulatedDepthTexture,
@@ -195,11 +191,19 @@ namespace Tango
         /// <summary>
         /// Create any resources needed for emulation.
         /// </summary>
-        private static void _InitializeResourcesForEmulation()
+        private static void _InternResourcesForEmulation()
         {
-            m_emulatedDepthTexture = new RenderTexture(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, 24, RenderTextureFormat.ARGB32);
+            if(m_emulationIsInitialized)
+            {
+                return;
+            }
 
-            m_emulationCaptureTexture = new Texture2D(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, TextureFormat.ARGB32, false);
+            m_emulatedDepthTexture = new RenderTexture(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, 24, 
+                                                       RenderTextureFormat.ARGB32);
+            m_emulationCaptureTexture = new Texture2D(NUM_X_DEPTH_SAMPLES, NUM_Y_DEPTH_SAMPLES, TextureFormat.ARGB32, 
+                                                      false);
+
+            m_emulationIsInitialized = true;
         }
 #endif
 
@@ -209,7 +213,7 @@ namespace Tango
         private struct DepthAPI
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_connectOnXYZijAvailable(TangoService_onDepthAvailable onDepthAvailalble);
 
  #else

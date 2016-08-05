@@ -80,11 +80,6 @@ namespace Tango
         private Matrix4x4 m_device_T_colorCamera;
 
         /// <summary>
-        /// Constant calibration data for the color camera.
-        /// </summary>
-        private APICameraCalibration m_colorCameraIntrinsics;
-
-        /// <summary>
         /// Cache of the most recent depth received, to send with color information.
         /// </summary>
         private APIPointCloud m_mostRecentDepth;
@@ -118,12 +113,19 @@ namespace Tango
         /// <param name="resolution">Size in meters of each grid cell.</param>
         /// <param name="generateColor">If true the reconstruction will contain color information.</param>
         /// <param name="spaceClearing">If true the reconstruction will clear empty space it detects.</param> 
-        internal Tango3DReconstruction(float resolution, bool generateColor, bool spaceClearing)
+        /// <param name="minNumVertices">
+        /// If non-zero, any submesh with less than this number of vertices will get removed, assumed to be noise.
+        /// </param>
+        /// <param name="updateMethod">Method used to update voxels.</param>
+        internal Tango3DReconstruction(float resolution, bool generateColor, bool spaceClearing, int minNumVertices,
+                                       UpdateMethod updateMethod)
         {
             IntPtr config = API.Tango3DR_Config_create((int)APIConfigType.Context);
             API.Tango3DR_Config_setDouble(config, "resolution", resolution);
             API.Tango3DR_Config_setBool(config, "generate_color", generateColor);
             API.Tango3DR_Config_setBool(config, "use_space_clearing", spaceClearing);
+            API.Tango3DR_Config_setInt32(config, "min_num_vertices", minNumVertices);
+            API.Tango3DR_Config_setInt32(config, "update_method", (int)updateMethod);
 
             // The 3D Reconstruction library can not handle a left handed transformation during update.  Instead,
             // transform into the Unity world space via the external_T_tango config.
@@ -147,6 +149,27 @@ namespace Tango
             INSUFFICIENT_SPACE = -2,
             INVALID = -1,
             SUCCESS = 0
+        }
+
+        /// <summary>
+        /// Corresponds to a Tango3DR_UpdateMethod.
+        /// </summary>
+        public enum UpdateMethod
+        {
+            /// <summary>
+            /// Associates voxels with depth readings by traversing (raycasting) forward from the camera to the
+            /// observed depth. Results in slightly higher reconstruction quality. Can be significantly slower,
+            /// especially on updates with a high number of depth points.
+            /// </summary>
+            TRAVERSAL = 0,
+
+            /// <summary>
+            /// Associates voxels with depth readings by projecting voxels into a depth  image plane using a
+            /// projection matrix. Requires that the depth camera calibration has been set using the
+            /// Tango3DR_setDepthCalibrtion method. Results in slightly lower reconstruction quality. Under this mode,
+            /// the speed of updates is independent of the number of depth points.
+            /// </summary>
+            PROJECTIVE = 1,
         }
 
         /// @cond
@@ -199,7 +222,72 @@ namespace Tango
         /// </summary>
         public void OnTangoServiceConnected()
         {
-            _UpdateExtrinsics();
+            // Calculate the camera extrinsics.
+            TangoCoordinateFramePair pair;
+
+            TangoPoseData imu_T_devicePose = new TangoPoseData();
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+            PoseProvider.GetPoseAtTime(imu_T_devicePose, 0, pair);
+
+            TangoPoseData imu_T_depthCameraPose = new TangoPoseData();
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH;
+            PoseProvider.GetPoseAtTime(imu_T_depthCameraPose, 0, pair);
+
+            TangoPoseData imu_T_colorCameraPose = new TangoPoseData();
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
+            PoseProvider.GetPoseAtTime(imu_T_colorCameraPose, 0, pair);
+
+            // Convert into matrix form to combine the poses.
+            Matrix4x4 device_T_imu = Matrix4x4.Inverse(imu_T_devicePose.ToMatrix4x4());
+            m_device_T_depthCamera = device_T_imu * imu_T_depthCameraPose.ToMatrix4x4();
+            m_device_T_colorCamera = device_T_imu * imu_T_colorCameraPose.ToMatrix4x4();
+
+            // Update the camera intrinsics.
+            TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+            Status status;
+
+            APICameraCalibration colorCameraCalibration;
+            VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+            colorCameraCalibration.calibration_type = (int)intrinsics.calibration_type;
+            colorCameraCalibration.width = intrinsics.width;
+            colorCameraCalibration.height = intrinsics.height;
+            colorCameraCalibration.cx = intrinsics.cx;
+            colorCameraCalibration.cy = intrinsics.cy;
+            colorCameraCalibration.fx = intrinsics.fx;
+            colorCameraCalibration.fy = intrinsics.fy;
+            colorCameraCalibration.distortion0 = intrinsics.distortion0;
+            colorCameraCalibration.distortion1 = intrinsics.distortion1;
+            colorCameraCalibration.distortion2 = intrinsics.distortion2;
+            colorCameraCalibration.distortion3 = intrinsics.distortion3;
+            colorCameraCalibration.distortion4 = intrinsics.distortion4;
+            status = (Status)API.Tango3DR_setColorCalibration(m_context, ref colorCameraCalibration);
+            if (status != Status.SUCCESS)
+            {
+                Debug.Log("Unable to set color calibration." + Environment.StackTrace);
+            }
+
+            APICameraCalibration depthCameraCalibration;
+            VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_DEPTH, intrinsics);
+            depthCameraCalibration.calibration_type = (int)intrinsics.calibration_type;
+            depthCameraCalibration.width = intrinsics.width;
+            depthCameraCalibration.height = intrinsics.height;
+            depthCameraCalibration.cx = intrinsics.cx;
+            depthCameraCalibration.cy = intrinsics.cy;
+            depthCameraCalibration.fx = intrinsics.fx;
+            depthCameraCalibration.fy = intrinsics.fy;
+            depthCameraCalibration.distortion0 = intrinsics.distortion0;
+            depthCameraCalibration.distortion1 = intrinsics.distortion1;
+            depthCameraCalibration.distortion2 = intrinsics.distortion2;
+            depthCameraCalibration.distortion3 = intrinsics.distortion3;
+            depthCameraCalibration.distortion4 = intrinsics.distortion4;
+            status = (Status)API.Tango3DR_setDepthCalibration(m_context, ref depthCameraCalibration);
+            if (status != Status.SUCCESS)
+            {
+                Debug.Log("Unable to set depth calibration." + Environment.StackTrace);
+            }
         }
 
         /// <summary>
@@ -512,8 +600,7 @@ namespace Tango
                 // No need to wait for a color image, update reconstruction immediately.
                 IntPtr rawUpdatedIndices;
                 Status result = (Status)API.Tango3DR_update(
-                    m_context, ref apiCloud, ref apiDepthPose, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero,
-                    out rawUpdatedIndices);
+                    m_context, ref apiCloud, ref apiDepthPose, IntPtr.Zero, IntPtr.Zero, out rawUpdatedIndices);
                 if (result != Status.SUCCESS)
                 {
                     Debug.Log("Tango3DR_update returned non-success." + Environment.StackTrace);
@@ -585,8 +672,7 @@ namespace Tango
                 IntPtr rawUpdatedIndices;
                 Status result = (Status)API.Tango3DR_update(
                     m_context, ref m_mostRecentDepth, ref m_mostRecentDepthPose,
-                    ref apiImage, ref apiImagePose, ref m_colorCameraIntrinsics, 
-                    out rawUpdatedIndices);
+                    ref apiImage, ref apiImagePose, out rawUpdatedIndices);
 
                 m_mostRecentDepthIsValid = false;
                 thisHandle.Free();
@@ -641,50 +727,6 @@ namespace Tango
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Calculate the camera extrinsics for this device.
-        /// </summary>
-        private void _UpdateExtrinsics()
-        {
-            TangoCoordinateFramePair pair;
-
-            TangoPoseData imu_T_devicePose = new TangoPoseData();
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-            PoseProvider.GetPoseAtTime(imu_T_devicePose, 0, pair);
-
-            TangoPoseData imu_T_depthCameraPose = new TangoPoseData();
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH;
-            PoseProvider.GetPoseAtTime(imu_T_depthCameraPose, 0, pair);
-
-            TangoPoseData imu_T_colorCameraPose = new TangoPoseData();
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_IMU;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
-            PoseProvider.GetPoseAtTime(imu_T_colorCameraPose, 0, pair);
-
-            // Convert into matrix form to combine the poses.
-            Matrix4x4 device_T_imu = Matrix4x4.Inverse(imu_T_devicePose.ToMatrix4x4());
-            m_device_T_depthCamera = device_T_imu * imu_T_depthCameraPose.ToMatrix4x4();
-            m_device_T_colorCamera = device_T_imu * imu_T_colorCameraPose.ToMatrix4x4();
-
-            // Update the camera intrinsics too.
-            TangoCameraIntrinsics colorCameraIntrinsics = new TangoCameraIntrinsics();
-            VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, colorCameraIntrinsics);
-            m_colorCameraIntrinsics.calibration_type = (int)colorCameraIntrinsics.calibration_type;
-            m_colorCameraIntrinsics.width = colorCameraIntrinsics.width;
-            m_colorCameraIntrinsics.height = colorCameraIntrinsics.height;
-            m_colorCameraIntrinsics.cx = colorCameraIntrinsics.cx;
-            m_colorCameraIntrinsics.cy = colorCameraIntrinsics.cy;
-            m_colorCameraIntrinsics.fx = colorCameraIntrinsics.fx;
-            m_colorCameraIntrinsics.fy = colorCameraIntrinsics.fy;
-            m_colorCameraIntrinsics.distortion0 = colorCameraIntrinsics.distortion0;
-            m_colorCameraIntrinsics.distortion1 = colorCameraIntrinsics.distortion1;
-            m_colorCameraIntrinsics.distortion2 = colorCameraIntrinsics.distortion2;
-            m_colorCameraIntrinsics.distortion3 = colorCameraIntrinsics.distortion3;
-            m_colorCameraIntrinsics.distortion4 = colorCameraIntrinsics.distortion4;
         }
 
         /// <summary>
@@ -1110,6 +1152,12 @@ namespace Tango
             public static extern int Tango3DR_Config_getMatrix3x3(IntPtr config, string key, out APIMatrix3x3 value);
 
             [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_setColorCalibration(IntPtr contxet, ref APICameraCalibration calibration);
+
+            [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_setDepthCalibration(IntPtr contxet, ref APICameraCalibration calibration);
+
+            [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_GridIndexArray_destroy(IntPtr gridIndexArray);
 
             [DllImport(TANGO_3DR_DLL)]
@@ -1118,12 +1166,11 @@ namespace Tango
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_update(IntPtr context, ref APIPointCloud cloud, ref APIPose cloud_pose,
                                                      ref APIImageBuffer image, ref APIPose image_pose,
-                                                     ref APICameraCalibration calibration, out IntPtr updated_indices);
+                                                     out IntPtr updated_indices);
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_update(IntPtr context, ref APIPointCloud cloud, ref APIPose cloud_pose,
-                                                     IntPtr image, IntPtr image_pose, IntPtr calibration, 
-                                                     out IntPtr updated_indices);
+                                                     IntPtr image, IntPtr image_pose, out IntPtr updated_indices);
 
             [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_extractPreallocatedMeshSegment(
@@ -1201,6 +1248,16 @@ namespace Tango
                 return (int)Status.SUCCESS;
             }
 
+            public static int Tango3DR_setColorCalibration(IntPtr contxet, ref APICameraCalibration calibration)
+            {
+                return (int)Status.SUCCESS;
+            }
+
+            public static int Tango3DR_setDepthCalibration(IntPtr contxet, ref APICameraCalibration calibration)
+            {
+                return (int)Status.SUCCESS;
+            }
+
             public static int Tango3DR_GridIndexArray_destroy(IntPtr gridIndexArray)
             {
                 return (int)Status.SUCCESS;
@@ -1213,14 +1270,14 @@ namespace Tango
 
             public static int Tango3DR_update(IntPtr context, ref APIPointCloud cloud, ref APIPose cloud_pose,
                                               ref APIImageBuffer image, ref APIPose image_pose,
-                                              ref APICameraCalibration calibration, out IntPtr updated_indices)
+                                              out IntPtr updated_indices)
             {
                 updated_indices = IntPtr.Zero;
                 return (int)Status.SUCCESS;
             }
 
             public static int Tango3DR_update(IntPtr context, ref APIPointCloud cloud, ref APIPose cloud_pose,
-                                              IntPtr image, IntPtr image_pose, IntPtr calibration,
+                                              IntPtr image, IntPtr image_pose,
                                               out IntPtr updated_indices)
             {
                 updated_indices = IntPtr.Zero;

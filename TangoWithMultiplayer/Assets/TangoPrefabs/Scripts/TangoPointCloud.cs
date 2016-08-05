@@ -365,6 +365,14 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// <param name="plane">Filled in with a model of the plane in Unity world space.</param>
     public bool FindPlane(Camera cam, Vector2 pos, out Vector3 planeCenter, out Plane plane)
     {
+        if (m_pointsCount == 0)
+        {
+            // No points to check, maybe not connected to the service yet
+            planeCenter = Vector3.zero;
+            plane = new Plane();
+            return false;
+        }
+
         Matrix4x4 colorCameraTUnityWorld = m_colorCameraTUnityCamera * cam.transform.worldToLocalMatrix;
         Vector2 normalizedPos = cam.ScreenToViewportPoint(pos);
 
@@ -376,9 +384,12 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
             normalizedPos = arScreen.ViewportPointToCameraImagePoint(normalizedPos);
         }
 
+        TangoCameraIntrinsics alignedIntrinsics = new TangoCameraIntrinsics();
+        VideoOverlayProvider.GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                                                  alignedIntrinsics);
         int returnValue = TangoSupport.FitPlaneModelNearClick(
-            m_points, m_pointsCount, m_depthTimestamp, m_colorCameraIntrinsics, ref colorCameraTUnityWorld, normalizedPos,
-            out planeCenter, out plane);
+                m_points, m_pointsCount, m_depthTimestamp, alignedIntrinsics, ref colorCameraTUnityWorld,
+                normalizedPos, out planeCenter, out plane);
 
         if (returnValue == Common.ErrorType.TANGO_SUCCESS)
         {

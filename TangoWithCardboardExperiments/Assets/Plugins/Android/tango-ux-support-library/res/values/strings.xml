@@ -16,9 +16,6 @@
 -->
 <resources>
 
-    <!-- Splash Component -->
-    <string name="project_tango">Project Tango</string>
-    
     <!-- Exceptions -->
     <string name="moving_too_fast_title">Too fast.</string>
     <string name="moving_too_fast_description">Slow down and hold device steady.</string>
@@ -39,8 +36,9 @@
     <string name="device_not_responding_description">Restart the app or reboot the device.</string>
     
     <string name="service_updated_title">Incompatible version.</string>
-    <string name="service_updated_description">Update to the latest Project Tango Core.</string>
-    <string name="service_updated_linkify">Project Tango Core</string>
+    <string name="service_updated_check_updates">Check for updates</string>
+    <string name="service_updated_description">Update to the latest Tango Core.</string>
+    <string name="service_updated_linkify">Tango Core</string>
 
     <string name="lying_on_surface_title">Camera blocked.</string>
     <string name="lying_on_surface_description">Pick up the device to continue.</string>

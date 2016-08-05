@@ -6,5 +6,5 @@
 -->
 <resources xmlns:tools="http://schemas.android.com/tools"
     tools:ignore="TypographyDashes">
-  <string name="ux_library_version">1.29:2015.12.10-capella-release-2217-g11e2b13b:7481:unstable</string>
+  <string name="ux_library_version"></string>
 </resources>

@@ -21,7 +21,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Experimental API only, subject to change.  Tango video overlay interface.
+/// DEPRECATED: Experimental API only, subject to change.  Tango video overlay interface.
 /// </summary>
 public interface IExperimentalTangoVideoOverlay
 {
