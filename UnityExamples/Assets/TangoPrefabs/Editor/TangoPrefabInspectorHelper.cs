@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TangoPrefabInspectorHelper.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
@@ -103,7 +103,7 @@ namespace Tango
                                                            bool shouldUsePermissions)
         {
             bool hasPermissions = tangoApplication.m_enableAreaDescriptions;
-            
+
             if (!hasPermissions && shouldUsePermissions)
             {
                 EditorGUILayout.HelpBox("\"Use Area Description Pose\" option selected but active "
@@ -153,7 +153,7 @@ namespace Tango
         {
             bool hasNeededVideoPermissions = tangoApplication.m_enableVideoOverlay;
             
-            if (textureIdMethodRequired && !tangoApplication.m_videoOverlayUseTextureIdMethod)
+            if (textureIdMethodRequired && !tangoApplication.m_videoOverlayUseTextureMethod)
             {
                 hasNeededVideoPermissions = false;
             }

@@ -43,10 +43,9 @@ public delegate void OnResumeEventHandler();
 public delegate void OnActivityResultEventHandler(int requestCode, int resultCode, AndroidJavaObject data);
 
 /// <summary>
-/// Delegate for the Android screen orientation changed.
+/// Delegate for the Android DisplayListener interface's onDisplayChanged event.
 /// </summary>
-/// <param name="newOrientation">The index of new orientation.</param>
-public delegate void OnScreenOrientationChangedEventHandler(AndroidScreenRotation newOrientation);
+public delegate void OnDisplayChangedEventHandler();
 
 /// <summary>
 /// Enum for native Android screen rotations.
@@ -82,7 +81,7 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     /// <summary>
     /// Occurs when the Android screen orientation changed.
     /// </summary>
-    private static OnScreenOrientationChangedEventHandler m_onScreenOrientationChangedEvent;
+    private static OnDisplayChangedEventHandler m_onDisplayChangedEvent;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AndroidLifecycleCallbacks"/> class.
@@ -128,14 +127,14 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Registers the callback to listen to screen orientation change.
+    /// Registers the callback to listen to display change.
     /// </summary>
-    /// <param name="onOrientationChanged">On screen orientation changed.</param>
-    public void RegisterOnScreenOrientationChanged(OnScreenOrientationChangedEventHandler onOrientationChanged)
+    /// <param name="onDisplayChanged">On display changed event.</param>
+    public void RegisterOnDisplayChanged(OnDisplayChangedEventHandler onDisplayChanged)
     {
-        if (onOrientationChanged != null)
+        if (onDisplayChanged != null)
         {
-            m_onScreenOrientationChangedEvent += onOrientationChanged;
+            m_onDisplayChangedEvent += onDisplayChanged;
         }
     }
 
@@ -176,14 +175,14 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Unregisters the on OnScreenOrientationChanged callback to Android.
+    /// Unregisters the on OnDisplayChanged callback to Android.
     /// </summary>
-    /// <param name="onOrientationChanged">On screen orientation changed.</param>
-    public void UnregisterOnScreenOrientationChanged(OnScreenOrientationChangedEventHandler onOrientationChanged)
+    /// <param name="onDisplayChanged">On screen display changed.</param>
+    public void UnregisterDisplayChanged(OnDisplayChangedEventHandler onDisplayChanged)
     {
-        if (onOrientationChanged != null)
+        if (onDisplayChanged != null)
         {
-            m_onScreenOrientationChangedEvent -= onOrientationChanged;
+            m_onDisplayChangedEvent -= onDisplayChanged;
         }
     }
 
@@ -236,17 +235,16 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Implements the onScreenRotationChanged.
+    /// Implements the onDisplayChanged.
     /// </summary>
-    /// <param name="newOrientation">New screen orientation.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
                                                      "SA1300:ElementMustBeginWithUpperCaseLetter",
                                                      Justification = "Android API.")]
-    protected void onScreenRotationChanged(AndroidScreenRotation newOrientation)
+    protected void onDisplayChanged()
     {
-        if (m_onScreenOrientationChangedEvent != null)
+        if (m_onDisplayChangedEvent != null)
         {
-            m_onScreenOrientationChangedEvent(newOrientation);
+            m_onDisplayChangedEvent();
         }
     }
 }

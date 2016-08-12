@@ -25,12 +25,7 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper
 {
-    internal const int TANGO_MINIMUM_VERSION_CODE = 9377;
-
-    private const string PERMISSION_REQUEST_ACTIVITY = "com.google.atap.tango.RequestPermissionActivity";
-    private const string TANGO_APPLICATION_ID = "com.projecttango.tango";
-    private const string LAUNCH_INTENT_SIGNATURE = "launchIntent";
-    private const string ADF_IMPORT_EXPORT_ACTIVITY = "com.google.atap.tango.RequestImportExportActivity";
+    internal const int TANGO_MINIMUM_VERSION_CODE = 10592;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject m_tangoHelper = null;
@@ -91,31 +86,23 @@ public partial class AndroidHelper
     /// <param name="permissionsType">String for the permission to request.</param>
     public static void StartTangoPermissionsActivity(string permissionsType)
     {
-        AndroidJavaObject unityActivity = GetUnityActivity();
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
         
-        if (unityActivity != null)
+        if (tangoObject != null)
         {
             int requestCode = 0;
-            string[] args = new string[1];
-
             if (permissionsType == Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS)
             {
                 requestCode = Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE;
-                args[0] = "PERMISSIONTYPE:" + Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS;
             }
             else if (permissionsType == Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS)
             {
                 requestCode = Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE;
-                args[0] = "PERMISSIONTYPE:" + Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS;
             }
-            
+
             if (requestCode != 0)
             {
-                unityActivity.Call(LAUNCH_INTENT_SIGNATURE,
-                                   TANGO_APPLICATION_ID,
-                                   PERMISSION_REQUEST_ACTIVITY,
-                                   args,
-                                   requestCode);
+                tangoObject.Call("startPermissionActivity", requestCode, permissionsType);
             }
             else
             {
@@ -141,41 +128,77 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Get the devices current and default orientations.
+    /// Get current Android rotation of the device.
     /// </summary>
-    /// <returns>The current and default orientations.</returns>
-    public static TangoDeviceOrientation GetTangoDeviceOrientation()
+    /// <returns>Current native andorid rotation.</returns>
+    public static Tango.OrientationManager.Rotation GetDisplayRotation()
     {
+#if UNITY_EDITOR
+        return Tango.OrientationManager.Rotation.ROTATION_0;
+#else
         AndroidJavaObject tangoObject = GetTangoHelperObject();
-        TangoDeviceOrientation deviceOrientation;
-        deviceOrientation.defaultRotation = DeviceOrientation.Unknown;
-        deviceOrientation.currentRotation = DeviceOrientation.Unknown;
 
         if (tangoObject != null)
         {
-            AndroidJavaObject rotationInfo = tangoObject.Call<AndroidJavaObject>("showTranslatedOrientation");
-
-            deviceOrientation.defaultRotation = (DeviceOrientation)rotationInfo.Get<int>("defaultRotation");
-            deviceOrientation.currentRotation = (DeviceOrientation)rotationInfo.Get<int>("currentRotation");
+            return (Tango.OrientationManager.Rotation)tangoObject.Call<int>("getDisplayRotation");
         }
-        
-        return deviceOrientation;
+
+        return Tango.OrientationManager.Rotation.INVALID;
+#endif
     }
 
     /// <summary>
-    /// Get native android orientation index.
+    /// Get color camera sensor rotation from Android. This will never change.
     /// </summary>
-    /// <returns>Current native andorid orientation.</returns>
-    public static int GetScreenOrientation()
+    /// <returns>Current color camera rotation.</returns>
+    public static Tango.OrientationManager.Rotation GetColorCameraRotation()
     {
+#if UNITY_EDITOR
+        return Tango.OrientationManager.Rotation.ROTATION_0;
+#else
         AndroidJavaObject tangoObject = GetTangoHelperObject();
-        
+
         if (tangoObject != null)
         {
-            return tangoObject.Call<int>("getScreenOrientation");
+            int rot = tangoObject.Call<int>("getColorCameraRotation");
+            switch (rot)
+            {
+            case 0:
+                return Tango.OrientationManager.Rotation.ROTATION_0;
+            case 90:
+                return Tango.OrientationManager.Rotation.ROTATION_90;
+            case 180:
+                return Tango.OrientationManager.Rotation.ROTATION_180;
+            case 270:
+                return Tango.OrientationManager.Rotation.ROTATION_270;
+            default:
+                return Tango.OrientationManager.Rotation.INVALID;
+            }
         }
-        
+
+        return Tango.OrientationManager.Rotation.INVALID;
+#endif
+    }
+
+    /// <summary>
+    /// Get the default orientation of the device. For example, most phones will return portrait and most tablets will
+    /// return landscape. This will never change.
+    /// </summary>
+    /// <returns>Default orientation, odd number represents portrait, even number represents landscape.</returns>
+    public static int GetDefaultOrientation()
+    {
+#if UNITY_EDITOR
+        return 0;
+#else
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<int>("getDeviceDefaultOrientation");
+        }
+
         return -1;
+#endif
     }
 
     /// <summary>
@@ -187,14 +210,11 @@ public partial class AndroidHelper
 #if UNITY_EDITOR
         return true;
 #else
-        AndroidJavaObject unityActivity = GetUnityActivity();
-        
-        if (unityActivity != null)
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
         {
-            if (GetPackageInfo(TANGO_APPLICATION_ID) != null)
-            {
-                return true;
-            }
+            return tangoObject.Call<int>("getTangoCoreVersionCode") != 0;
         }
         
         return false;
@@ -210,7 +230,43 @@ public partial class AndroidHelper
 #if UNITY_EDITOR
         return true;
 #else
-        return GetVersionCode(TANGO_APPLICATION_ID) >= TANGO_MINIMUM_VERSION_CODE;
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            int rawCode = tangoObject.Call<int>("getTangoCoreVersionCode");
+
+            // The first two digits of the version code are actually the Platform version.  The real
+            // code is actually the integer following those.
+            string stringCode = rawCode.ToString().Remove(0, 2);
+            int realCode;
+            if (int.TryParse(stringCode, out realCode))
+            {
+                return realCode >= TANGO_MINIMUM_VERSION_CODE;
+            }
+        }
+
+        return false;
+#endif
+    }
+
+    /// <summary>
+    /// Get the Tango Core's version name field.
+    /// </summary>
+    /// <returns>The tango core version name.</returns>
+    public static string GetTangoCoreVersionName()
+    {
+#if UNITY_EDITOR
+        return "UnityEditor";
+#else
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
+
+        if (tangoObject != null)
+        {
+            return tangoObject.Call<string>("getTangoCoreVersionName");
+        }
+
+        return string.Empty;
 #endif
     }
 
@@ -331,18 +387,14 @@ public partial class AndroidHelper
     /// <param name="exportLocation">Path to the export location.</param>
     internal static void StartExportADFActivity(string srcAdfUuid, string exportLocation)
     {
-        AndroidJavaObject unityActivity = GetUnityActivity();
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
 
-        if (unityActivity != null)
+        if (tangoObject != null)
         {
-            string[] args = new string[2];
-            args[0] = "SOURCE_UUID:" + srcAdfUuid;
-            args[1] = "DESTINATION_FILE:" + exportLocation;
-            unityActivity.Call(LAUNCH_INTENT_SIGNATURE,
-                               TANGO_APPLICATION_ID,
-                               ADF_IMPORT_EXPORT_ACTIVITY,
-                               args,
-                               Tango.Common.TANGO_ADF_EXPORT_REQUEST_CODE);
+            tangoObject.Call("startExportAreaDescriptionActivity", 
+                             Tango.Common.TANGO_ADF_EXPORT_REQUEST_CODE,
+                             srcAdfUuid, 
+                             exportLocation);
         }
     }
 
@@ -352,17 +404,13 @@ public partial class AndroidHelper
     /// <param name="adfPath">Path to the ADF that is going to be imported.</param>
     internal static void StartImportADFActivity(string adfPath)
     {
-        AndroidJavaObject unityActivity = GetUnityActivity();
+        AndroidJavaObject tangoObject = GetTangoHelperObject();
 
-        if (unityActivity != null)
+        if (tangoObject != null)
         {
-            string[] args = new string[1];
-            args[0] = "SOURCE_FILE:" + adfPath;
-            unityActivity.Call(LAUNCH_INTENT_SIGNATURE,
-                               TANGO_APPLICATION_ID,
-                               ADF_IMPORT_EXPORT_ACTIVITY,
-                               args,
-                               Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE);
+            tangoObject.Call("startImportAreaDescriptionActivity", 
+                             Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE,
+                             adfPath);
         }
     }
 
@@ -377,22 +425,6 @@ public partial class AndroidHelper
         m_tangoServiceLifecycle = new TangoServiceLifecycleListener();
         tangoObject.Call("attachTangoServiceLifecycleListener", m_tangoServiceLifecycle);
 #endif
-    }
-
-    /// <summary>
-    /// Holds the current and default orientation of the device.
-    /// </summary>
-    public struct TangoDeviceOrientation
-    {
-        /// <summary>
-        /// The default orientation of the device.  This is the "natural" way to hold this device.
-        /// </summary>
-        public DeviceOrientation defaultRotation;
-
-        /// <summary>
-        /// The current orientation of the device.
-        /// </summary>
-        public DeviceOrientation currentRotation;
     }
 
     /// <summary>

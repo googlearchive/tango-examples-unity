@@ -31,10 +31,16 @@ namespace Tango
     internal static class EmulatedAreaDescriptionHelper
     {
         /// <summary>
-        /// Whether the Area Description -> Device frame should be valid.
+        /// Whether the Area Description -> Device frame should ever be valid in emulation.
         /// </summary>
         public static bool m_usingEmulatedDescriptionFrames;
 
+        /// <summary>
+        /// <c>true</c> if Area Description frames should be available at start, <c>false</c>
+        /// if there should be a delay.
+        /// </summary>
+        public static bool m_areaDescriptionFramesAvailableAtStart;
+        
         /// <summary>
         /// UUID of currently 'loaded' emulated area description.
         /// </summary>
@@ -56,7 +62,7 @@ namespace Tango
         /// <param name="learningMode">If set to <c>true</c>, service is in learning mode.</param>
         /// <param name="artificialOffset">Artificial offset fom Start of Service to Area Description.</param>
         public static void InitEmulationForUUID(string uuid, bool haveAreaDescriptionPermissions,
-                                                bool learningMode, Vector3 artificialOffset)
+                                                bool learningMode, bool driftCorrection, Vector3 artificialOffset)
         {
             m_usingEmulatedDescriptionFrames = false;
             m_currentUUID = uuid;
@@ -68,6 +74,7 @@ namespace Tango
                     if (AreaDescription.ForUUID(uuid).GetMetadata() != null)
                     {
                         m_usingEmulatedDescriptionFrames = true;
+                        m_areaDescriptionFramesAvailableAtStart = false;
                     }
                     else
                     {
@@ -75,9 +82,10 @@ namespace Tango
                         Debug.LogError("Requested Area Description UUID does not exist.");
                     }
                 }
-                else if (learningMode)
+                else if (learningMode || driftCorrection)
                 {
                     m_usingEmulatedDescriptionFrames = true;
+                    m_areaDescriptionFramesAvailableAtStart = true;
                 }
             }
 

@@ -20,6 +20,7 @@
 using System.Collections;
 using Tango;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 /// <summary>
 /// TangoARScreen takes the YUV image from the API, resizes the image plane, and
@@ -31,7 +32,7 @@ using UnityEngine;
 /// shader.
 /// </summary>
 [RequireComponent(typeof(Camera))]
-public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoVideoOverlay
+public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
 {   
     /// <summary>
     /// If set, m_updatePointsMesh in PointCloud also gets set. Then PointCloud 
@@ -44,35 +45,20 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     public bool m_enableOcclusion;
 
     /// <summary>
-    /// Set this to the AR Screen material.
+    /// The shader to use for rendering occlusion points.
     /// </summary>
-    public Material m_screenMaterial;
+    public Shader m_occlusionShader;
 
     /// <summary>
     /// The most recent time (in seconds) the screen was updated.
     /// </summary>
-    [HideInInspector]
+    [System.NonSerialized]
     public double m_screenUpdateTime;
-
-    /// <summary>
-    /// The Background renderqueue's number.
-    /// </summary>
-    private const int BACKGROUND_RENDER_QUEUE = 1000;
-    
-    /// <summary>
-    /// Point size of PointCloud data when projected on to image plane.
-    /// </summary>
-    private const int POINTCLOUD_SPLATTER_UPSAMPLE_SIZE = 30;
 
     /// <summary>
     /// Script that manages the postprocess distortiotn of the camera image.
     /// </summary>
     private ARCameraPostProcess m_arCameraPostProcess;
-    
-    /// <summary>
-    /// Screen-space mesh used to render the color camera image.
-    /// </summary>
-    private Mesh m_screenSpaceMesh;
 
     /// <summary>
     /// Camera the TangoARScreen is attached to,
@@ -124,10 +110,10 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// </summary>
     public void Start()
     {
-        m_screenSpaceMesh = new Mesh();
         m_camera = GetComponent<Camera>();
 
         TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
+        tangoApplication.OnDisplayChanged += _OnDisplayChanged;
         m_arCameraPostProcess = gameObject.GetComponent<ARCameraPostProcess>();
         if (tangoApplication != null)
         {
@@ -139,11 +125,9 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
                 OnTangoServiceConnected();
             }
 
-            // Pass YUV textures to shader for process.
-            YUVTexture textures = tangoApplication.GetVideoOverlayTextureYUV();
-            m_screenMaterial.SetTexture("_YTex", textures.m_videoOverlayTextureY);
-            m_screenMaterial.SetTexture("_UTex", textures.m_videoOverlayTextureCb);
-            m_screenMaterial.SetTexture("_VTex", textures.m_videoOverlayTextureCr);
+            CommandBuffer buf = VideoOverlayProvider.CreateARScreenCommandBuffer();
+            m_camera.AddCommandBuffer(CameraEvent.BeforeForwardOpaque, buf);
+            m_camera.AddCommandBuffer(CameraEvent.BeforeGBuffer, buf);
         }
 
         if (m_enableOcclusion) 
@@ -153,31 +137,13 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
             {
                 Renderer renderer = pointCloud.GetComponent<Renderer>();
                 renderer.enabled = true;
-
-                // Set the renderpass as background renderqueue's number minus one. YUV2RGB shader executes in 
-                // Background queue which is 1000.
-                // But since we want to write depth data to Z buffer before YUV2RGB shader executes so that YUV2RGB 
-                // data ignores Ztest from the depth data we set renderqueue of PointCloud as 999.
-                renderer.material.renderQueue = BACKGROUND_RENDER_QUEUE - 1;
-                renderer.material.SetFloat("point_size", POINTCLOUD_SPLATTER_UPSAMPLE_SIZE);
+                renderer.material.shader = m_occlusionShader;
                 pointCloud.m_updatePointsMesh = true;
             }
             else
             {
                 Debug.Log("Point Cloud data is not available, occlusion is not possible.");
             }
-        }
-    }
-    
-    /// <summary>
-    /// Submit AR Screen for drawing to the attached camera each frame.
-    /// </summary>
-    public void OnPreCull()
-    {
-        if (m_screenMaterial != null)
-        {
-            Graphics.DrawMesh(m_screenSpaceMesh, Matrix4x4.identity, m_screenMaterial, 
-                              _GetFirstValidRenderLayerForAttachedCamera(), m_camera);
         }
     }
 
@@ -206,41 +172,8 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// </summary>
     public void OnTangoServiceConnected()
     {
-        // Set up the size of ARScreen based on camera intrinsics.
-        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
-        if (intrinsics.width != 0 && intrinsics.height != 0)
-        {
-            // The camera to which this script is attached is an Augmented Reality camera.  The color camera
-            // image must fill that camera's viewport.  That means we must clip the color camera image to make
-            // its ratio the same as the Unity camera.  If we don't do this the color camera image will be
-            // stretched non-uniformly, making a circle into an ellipse.
-            float widthRatio = (float)m_camera.pixelWidth / (float)intrinsics.width;
-            float heightRatio = (float)m_camera.pixelHeight / (float)intrinsics.height;
-            if (widthRatio >= heightRatio)
-            {
-                m_uOffset = 0;
-                m_vOffset = (1 - (heightRatio / widthRatio)) / 2;
-            }
-            else
-            {
-                m_uOffset = (1 - (widthRatio / heightRatio)) / 2;
-                m_vOffset = 0;
-            }
-
-            _MaterialUpdateForIntrinsics(m_screenMaterial, m_arCameraPostProcess, intrinsics);
-            _MeshUpdateForIntrinsics(m_screenSpaceMesh, m_uOffset, m_vOffset);
-            _CameraUpdateForIntrinsics(m_camera, intrinsics, m_uOffset, m_vOffset);
-        }
-        else
-        {
-            m_uOffset = 0;
-            m_vOffset = 0;
-            if (m_arCameraPostProcess != null)
-            {
-                m_arCameraPostProcess.enabled = false;
-            }
-        }
+        _SetRenderAndCamera(AndroidHelper.GetDisplayRotation(),
+                            AndroidHelper.GetColorCameraRotation());
     }
 
     /// <summary>
@@ -256,84 +189,58 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// The first scan-line of the color image is reserved for metadata instead of image pixels.
     /// </summary>
     /// <param name="cameraId">Camera identifier.</param>
-    public void OnExperimentalTangoImageAvailable(TangoEnums.TangoCameraId cameraId)
+    public void OnTangoCameraTextureAvailable(TangoEnums.TangoCameraId cameraId)
     {
         if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
         {
-            m_screenUpdateTime = VideoOverlayProvider.RenderLatestFrame(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
-
-            // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL state.
-            GL.InvalidateState();
+            m_screenUpdateTime = VideoOverlayProvider.UpdateARScreen(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
         }
     }
 
-    /// @endcond
     /// <summary>
-    /// Update a mesh so it can be used for the Video Overlay image plane.
-    ///
-    /// The image plane is drawn without any projection or view matrix transforms, so it must line up exactly with
-    /// normalized screen space.  The texture coordinates of the mesh are adjusted so it properly clips the image
-    /// plane.
+    /// Rotate color camera render material's UV based on the color camera orientation and current activity orientation.
     /// </summary>
-    /// <param name="mesh">Mesh to update.</param> 
-    /// <param name="uOffset">U texture coordinate clipping.</param>
-    /// <param name="vOffset">V texture coordinate clipping.</param>
-    private static void _MeshUpdateForIntrinsics(Mesh mesh, float uOffset, float vOffset)
+    /// <param name="uv">Input UV.</param>
+    /// <param name="colorCamerRDisplay">Combined rotation index with color camera sensor and activity rotation.</param>
+    /// <returns>Converted UV in Vector2.</returns>
+    private static Vector2 _GetUnityUvBasedOnRotation(Vector2 uv, OrientationManager.Rotation colorCamerRDisplay)
     {
-        // Set the vertices base on the offset, note that the offset is used to compensate
-        // the ratio differences between the camera image and device screen.
-        Vector3[] verts = new Vector3[4];
-        verts[0] = new Vector3(-1, -1, 1);
-        verts[1] = new Vector3(-1, +1, 1);
-        verts[2] = new Vector3(+1, +1, 1);
-        verts[3] = new Vector3(+1, -1, 1);
-
-        // Set indices.
-        int[] indices = new int[6];
-        indices[0] = 0;
-        indices[1] = 2;
-        indices[2] = 3;
-        indices[3] = 1;
-        indices[4] = 2;
-        indices[5] = 0;
-
-        // Set UVs.
-        Vector2[] uvs = new Vector2[4];
-        uvs[0] = new Vector2(0 + uOffset, 0 + vOffset);
-        uvs[1] = new Vector2(0 + uOffset, 1 - vOffset);
-        uvs[2] = new Vector2(1 - uOffset, 1 - vOffset);
-        uvs[3] = new Vector2(1 - uOffset, 0 + vOffset);
-
-        mesh.Clear();
-        mesh.vertices = verts;
-        mesh.triangles = indices;
-        mesh.uv = uvs;
-
-        // Make this mesh never fail the occlusion cull
-        mesh.bounds = new Bounds(Vector3.zero, new Vector3(float.MaxValue, float.MaxValue, float.MaxValue));
+        switch (colorCamerRDisplay)
+        {
+        case OrientationManager.Rotation.ROTATION_270: 
+            return new Vector2(1 - uv.y, 1 - uv.x);
+        case OrientationManager.Rotation.ROTATION_180:
+            return new Vector2(1 - uv.x, 0 + uv.y);
+        case OrientationManager.Rotation.ROTATION_90:
+            return new Vector2(0 + uv.y, 0 + uv.x);
+        default:
+            return new Vector2(0 + uv.x, 1 - uv.y);
+        }
     }
 
     /// <summary>
     /// Update AR screen material with camera texture size data 
     /// (and distortion parameters if using distortion post-process filter).
     /// </summary>
-    /// <param name="mat">Material to update.</param>
-    /// <param name="arPostProcess">ARCameraPostProcess script that handles distortion for this material instance 
-    /// (null if none).</param>
-    /// <param name="intrinsics">Tango camera intrinsics for the color camera.</param>
-    private static void _MaterialUpdateForIntrinsics(Material mat, ARCameraPostProcess arPostProcess, TangoCameraIntrinsics intrinsics)
+    /// <param name="uOffset">U texcoord offset.</param>
+    /// <param name="vOffset">V texcoord offset.</param>
+    /// <param name="colorCameraRDisplay">Rotation of the displaya with respect to the color camera.</param> 
+    private static void _MaterialUpdateForIntrinsics(
+        float uOffset, float vOffset, OrientationManager.Rotation colorCameraRDisplay)
     {
-        if (arPostProcess != null)
+        TangoApplication tangoApplication = GameObject.FindObjectOfType<TangoApplication>();
+        Vector2[] uvs = new Vector2[4];
+        uvs[0] = new Vector2(0 + uOffset, 0 + vOffset);
+        uvs[1] = new Vector2(0 + uOffset, 1 - vOffset);
+        uvs[2] = new Vector2(1 - uOffset, 0 + vOffset);
+        uvs[3] = new Vector2(1 - uOffset, 1 - vOffset);
+
+        for (int i = 0; i < 4; ++i)
         {
-            // ARCameraPostProcess should take care of setting everything up for all materials involved.
-            arPostProcess.SetupIntrinsic(intrinsics, mat);
+            uvs[i] = _GetUnityUvBasedOnRotation(uvs[i], colorCameraRDisplay);
         }
-        else
-        {
-            // If not handling distortion, all the material needs to know is camera image dimensions.
-            mat.SetFloat("_Width", (float)intrinsics.width);
-            mat.SetFloat("_Height", (float)intrinsics.height);
-        }
+        
+        VideoOverlayProvider.SetARScreenUVs(uvs);
     }
 
     /// <summary>
@@ -343,8 +250,8 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     /// <param name="intrinsics">Tango camera intrinsics for the color camera.</param>
     /// <param name="uOffset">U texture coordinate clipping.</param>
     /// <param name="vOffset">V texture coordinate clipping.</param>
-    private static void _CameraUpdateForIntrinsics(Camera cam, TangoCameraIntrinsics intrinsics, float uOffset,
-                                                   float vOffset)
+    private static void _CameraUpdateForIntrinsics(
+            Camera cam, TangoCameraIntrinsics intrinsics, float uOffset, float vOffset)
     {
         float cx = (float)intrinsics.cx;
         float cy = (float)intrinsics.cy;
@@ -391,27 +298,95 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, IExperimentalTangoV
     }
 
     /// <summary>
-    /// Get the first valid render layer for attached camera.
-    /// 
-    /// A necessary weasel to pretend that ARScreen renders regardless of layer, given that 
-    /// Graphics.DrawMesh() allows specifying a camera but still requires a layer. 
+    /// Update AR screen rendering and attached Camera's projection matrix.
     /// </summary>
-    /// <returns>The first valid render layer for attached camera.</returns>
-    private int _GetFirstValidRenderLayerForAttachedCamera()
+    /// <param name="displayRotation">Activity (screen) rotation.</param>
+    /// <param name="colorCameraRotation">Color camera sensor rotation.</param>
+    private void _SetRenderAndCamera(OrientationManager.Rotation displayRotation,
+                                     OrientationManager.Rotation colorCameraRotation)
     {
-        int renderLayer = 0;
-        
-        while ((m_camera.cullingMask & (1 << renderLayer)) == 0 && renderLayer < 32)
-        {
-            renderLayer++;
-        }
-        
-        if (renderLayer >= 32)
-        {
-            Debug.LogError("AR Camera feed will not be visible because attached camera is not drawing any layers.");
-            renderLayer = 0;
-        }
+        float cameraRatio = (float)Screen.width / (float)Screen.height;
+        float cameraWidth = (float)Screen.width;
+        float cameraHeight = (float)Screen.height;
+        bool needToFlipCameraRatio = false;
 
-        return renderLayer;
+        // Here we are computing if current display orientation is landscape or portrait.
+        // AndroidHelper.GetAndroidDefaultOrientation() returns 1 if deivce default orientation is in portrait,
+        // returns 2 if device default orientation is landscape. Adding device default orientation with
+        // how much the display is rotation from default orientation will get us the result of current display
+        // orientation. (landscape vs. portrait)
+        bool isLandscape = (AndroidHelper.GetDefaultOrientation() + (int)displayRotation) % 2 == 0;
+
+#if !UNITY_EDITOR
+        // In most of the time, we don't need to flip the camera width and height. However, in some cases Unity camera
+        // only updates couple of frames after the display changed callback from Android, thus we need to flip the width
+        // and height in this case.
+        //
+        // This does not happen in the editor, because the emulated device does not ever rotate.
+        needToFlipCameraRatio = (!isLandscape & (cameraRatio > 1.0f)) || (isLandscape & (cameraRatio < 1.0f));
+
+        if (needToFlipCameraRatio)
+        {
+            cameraRatio = 1.0f / cameraRatio;
+            float tmp = cameraWidth;
+            cameraWidth = cameraHeight;
+            cameraHeight = tmp;
+        }
+#endif
+
+        TangoCameraIntrinsics alignedIntrinsics = new TangoCameraIntrinsics();
+        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+        VideoOverlayProvider.GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                                                  alignedIntrinsics);
+        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                           intrinsics);
+
+        if (alignedIntrinsics.width != 0 && alignedIntrinsics.height != 0)
+        {
+            // The camera to which this script is attached is an Augmented Reality camera.  The color camera
+            // image must fill that camera's viewport.  That means we must clip the color camera image to make
+            // its ratio the same as the Unity camera.  If we don't do this the color camera image will be
+            // stretched non-uniformly, making a circle into an ellipse.
+            float widthRatio = (float)cameraWidth / (float)alignedIntrinsics.width;
+            float heightRatio = (float)cameraHeight / (float)alignedIntrinsics.height;
+
+            if (widthRatio >= heightRatio)
+            {
+                m_uOffset = 0;
+                m_vOffset = (1 - (heightRatio / widthRatio)) / 2;
+            }
+            else
+            {
+                m_uOffset = (1 - (widthRatio / heightRatio)) / 2;
+                m_vOffset = 0;
+            }
+
+            // Note that here we are passing in non-inverted intrinsics, because the YUV conversion is still operating
+            // on native buffer layout.
+            OrientationManager.Rotation rotation = TangoSupport.RotateFromAToB(displayRotation, colorCameraRotation);
+            _MaterialUpdateForIntrinsics(m_uOffset, m_vOffset, rotation);
+            _CameraUpdateForIntrinsics(m_camera, alignedIntrinsics, m_uOffset, m_vOffset);
+            if (m_arCameraPostProcess != null)
+            {
+                m_arCameraPostProcess.SetupIntrinsic(intrinsics);
+            }
+        }
+        else
+        {
+            Debug.LogError("AR Camera intrinsic is not valid.");
+        }
+    }
+
+    /// <summary>
+    /// Called when device orientation is changed.
+    /// </summary>
+    /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
+    /// rotation standard.</param>
+    /// <param name="colorCameraRotation">Orientation of current color camera sensor. Index enum is same as Android
+    /// camera rotation standard.</param>
+    private void _OnDisplayChanged(OrientationManager.Rotation displayRotation,
+                                   OrientationManager.Rotation colorCameraRotation)
+    {
+        _SetRenderAndCamera(displayRotation, colorCameraRotation);
     }
 }

@@ -178,6 +178,14 @@ namespace Tango
         }
 
         /// <summary>
+        /// Display Tango Service out of date notification.
+        /// </summary>
+        public void ShowTangoOutOfDate()
+        {
+            AndroidHelper.ShowTangoOutOfDate();
+        }
+
+        /// <summary>
         /// Start exceptions listener.
         /// </summary>
         /// <returns>The start exceptions listener.</returns>

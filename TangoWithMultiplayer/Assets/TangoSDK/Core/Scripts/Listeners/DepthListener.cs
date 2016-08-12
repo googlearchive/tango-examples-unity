@@ -50,6 +50,12 @@ namespace Tango
         private System.Object m_lockObject = new System.Object();
 
         /// <summary>
+        /// Maxiumum number of depth points DepthListener will pass on from the tango service.
+        /// If value is 0, no limit is imposed.
+        /// </summary>
+        private int m_maxNumReducedDepthPoints = 0;
+
+        /// <summary>
         /// Called when a new Tango depth is available.
         /// </summary>
         private OnTangoDepthAvailableEventHandler m_onTangoDepthAvailable;
@@ -110,6 +116,7 @@ namespace Tango
             {
                 lock (m_lockObject)
                 {
+                    ReduceDepthPoints(m_tangoDepth, m_maxNumReducedDepthPoints);
                     m_onTangoDepthAvailable(m_tangoDepth);
                 }
 
@@ -165,6 +172,55 @@ namespace Tango
             }
         }
 
+        /// <summary>
+        /// Set an upper limit on the number of points in the point cloud.
+        /// Hopefully a temporary workaround 'till this is implemented as an option C-side.
+        /// </summary>
+        /// <param name="maxPoints">Max points.</param>
+        internal void SetPointCloudLimit(int maxPoints)
+        {
+            m_maxNumReducedDepthPoints = maxPoints;
+        }
+
+        /// <summary>
+        /// Reduces depth points down to below a fixed number of points.
+        /// 
+        /// TODO: Do this sort of thing in C code before before passing to Unity instead.
+        /// </summary>
+        /// <param name="tangoDepthData">Tango depth data to reduce.</param>
+        /// <param name="maxPoints">Max points to reduce down to.</param>
+        private void ReduceDepthPoints(TangoUnityDepth tangoDepthData, int maxPoints)
+        {
+            if (maxPoints > 0 && tangoDepthData.m_pointCount > maxPoints)
+            {
+                // Here (maxPoints - 1) rather than maxPoints is just a quick and
+                // dirty way to avoid any possibile edge-case accumulated FP error
+                // in the sketchy code below.
+                float keepFraction = (maxPoints - 1) / (float)tangoDepthData.m_pointCount;
+                
+                int keptPoints = 0;
+                float keepCounter = 0;
+                for (int i = 0; i < tangoDepthData.m_pointCount; i++)
+                {
+                    keepCounter += keepFraction;
+                    if (keepCounter > 1)
+                    {
+                        int index = keptPoints * 3;
+                        int otherIndex = i * 3;
+                        
+                        tangoDepthData.m_points[index] = tangoDepthData.m_points[otherIndex];
+                        tangoDepthData.m_points[index + 1] = tangoDepthData.m_points[otherIndex + 1];
+                        tangoDepthData.m_points[index + 2] = tangoDepthData.m_points[otherIndex + 2];
+                        
+                        keepCounter--;
+                        keptPoints++;
+                    }
+                }
+                
+                m_tangoDepth.m_pointCount = keptPoints;
+            }
+        }
+        
         /// <summary>
         /// Callback that gets called when depth is available from the Tango Service.
         /// </summary>

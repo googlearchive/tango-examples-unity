@@ -114,6 +114,21 @@ public partial class AndroidHelper
     }
 
     /// <summary>
+    /// Start exception handler.
+    /// 
+    /// This is interface is to handle the case of displaying notification when Tango is not connect, i.e.
+    /// Tango Core out of date.
+    /// </summary>
+    public static void StartExceptionHandler()
+    {
+        AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
+        if (tangoUxObject != null)
+        {
+            tangoUxObject.Call("startExceptionHandler");
+        }
+    }
+
+    /// <summary>
     /// Starts the tango UX library.
     /// Should be called after connecting to Tango service.
     /// </summary>
@@ -163,6 +178,18 @@ public partial class AndroidHelper
         if (tangoUxObject != null)
         {
             tangoUxObject.Call("setHoldPosture", holdPostureType);
+        }
+    }
+
+    /// <summary>
+    /// Display notification for Tango Core out of date.
+    /// </summary>
+    public static void ShowTangoOutOfDate()
+    {
+        AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
+        if (tangoUxObject != null)
+        {
+            tangoUxObject.Call("showTangoOutOfDate");
         }
     }
 }

@@ -343,23 +343,26 @@ namespace Tango
         internal struct Keys
         {
             // Motion Tracking
-            public static readonly string ENABLE_MOTION_TRACKING_BOOL = "config_enable_motion_tracking";
-            public static readonly string ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL = "config_enable_auto_recovery";
-            public static readonly string ENABLE_LOW_LATENCY_IMU_INTEGRATION = "config_enable_low_latency_imu_integration";
+            public const string ENABLE_MOTION_TRACKING_BOOL = "config_enable_motion_tracking";
+            public const string ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL = "config_enable_auto_recovery";
+            public const string ENABLE_LOW_LATENCY_IMU_INTEGRATION = "config_enable_low_latency_imu_integration";
 
             // Area Learning
-            public static readonly string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
-            public static readonly string LOAD_AREA_DESCRIPTION_UUID_STRING = "config_load_area_description_UUID";
+            public const string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
+            public const string LOAD_AREA_DESCRIPTION_UUID_STRING = "config_load_area_description_UUID";
+
+            // Experimental COM
+            public const string EXPERIMENTAL_ENABLE_DRIFT_CORRECTION_BOOL = "config_enable_drift_correction";
 
             // Depth Perception
-            public static readonly string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
+            public const string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
 
             // Video overlay
-            public static readonly string ENABLE_COLOR_CAMERA_BOOL = "config_enable_color_camera";
-            public static readonly string EXPERIMENTAL_Y_TEXTURE_HEIGHT = "experimental_color_y_tex_data_height";
-            public static readonly string EXPERIMENTAL_Y_TEXTURE_WIDTH = "experimental_color_y_tex_data_width";
-            public static readonly string EXPERIMENTAL_UV_TEXTURE_HEIGHT = "experimental_color_uv_tex_data_height";
-            public static readonly string EXPERIMENTAL_UV_TEXTURE_WIDTH = "experimental_color_uv_tex_data_width";
+            public const string ENABLE_COLOR_CAMERA_BOOL = "config_enable_color_camera";
+            public const string EXPERIMENTAL_Y_TEXTURE_HEIGHT = "experimental_color_y_tex_data_height";
+            public const string EXPERIMENTAL_Y_TEXTURE_WIDTH = "experimental_color_y_tex_data_width";
+            public const string EXPERIMENTAL_UV_TEXTURE_HEIGHT = "experimental_color_uv_tex_data_height";
+            public const string EXPERIMENTAL_UV_TEXTURE_WIDTH = "experimental_color_uv_tex_data_width";
 
             // Utility
             public static readonly string ENABLE_DATASET_RECORDING = "config_enable_dataset_recording";
@@ -375,66 +378,66 @@ namespace Tango
         private struct TangoConfigAPI
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern void TangoConfig_free(IntPtr tangoConfig);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern string TangoConfig_toString(IntPtr tangoConfig);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_setBool(IntPtr tangoConfig,
                                                          [MarshalAs(UnmanagedType.LPStr)] string key,
                                                          bool value);
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern IntPtr TangoService_getConfig(TangoEnums.TangoConfigType config_type);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_setInt32(IntPtr tangoConfig,
                                                           [MarshalAs(UnmanagedType.LPStr)] string key,
                                                           Int32 value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_setInt64(IntPtr tangoConfig,
                                                           [MarshalAs(UnmanagedType.LPStr)] string key,
                                                           Int64 value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_setDouble(IntPtr tangoConfig,
                                                            [MarshalAs(UnmanagedType.LPStr)] string key,
                                                            double value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_setString(IntPtr tangoConfig,
                                                            [MarshalAs(UnmanagedType.LPStr)] string key,
                                                            [MarshalAs(UnmanagedType.LPStr)] string value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_getBool(IntPtr tangoConfig,
                                                          [MarshalAs(UnmanagedType.LPStr)] string key,
                                                          ref bool value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_getInt32(IntPtr tangoConfig,
                                                           [MarshalAs(UnmanagedType.LPStr)] string key,
                                                           ref Int32 value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_getInt64(IntPtr tangoConfig,
                                                           [MarshalAs(UnmanagedType.LPStr)] string key,
                                                           ref Int64 value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_getDouble(IntPtr tangoConfig,
                                                            [MarshalAs(UnmanagedType.LPStr)] string key,
                                                            ref double value);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoConfig_getString(IntPtr tangoConfig,
                                                            [MarshalAs(UnmanagedType.LPStr)] string key,
                                                            [In, Out] StringBuilder value,
                                                            UInt32 size);
 
-            [DllImport(Common.TANGO_UNITY_DLL)]
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_setRuntimeConfig(IntPtr tangoConfig);
 #else
             public static void TangoConfig_free(IntPtr tangoConfig)

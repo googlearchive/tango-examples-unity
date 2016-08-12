@@ -116,6 +116,11 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     private TangoARScreen m_tangoARScreen;
 
+    /// <summary>
+    /// Reference to TangoApplication object.
+    /// </summary>
+    private TangoApplication m_tangoApplicaiton;
+
     /// @cond
     /// <summary>
     /// Awake is called when the script instance is being loaded.
@@ -143,13 +148,13 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     {
         m_tangoARScreen = GetComponent<TangoARScreen>();
 
-        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
-        if (tangoApplication != null)
+        m_tangoApplicaiton = FindObjectOfType<TangoApplication>();
+        if (m_tangoApplicaiton != null)
         {
-            tangoApplication.Register(this);
+            m_tangoApplicaiton.Register(this);
 
             // If already connected to a service, then do initialization now.
-            if (tangoApplication.IsServiceConnected)
+            if (m_tangoApplicaiton.IsServiceConnected)
             {
                 OnTangoServiceConnected();
             }
@@ -194,10 +199,9 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void OnDestroy()
     {
-        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
-        if (tangoApplication != null)
+        if (m_tangoApplicaiton != null)
         {
-            tangoApplication.Unregister(this);
+            m_tangoApplicaiton.Unregister(this);
         }
     }
 
@@ -233,14 +237,14 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     {
         TangoPoseData pose = new TangoPoseData();
         TangoCoordinateFramePair pair;
-        if (!m_useAreaDescriptionPose)
+        if (m_useAreaDescriptionPose)
         {
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
         }
         else
         {
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
             pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
         }
 
@@ -253,7 +257,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
             Matrix4x4 ssTd = pose.ToMatrix4x4();
             
             // Calculate matrix for the camera in the Unity world, taking into account offsets.
-            Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc;
+            Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc * TangoSupport.m_colorCameraPoseRotation;
             
             // Extract final position, rotation.
             m_tangoPosition = uwTuc.GetColumn(3);

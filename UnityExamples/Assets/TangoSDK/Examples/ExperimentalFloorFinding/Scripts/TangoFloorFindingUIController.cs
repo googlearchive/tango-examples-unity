@@ -140,4 +140,20 @@ public class TangoFloorFindingUIController : MonoBehaviour
             GUI.Label(new Rect(0, Screen.height - 50, Screen.width, 50), "<size=30>Searching for floor position. Make sure the floor is visible.</size>");
         }
     }
+
+    /// <summary>
+    /// Application onPause / onResume callback.
+    /// </summary>
+    /// <param name="pauseStatus"><c>true</c> if the application about to pause, otherwise <c>false</c>.</param>
+    public void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus)
+        {
+            // When application is backgrounded, we reload the level because the Tango Service is disconected. All
+            // learned area and placed marker should be discarded as they are not saved.
+            #pragma warning disable 618
+            Application.LoadLevel(Application.loadedLevel);
+            #pragma warning restore 618
+        }
+    }
 }

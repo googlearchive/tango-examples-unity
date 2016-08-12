@@ -107,6 +107,11 @@ public class PointToPointGUIController : MonoBehaviour, ITangoDepth
         {
              StartCoroutine(_WaitForDepth(Input.mousePosition));
         }
+
+        if (Input.GetKey(KeyCode.Escape))
+        {
+            Application.Quit();
+        }
     }
 
     /// <summary>
