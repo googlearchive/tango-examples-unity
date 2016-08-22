@@ -59,13 +59,14 @@ namespace Tango
     /// 
     /// This component handles nearly all communication with the underlying TangoService.  You must have one of these
     /// in your scene for Tango to work.  Customization of the Tango connection can be done in the Unity editor or by
-    /// programatically setting the member flags.
+    /// programmatically setting the member flags.
     /// 
     /// This sends out events to Components that derive from the ITangoPose, ITangoDepth, etc. interfaces and
     /// register themselves via Register.  This also sends out events to callbacks passed in through 
     /// RegisterOnTangoConnect, RegisterOnTangoDisconnect, and RegisterPermissionsCallback.
     /// 
-    /// Note: To connect to the Tango Service, you should call InitApplication after properly registering everything.
+    /// Note: To connect to the Tango Service, you should call <c>InitApplication</c> after properly registering 
+    /// everything.
     /// </summary>
     public class TangoApplication : MonoBehaviour
     {
@@ -131,7 +132,7 @@ namespace Tango
         /// There will be a period after Startup during which drift-corrected frames
         /// are not available.
         /// 
-        /// Behaviour is likely to change in the future.
+        /// Behavior is likely to change in the future.
         /// </summary>
         public bool m_enableDriftCorrection = false;
 
@@ -319,7 +320,7 @@ namespace Tango
         /// <summary>
         /// Register to get Tango callbacks.
         /// 
-        /// The object should derive from one of ITangoDepth, ITangoEvent, ITangoPos, ITangoVideoOverlay, or
+        /// The object should derive from one of ITangoDepth, ITangoEvent, ITangoPose, ITangoVideoOverlay, or
         /// ITangoExperimentalTangoVideoOverlay.  You will get callback during Update until you unregister.
         /// </summary>
         /// <param name="tangoObject">Object to get Tango callbacks from.</param>
@@ -368,18 +369,33 @@ namespace Tango
                 }
             }
 
-            if (m_enableDepth)
+            if (m_enableDepth && m_depthListener != null)
             {
+                ITangoPointCloud pointCloudHandler = tangoObject as ITangoPointCloud;
+                if (pointCloudHandler != null)
+                {
+                    m_depthListener.RegisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
+                }
+
+                ITangoPointCloudMultithreaded pointCloudMultithreadedHandler
+                    = tangoObject as ITangoPointCloudMultithreaded;
+                if (pointCloudMultithreadedHandler != null)
+                {
+                    m_depthListener.RegisterOnPointCloudMultithreadedAvailable(
+                        pointCloudMultithreadedHandler.OnTangoPointCloudMultithreadedAvailable);
+                }
+
                 ITangoDepth depthHandler = tangoObject as ITangoDepth;
                 if (depthHandler != null)
                 {
-                    _RegisterOnTangoDepthEvent(depthHandler.OnTangoDepthAvailable);
+                    m_depthListener.RegisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
                 }
 
                 ITangoDepthMultithreaded depthMultithreadedHandler = tangoObject as ITangoDepthMultithreaded;
-                if (depthMultithreadedHandler != null && m_depthListener != null)
+                if (depthMultithreadedHandler != null)
                 {
-                    m_depthListener.RegisterOnTangoDepthMultithreadedAvailable(depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
+                    m_depthListener.RegisterOnTangoDepthMultithreadedAvailable(
+                        depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
                 }
             }
             
@@ -479,18 +495,32 @@ namespace Tango
                 }
             }
 
-            if (m_enableDepth)
+            if (m_enableDepth && m_depthListener != null)
             {
+                ITangoPointCloud pointCloudHandler = tangoObject as ITangoPointCloud;
+                if (pointCloudHandler != null)
+                {
+                    m_depthListener.UnregisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
+                }
+
+                ITangoPointCloudMultithreaded pointCloudMultithreaded = tangoObject as ITangoPointCloudMultithreaded;
+                if (pointCloudMultithreaded != null)
+                {
+                    m_depthListener.UnregisterOnPointCloudMultithreadedAvailable(
+                        pointCloudMultithreaded.OnTangoPointCloudMultithreadedAvailable);
+                }
+
                 ITangoDepth depthHandler = tangoObject as ITangoDepth;
                 if (depthHandler != null)
                 {
-                    _UnregisterOnTangoDepthEvent(depthHandler.OnTangoDepthAvailable);
+                    m_depthListener.UnregisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
                 }
 
                 ITangoDepthMultithreaded depthMultithreadedHandler = tangoObject as ITangoDepthMultithreaded;
-                if (depthMultithreadedHandler != null && m_depthListener != null)
+                if (depthMultithreadedHandler != null)
                 {
-                    m_depthListener.UnregisterOnTangoDepthMultithreadedAvailable(depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
+                    m_depthListener.UnregisterOnTangoDepthMultithreadedAvailable(
+                        depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
                 }
             }
 
@@ -566,7 +596,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Manual initalization step 2: Call this to connect to the Tango service.
+        /// Manual initialization step 2: Call this to connect to the Tango service.
         /// 
         /// After connecting to the Tango service, you will get updates for Motion Tracking, Depth Sensing, and Area
         /// Learning.  If you have a specific Area Description you want to localize too, pass that Area Description in
@@ -621,7 +651,9 @@ namespace Tango
                 _InitializeMotionTracking(null);
             }
 
-            if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL, m_enableDepth) && m_enableDepth)
+            if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_DEPTH_PERCEPTION_BOOL, m_enableDepth) 
+                && m_tangoConfig.SetInt32(TangoConfig.Keys.DEPTH_MODE, (int)TangoConfig.DepthMode.XYZC)
+                && m_enableDepth)
             {
                 _SetDepthCallbacks();
             }
@@ -656,9 +688,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set the framerate of the depth camera.
+        /// Set the frame rate of the depth camera.
         /// 
-        /// Disabling or reducing the framerate of the depth camera when it is running can save a significant amount
+        /// Disabling or reducing the frame rate of the depth camera when it is running can save a significant amount
         /// of battery.
         /// </summary>
         /// <param name="rate">The rate in frames per second, for the depth camera to run at.</param>
@@ -675,9 +707,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set the framerate of the depth camera.
+        /// Set the frame rate of the depth camera.
         /// 
-        /// Disabling or reducing the framerate of the depth camera when it is running can save a significant amount
+        /// Disabling or reducing the frame rate of the depth camera when it is running can save a significant amount
         /// of battery.
         /// </summary>
         /// <param name="rate">A special rate to set the depth camera to.</param>
@@ -781,7 +813,7 @@ namespace Tango
         /// Extract an array of <c>SignedDistanceVoxel</c> objects.
         /// </summary>
         /// <returns>
-        /// Returns Status.SUCCESS if the voxels are fully extracted and stared in the array.  In this case, numVoxels
+        /// Returns Status.SUCCESS if the voxels are fully extracted and stared in the array.  In this case, <c>numVoxels</c>
         /// will say how many voxels are used, the rest of the array is untouched.
         /// 
         /// Returns Status.INVALID if the array length does not exactly equal the number of voxels in a single grid
@@ -861,34 +893,6 @@ namespace Tango
             if (m_poseListener != null)
             {
                 m_poseListener.UnregisterTangoPoseAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Register to get Tango depth callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
-        {
-            if (m_depthListener != null)
-            {
-                m_depthListener.RegisterOnTangoDepthAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango depth callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnTangoDepthEvent(OnTangoDepthAvailableEventHandler handler)
-        {
-            if (m_depthListener != null)
-            {
-                m_depthListener.UnregisterOnTangoDepthAvailable(handler);
             }
         }
 

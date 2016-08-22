@@ -1,0 +1,37 @@
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "24.0.0"
+
+    defaultConfig {
+        minSdkVersion 17
+        targetSdkVersion 23
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+}
+
+repositories {
+    flatDir {
+        dirs '../aar'
+    }
+}
+
+dependencies {
+    compile (name: 'tango-cloud-lib', ext: 'aar')
+    compile (name: 'tango-ux-support-library', ext: 'aar')
+    compile (name: 'tango_java_lib', ext: 'aar')
+    compile (name: 'tango_unity_helper', ext: 'aar')
+    compile (name: 'unity_ux_helper', ext: 'aar')
+    compile files('libs/unity-classes.jar')
+}

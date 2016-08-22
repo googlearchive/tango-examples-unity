@@ -21,7 +21,7 @@ using Tango;
 using UnityEngine;
 
 /// <summary>
-/// Pointcloud orbit camera.
+/// Orbit camera.
 /// </summary>
 public class TangoGestureCamera : MonoBehaviour
 {

@@ -283,7 +283,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     }
     
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -311,9 +311,9 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     }
 
     /// <summary>
-    /// Convert a 3D bounding box into a 2D Rect.
+    /// Convert a 3D bounding box into a 2D rectangle.
     /// </summary>
-    /// <returns>The 2D Rect in Screen coordinates.</returns>
+    /// <returns>The 2D rectangle in Screen coordinates.</returns>
     /// <param name="cam">Camera to use.</param>
     /// <param name="bounds">3D bounding box.</param>
     private Rect WorldBoundsToScreen(Camera cam, Bounds bounds)
@@ -367,7 +367,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     /// Reformat string from vector3 type for data logging.
     /// </summary>
     /// <param name="vec">Position to display.</param>
-    /// <returns>Readable string corresponding to vec.</returns>
+    /// <returns>Readable string corresponding to <c>vec</c>.</returns>
     private string _GetLoggingStringFromVec3(Vector3 vec)
     {
         if (vec == Vector3.zero)
@@ -387,7 +387,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     /// Reformat string from quaternion type for data logging.
     /// </summary>
     /// <param name="quat">Quaternion to display.</param>
-    /// <returns>Readable string corresponding to quat.</returns>
+    /// <returns>Readable string corresponding to <c>quat</c>.</returns>
     private string _GetLoggingStringFromQuaternion(Quaternion quat)
     {
         if (quat == Quaternion.identity)
@@ -424,9 +424,9 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     /// <summary>
     /// Return a string to get logging of FrameDeltaTime.
     /// </summary>
-    /// <returns>The get loggin string from frame delta time.</returns>
+    /// <returns>The logging string for frame delta time.</returns>
     /// <param name="frameDeltaTime">Frame delta time.</param>
-    private string _GetLogginStringFromFrameDeltaTime(float frameDeltaTime)
+    private string _GetLoggingStringFromFrameDeltaTime(float frameDeltaTime)
     {
         if (frameDeltaTime == -1.0)
         {

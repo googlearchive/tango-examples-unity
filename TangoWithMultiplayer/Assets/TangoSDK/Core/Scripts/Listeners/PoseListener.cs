@@ -102,7 +102,7 @@ namespace Tango
                             if (m_relocalizationData.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID
                                 && m_relocalizationData.timestamp != m_mostRecentEmulatedRelocalizationTimestamp)
                             {
-                                m_mostRecentEmulatedRelocalizationTimestamp = m_mostRecentEmulatedRelocalizationTimestamp;
+                                m_mostRecentEmulatedRelocalizationTimestamp = m_relocalizationData.timestamp;
                                 m_isRelocalizaitonPoseAvailable = true;
                             }
                         }

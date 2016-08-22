@@ -41,7 +41,7 @@ namespace Tango
         /// </summary>
         /// <returns><c>true</c>, if a tango application on an active GameObject can be identified, 
         /// <c>false</c> otherwise.</returns>
-        /// <param name="inspectedBehaviour">Prefab behaviour that's being inspected.</param>
+        /// <param name="inspectedBehaviour">Prefab behavior that's being inspected.</param>
         /// <param name="tangoApplication">Prefab inspector's reference to Tango Application, or
         /// null if no Tango Application on an active GameObject can be identified.</param>
         public static bool CheckForTangoApplication(MonoBehaviour inspectedBehaviour,

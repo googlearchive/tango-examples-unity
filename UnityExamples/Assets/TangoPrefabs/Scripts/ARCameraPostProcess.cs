@@ -41,7 +41,7 @@ public class ARCameraPostProcess : MonoBehaviour
     /// <summary>
     /// Pass the camera intrinsics to both PostProcess and ARScreen shader.
     /// 
-    /// The camera intrinsics are needed for undistortion or distortion.
+    /// The camera intrinsics are needed to distort and undo distort the camera image.
     /// </summary>
     /// <param name="intrinsics">Color camera intrinsics.</param>
     internal void SetupIntrinsic(TangoCameraIntrinsics intrinsics)

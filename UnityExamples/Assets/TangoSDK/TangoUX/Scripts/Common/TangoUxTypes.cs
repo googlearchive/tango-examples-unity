@@ -28,31 +28,31 @@ using UnityEngine;
 namespace Tango
 {
     /// <summary>
-    /// Represents a Tango Ux Exception Event.
+    /// Represents a Tango UX Exception Event.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     public class UxExceptionEvent
     {
         /// <summary>
-        /// The type for this Ux Exception Event.
+        /// The type for this UX Exception Event.
         /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoUxEnums.UxExceptionEventType type;
 
         /// <summary>
-        /// The event value for this Ux Exception Event.
+        /// The event value for this UX Exception Event.
         /// </summary>
         [MarshalAs(UnmanagedType.R4)]
         public float value;
 
         /// <summary>
-        /// The status for this Ux Exception Event.
+        /// The status for this UX Exception Event.
         /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoUxEnums.UxExceptionEventStatus status;
 
         /// <summary>
-        /// Initialize a new instance of Tango.UxExceptionEvent.
+        /// Initialize a new instance of <c>Tango.UxExceptionEvent</c>.
         /// </summary>
         public UxExceptionEvent()
         {

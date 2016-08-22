@@ -21,7 +21,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Misc Android related utilities provided by the Tango CoreSDK.
+/// Miscellaneous Android related utilities provided by the Tango CoreSDK.
 /// </summary>
 public partial class AndroidHelper
 {
@@ -130,7 +130,7 @@ public partial class AndroidHelper
     /// <summary>
     /// Get current Android rotation of the device.
     /// </summary>
-    /// <returns>Current native andorid rotation.</returns>
+    /// <returns>Current native android rotation.</returns>
     public static Tango.OrientationManager.Rotation GetDisplayRotation()
     {
 #if UNITY_EDITOR

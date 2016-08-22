@@ -32,7 +32,7 @@ public interface ITangoLifecycle
     void OnTangoPermissions(bool permissionsGranted);
 
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     void OnTangoServiceConnected();
 

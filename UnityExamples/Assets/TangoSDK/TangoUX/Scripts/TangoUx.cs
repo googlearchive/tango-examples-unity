@@ -27,7 +27,7 @@ namespace Tango
     /// Main entry point for the Tango UX Library.
     /// 
     /// This component handles nearly all communication with the underlying Tango UX Library.  Customization of the 
-    /// UX library can be done in the Unity editor or by programatically setting the member flags.
+    /// UX library can be done in the Unity editor or by programmatically setting the member flags.
     /// </summary>
     [RequireComponent(typeof(TangoApplication))]
     public class TangoUx : MonoBehaviour, ITangoLifecycle, ITangoPose, ITangoEventMultithreaded, ITangoDepthMultithreaded
@@ -108,7 +108,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// This is called when succesfully connected to the Tango service.
+        /// This is called when successfully connected to the Tango service.
         /// </summary>
         public void OnTangoServiceConnected()
         {

@@ -31,7 +31,7 @@ public class FPSCounter : MonoBehaviour
     public int m_FPSLabelOffsetX = 15;
 
     /// <summary>
-    /// Offset of FPS string in pxiels on Y axis of screen.
+    /// Offset of FPS string in pixels on Y axis of screen.
     /// </summary>
     public int m_FPSLabelOffsetY = 250;
 
