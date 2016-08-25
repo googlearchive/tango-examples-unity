@@ -56,7 +56,7 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     public double m_screenUpdateTime;
 
     /// <summary>
-    /// Script that manages the postprocess distortiotn of the camera image.
+    /// Script that manages the postprocess distortion of the camera image.
     /// </summary>
     private ARCameraPostProcess m_arCameraPostProcess;
 
@@ -168,7 +168,7 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     }
 
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -224,7 +224,7 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     /// </summary>
     /// <param name="uOffset">U texcoord offset.</param>
     /// <param name="vOffset">V texcoord offset.</param>
-    /// <param name="colorCameraRDisplay">Rotation of the displaya with respect to the color camera.</param> 
+    /// <param name="colorCameraRDisplay">Rotation of the display with respect to the color camera.</param> 
     private static void _MaterialUpdateForIntrinsics(
         float uOffset, float vOffset, OrientationManager.Rotation colorCameraRDisplay)
     {

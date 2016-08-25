@@ -39,7 +39,7 @@ namespace Tango
         public readonly string m_uuid;
 
         /// <summary>
-        /// Byte count of an Int64.  What the C sizeof operator would return.
+        /// Byte count of an <c>Int64</c>.  What the C sizeof operator would return.
         /// </summary>
         private const int INT64_BYTE_COUNT = 8;
 
@@ -225,7 +225,7 @@ namespace Tango
         /// Import an area description from a file path to the default area storage location. 
         /// </summary>
         /// <returns><c>true</c> if the area description was imported successfully, <c>false</c> otherwise.</returns>
-        /// <param name="filePath">File path of the area descrption to be imported.</param>
+        /// <param name="filePath">File path of the area description to be imported.</param>
         public static bool ImportFromFile(string filePath)
         {
 #if UNITY_EDITOR
@@ -590,9 +590,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Get an Int64 value from an area description metadata.
+        /// Get an <c>Int64</c> value from an area description metadata.
         /// </summary>
-        /// <returns><c>true</c>, if an Int64 value was found, <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c>, if an <c>Int64</c> value was found, <c>false</c> otherwise.</returns>
         /// <param name="rawMetadata">Area description metadata pointer.</param>
         /// <param name="key">Key name.</param>
         /// <param name="value">Output value for the specified key.</param>
@@ -623,9 +623,9 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set an Int64 value in an area description metadata.
+        /// Set an <c>Int64</c> value in an area description metadata.
         /// </summary>
-        /// <returns><c>true</c>, if Int64 value was set, <c>false</c> otherwise.</returns>
+        /// <returns><c>true</c>, if <c>Int64</c> value was set, <c>false</c> otherwise.</returns>
         /// <param name="rawMetadata">Area description metadata pointer.</param>
         /// <param name="key">Key name.</param>
         /// <param name="value">New value.</param>
@@ -699,7 +699,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Convert an IntPtr to a UTF-8 encoded C-string into a C# string.
+        /// Convert an <c>IntPtr</c> to a UTF-8 encoded C-string into a C# string.
         /// </summary>
         /// <returns>The string object.</returns>
         /// <param name="rawPtr">Pointer to a UTF-8 encoded C-string.</param>
@@ -720,7 +720,7 @@ namespace Tango
         /// <summary>
         /// Get the low level metadata pointer for an area description.
         /// 
-        /// Make sure to free this with FreeMetadataPtr when you are done with it.
+        /// Make sure to free this with <c>_FreeMetadataPtr</c> when you are done with it.
         /// </summary>
         /// <returns>A metadata pointer or <c>IntPtr.Zero</c> if it could not be loaded.</returns>
         private IntPtr _GetMetadataPtr()

@@ -127,7 +127,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// <summary>
     /// If the interaction is initialized.
     /// 
-    /// Note that the initilization is triggered by the relocalization event. We don't want user to place object before
+    /// Note that the initialization is triggered by the relocalization event. We don't want user to place object before
     /// the device is relocalized.
     /// </summary>
     private bool m_initialized = false;
@@ -142,7 +142,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// <summary>
     /// Unity Start function.
     /// 
-    /// We find and assign pose controller and tango applicaiton, and register this class to callback events.
+    /// We find and assign pose controller and tango application, and register this class to callback events.
     /// </summary>
     public void Start()
     {
@@ -233,7 +233,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     }
 
     /// <summary>
-    /// Applicaiton onPause / onResume callback.
+    /// Application onPause / onResume callback.
     /// </summary>
     /// <param name="pauseStatus"><c>true</c> if the application about to pause, otherwise <c>false</c>.</param>
     public void OnApplicationPause(bool pauseStatus)
@@ -339,7 +339,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// Save will trigger 3 things:
     /// 
     /// 1. Save the Area Description if the learning mode is on.
-    /// 2. Bundle adjustment for all markers's position, please see _UpdateMarkersForLoopClosures() function header for 
+    /// 2. Bundle adjustment for all marker positions, please see _UpdateMarkersForLoopClosures() function header for 
     ///     more details.
     /// 3. Save all markers to xml, save the Area Description if the learning mode is on.
     /// 4. Reload the scene.
@@ -494,7 +494,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     /// Correct all saved marks when loop closure happens.
     /// 
     /// When Tango Service is in learning mode, the drift will accumulate overtime, but when the system sees a
-    /// pre-exsiting area, it will do a operation to correct all previously saved poses
+    /// preexisting area, it will do a operation to correct all previously saved poses
     /// (the pose you can query with GetPoseAtTime). This operation is called loop closure. When loop closure happens,
     /// we will need to re-query all previously saved marker position in order to achieve the best result.
     /// This function is doing the querying job based on timestamp.
@@ -584,9 +584,10 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
     }
 
     /// <summary>
-    /// Convert a 3D bounding box into a 2D Rect.
+    /// Convert a 3D bounding box represented by a <c>Bounds</c> object into a 2D 
+    /// rectangle represented by a <c>Rect</c> object.
     /// </summary>
-    /// <returns>The 2D Rect in Screen coordinates.</returns>
+    /// <returns>The 2D rectangle in Screen coordinates.</returns>
     /// <param name="cam">Camera to use.</param>
     /// <param name="bounds">3D bounding box.</param>
     private Rect _WorldBoundsToScreen(Camera cam, Bounds bounds)
@@ -682,7 +683,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         /// <summary>
         /// Marker's type.
         /// 
-        /// Red, green or blue markers. In a real game senario, this could be different game objects
+        /// Red, green or blue markers. In a real game scenario, this could be different game objects
         /// (e.g. banana, apple, watermelon, persimmons).
         /// </summary>
         [XmlElement("type")]

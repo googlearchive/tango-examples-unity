@@ -214,7 +214,7 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     }
 
     /// <summary>
-    /// Applicaiton onPause / onResume callback.
+    /// Application onPause / onResume callback.
     /// </summary>
     /// <param name="pauseStatus"><c>true</c> if the application about to pause, otherwise <c>false</c>.</param>
     public void OnApplicationPause(bool pauseStatus)
@@ -286,7 +286,7 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     }
 
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -420,7 +420,7 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
     }
 
     /// <summary>
-    /// Save changes made to the selected Area Description's metaata.
+    /// Save changes made to the selected Area Description's metadata.
     /// </summary>
     public void SaveSelectedAreaDescriptionMetadata()
     {

@@ -76,7 +76,7 @@ namespace Tango
         /// <summary>
         /// Max number of vertices the Point Cloud supports.
         /// </summary>
-        internal const int UNITY_MAX_SUPPORTED_VERTS_PER_MESH = 65534;
+        internal const int MAX_NUM_POINTS = 65534;
 
         /// <summary>
         /// The length of an area description ID string.
@@ -84,7 +84,7 @@ namespace Tango
         internal const int UUID_LENGTH = 37;
 
         /// <summary>
-        /// Return values from Android actvities.
+        /// Return values from Android activities.
         /// </summary>
         public enum AndroidResult
         {

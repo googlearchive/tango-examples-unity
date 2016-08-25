@@ -42,7 +42,7 @@ namespace Tango
         private const float MAX_POINT_DISTANCE = 5f;
         private const int NUM_X_DEPTH_SAMPLES = 120;
         private const int NUM_Y_DEPTH_SAMPLES = 80;
-        
+
 #if UNITY_EDITOR
         /// <summary>
         /// The emulated point cloud.  Used for Tango emulation on PC.
@@ -69,29 +69,33 @@ namespace Tango
         /// </summary>
         private static bool m_emulationIsInitialized = false;
 #endif
-
+        
         /// <summary>
-        /// Tango depth C callback function signature.
+        /// Tango point cloud C callback function signature.
         /// </summary>
-        /// <param name="callbackContext">Callback context.</param>
-        /// <param name="xyzij">Depth information.</param>
+        /// <param name="context">Callback context.</param>
+        /// <param name="pointCloud">Point cloud data.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onDepthAvailable(IntPtr callbackContext, [In, Out] TangoXYZij xyzij);
+        internal delegate void APIOnPointCloudAvailable(IntPtr context, ref TangoPointCloudIntPtr pointCloud);
 
         /// <summary>
         /// Set the C callback for the Tango depth interface.
         /// </summary>
         /// <param name="callback">Callback method.</param>
-        internal static void SetCallback(TangoService_onDepthAvailable callback)
+        internal static void SetCallback(APIOnPointCloudAvailable callback)
         {
-            int returnValue = DepthAPI.TangoService_connectOnXYZijAvailable(callback);
+            // The TangoCore in release-rana garbage initializes the PointCloudParcel
+            // callback, causing crashes.  This fixes that issue.
+            API.TangoServiceHidden_connectOnPointCloudParcelAvailable(IntPtr.Zero);
+
+            int returnValue = API.TangoService_connectOnPointCloudAvailable(callback);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log("DepthProvider.SetCallback() Callback was not set!");
             }
             else
             {
-                Debug.Log("DepthProvider.SetCallback() OnDepth callback was set!");
+                Debug.Log("DepthProvider.SetCallback() Callback was set!");
             }
         }
 
@@ -210,14 +214,21 @@ namespace Tango
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
                                                          "SA1600:ElementsMustBeDocumented",
                                                          Justification = "C API Wrapper.")]
-        private struct DepthAPI
+        private struct API
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_connectOnXYZijAvailable(TangoService_onDepthAvailable onDepthAvailalble);
+            public static extern int TangoService_connectOnPointCloudAvailable(APIOnPointCloudAvailable callback);
 
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoServiceHidden_connectOnPointCloudParcelAvailable(IntPtr callback);
  #else
-            public static int TangoService_connectOnXYZijAvailable(TangoService_onDepthAvailable onDepthAvailalble)
+            public static int TangoService_connectOnPointCloudAvailable(APIOnPointCloudAvailable callback)
+            {
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoServiceHidden_connectOnPointCloudParcelAvailable(IntPtr callback)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }

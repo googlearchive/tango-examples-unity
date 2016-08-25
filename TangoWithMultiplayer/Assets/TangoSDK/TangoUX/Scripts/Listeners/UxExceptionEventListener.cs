@@ -41,14 +41,14 @@ public class UxExceptionEventListener : AndroidJavaProxy
     public delegate void OnUxExceptionEventHandler(Tango.UxExceptionEvent tangoUxEvent);
 
     /// <summary>
-    /// Occurs when on ux exception event.
+    /// Occurs when a UX Exception event happens.
     /// </summary>
     private event OnUxExceptionEventHandler OnUxExceptionEvent;
 
     /// <summary>
-    /// Gets the get instance.
+    /// Gets the instance.
     /// </summary>
-    /// <value>The get instance.</value>
+    /// <value>The instance.</value>
     public static UxExceptionEventListener GetInstance
     {
         get
@@ -63,7 +63,7 @@ public class UxExceptionEventListener : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Registers ux exception events.
+    /// Registers UX Exception event handler.
     /// </summary>
     /// <param name="handler">Event handler.</param>
     public void RegisterOnUxExceptionEventHandler(OnUxExceptionEventHandler handler)
@@ -87,7 +87,7 @@ public class UxExceptionEventListener : AndroidJavaProxy
     }
 
     /// <summary>
-    /// Called when a Ux Exception Event is dispatched.
+    /// Called when a UX Exception event is dispatched.
     /// </summary>
     /// <param name="tangoUxEvent">A AndroidJavaObject containing information about the exception.</param>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",

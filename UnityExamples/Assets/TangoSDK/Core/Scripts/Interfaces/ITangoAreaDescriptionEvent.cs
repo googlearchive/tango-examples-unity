@@ -21,7 +21,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Tango Area Descrrption event interface.
+/// Tango Area Description event interface.
 /// </summary>
 public interface ITangoAreaDescriptionEvent
 {

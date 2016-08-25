@@ -26,7 +26,7 @@ using UnityEngine;
 public interface ITangoUX
 {
     /// <summary>
-    /// Called when a Tango.UxExceptionEvent is dispatched.
+    /// Called when a <c>Tango.UxExceptionEvent</c> is dispatched.
     /// </summary>
     /// <param name="exceptionEvent">Event containing information about the exception.</param>
     void OnUxExceptionEventHandler(Tango.UxExceptionEvent exceptionEvent);

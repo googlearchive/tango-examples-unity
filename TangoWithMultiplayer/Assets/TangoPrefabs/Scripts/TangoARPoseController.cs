@@ -40,7 +40,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// When enabled (which is the default), pose positions are based on the 
     /// timestamp of the most recent video camera update.
     /// 
-    /// Can be disabled for whenever this behaviour is not desired: For instance, in
+    /// Can be disabled for whenever this behavior is not desired: For instance, in
     /// an application where only some segments of the experience display an
     /// active camera feed.
     /// </summary>
@@ -214,7 +214,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     }
 
     /// <summary>
-    /// Called when succesfully connected to the Tango service.
+    /// Called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {

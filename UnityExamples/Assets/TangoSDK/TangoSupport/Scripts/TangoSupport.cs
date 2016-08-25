@@ -183,7 +183,7 @@ namespace Tango
         /// <summary>
         /// Fits a plane to a point cloud near a user-specified location. This
         /// occurs in two passes. First, all points in cloud within
-        /// maxPixelDistance to uvCoordinates after projection are kept. Then a
+        /// <c>maxPixelDistance</c> to <c>uvCoordinates</c> after projection are kept. Then a
         /// plane is fit to the subset cloud using RANSAC. After the initial fit
         /// all inliers from the original cloud are used to refine the plane
         /// model.

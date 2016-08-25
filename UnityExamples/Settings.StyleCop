@@ -1,5 +1,37 @@
 <StyleCopSettings Version="105">
   <GlobalSettings>
+    <CollectionProperty Name="RecognizedWords">
+      <Value>cb</Value>
+      <Value>coroutine</Value>
+      <Value>cr</Value>
+      <Value>deserializing</Value>
+      <Value>downsampled</Value>
+      <Value>extrinsic</Value>
+      <Value>extrinsics</Value>
+      <Value>git</Value>
+      <Value>gl</Value>
+      <Value>interactable</Value>
+      <Value>intrinsic</Value>
+      <Value>intrinsics</Value>
+      <Value>logcat</Value>
+      <Value>mipmap</Value>
+      <Value>ms</Value>
+      <Value>normals</Value>
+      <Value>pixels</Value>
+      <Value>postprocess</Value>
+      <Value>queryable</Value>
+      <Value>raycast</Value>
+      <Value>raycasting</Value>
+      <Value>relocalization</Value>
+      <Value>relocalize</Value>
+      <Value>relocalized</Value>
+      <Value>renormalization</Value>
+      <Value>scanline</Value>
+      <Value>shader</Value>
+      <Value>shaders</Value>
+      <Value>submesh</Value>
+      <Value>texcoord</Value>
+    </CollectionProperty>
     <BooleanProperty Name="ViolationsAsErrors">True</BooleanProperty>
     <StringProperty Name="MergeSettingsFiles">NoMerge</StringProperty>
   </GlobalSettings>

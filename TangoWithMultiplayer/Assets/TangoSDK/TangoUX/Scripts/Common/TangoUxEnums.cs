@@ -24,7 +24,7 @@ namespace Tango
     using UnityEngine;
 
     /// <summary>
-    /// Enumerations used by TangoUx.
+    /// Enumerations used by <c>TangoUx</c>.
     /// </summary>
     public class TangoUxEnums
     {

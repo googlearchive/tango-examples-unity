@@ -147,7 +147,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// <summary>
     /// If the interaction is initialized.
     /// 
-    /// Note that the initilization is triggered by the relocalization event. We don't want user to place object before
+    /// Note that the initialization is triggered by the relocalization event. We don't want user to place object before
     /// the device is relocalized.
     /// </summary>
     private bool m_initialized = false;
@@ -268,7 +268,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     }
     
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -631,9 +631,9 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// Process the mesh in 3 steps.
     /// 1. Extract the whole mesh from tango 3D Reconstruction.
     /// 2. Convert to a serializable format.
-    /// 3. Serialize with xml on sdcard.
+    /// 3. Serialize with XML on to the SD card.
     /// </summary>
-    /// <returns>The coroutine Ienumerator.</returns>
+    /// <returns>The coroutine IEnumerator.</returns>
     private IEnumerator _DoSaveTangoDynamicMesh()
     {
         m_savingText.gameObject.SetActive(true);

@@ -25,7 +25,7 @@ using UnityEngine;
 /// 
 /// Use this if you want to get the depth as soon as it is available with minimal processing.  The handler will be
 /// invoked as soon as depth is available, even if that is in another thread.  The handler will be passed the raw
-/// TangoXYZij instead of the more friendly TangoUnityDepth.  You must make sure your handler is threadsafe.
+/// <c>TangoXYZij</c> instead of the more friendly TangoUnityDepth.  You must make sure your handler is thread-safe.
 /// </summary>
 public interface ITangoDepthMultithreaded
 {

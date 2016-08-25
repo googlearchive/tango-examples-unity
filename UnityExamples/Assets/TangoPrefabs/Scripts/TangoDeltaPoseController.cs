@@ -58,7 +58,7 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
 
     /// <summary>
     /// The absolute target position for this controller. This is based on the
-    /// most recent pose recieved from the Tango service, and adjusted for any
+    /// most recent pose received from the Tango service, and adjusted for any
     /// offsets from calling <c>SetPose</c> or using the clutch feature.
     /// </summary>
     [HideInInspector]
@@ -66,7 +66,7 @@ public class TangoDeltaPoseController : MonoBehaviour, ITangoPose
     
     /// <summary>
     /// The absolute target rotation for this controller. This is based on the
-    /// most recent pose recieved from the Tango service, and adjusted for any
+    /// most recent pose received from the Tango service, and adjusted for any
     /// offsets from calling <c>SetPose()</c> or using the clutch feature.
     /// </summary>
     [HideInInspector]

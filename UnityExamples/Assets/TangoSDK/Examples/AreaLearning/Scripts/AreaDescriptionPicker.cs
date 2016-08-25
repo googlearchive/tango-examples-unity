@@ -155,7 +155,7 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
     }
     
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {

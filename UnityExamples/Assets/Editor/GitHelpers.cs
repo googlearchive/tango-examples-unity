@@ -78,7 +78,7 @@ public class GitHelpers
     }
 
     /// <summary>
-    /// Launch a process and return what is printed on stdout as a string.
+    /// Launch a process and return what is printed to standard output as a string.
     /// </summary>
     /// <returns>Output for the launched process.</returns>
     /// <param name="process">Command line to run.</param>

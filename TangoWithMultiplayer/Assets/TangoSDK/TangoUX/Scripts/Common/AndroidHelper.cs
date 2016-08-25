@@ -21,7 +21,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>
-/// Misc Android related utilities provided by the Tango UX SDK.
+/// Miscellaneous Android related utilities provided by the Tango UX SDK.
 /// </summary>
 public partial class AndroidHelper
 {
@@ -89,7 +89,7 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Initialize tango ux library.
+    /// Initialize Tango UX library.
     /// </summary>
     public static void InitTangoUx()
     {
@@ -101,9 +101,9 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Shows the standard tango exceptions UI.
+    /// Shows the standard Tango exception UI.
     /// </summary>
-    /// <param name="shouldUseDefaultUi">A flag to indicate if default TangoUx UI is enabled.</param>
+    /// <param name="shouldUseDefaultUi">A flag to indicate if default <c>TangoUx</c> UI is enabled.</param>
     public static void ShowStandardTangoExceptionsUI(bool shouldUseDefaultUi)
     {
         AndroidJavaObject tangoUxObject = GetTangoUxHelperObject();
@@ -157,7 +157,7 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Sets the Tango Ux exception event listener.
+    /// Sets the Tango UX exception event listener.
     /// </summary>
     public static void SetUxExceptionEventListener()
     {

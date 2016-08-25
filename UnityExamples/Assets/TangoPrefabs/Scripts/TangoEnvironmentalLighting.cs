@@ -17,8 +17,10 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Tango;
 using UnityEngine;
 
@@ -32,10 +34,10 @@ using UnityEngine;
 /// Note 1: Must have both TextureID and Raw Bytes enabled under Video
 /// Overlay in the Tango Manager.
 /// </summary>
-public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
+public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITangoLifecycle
 {
     /// <summary>
-    /// Enable environmental lighting toggle-ing.
+    /// Enable environmental lighting toggling.
     /// </summary>
     public bool m_enableDebugUI = false;
 
@@ -55,6 +57,12 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     private const float C5 = 0.247708f;
 
     /// <summary>
+    /// Emulation constants.
+    /// </summary>
+    private const int EMULATED_CAMERA_WIDTH = 1280;
+    private const int EMULATED_CAMERA_HEIGHT = 720;
+
+    /// <summary>
     /// The square root of the number of samples used to compute the diffuse
     /// image based lighting buffer.
     /// </summary>
@@ -67,12 +75,12 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     private const int LEVELS = 3;
 
     /// <summary>
-    /// The YUV textures used for the specular lighting.
+    /// The texture used for the specular lighting.
     /// </summary>
-    private YUVTexture m_textures;
+    private Texture m_environmentMap;
 
     /// <summary>
-    /// The diffuse lighting samples with (theta, phi) coords and weighted
+    /// The diffuse lighting samples with (theta, phi) coordinates and weighted
     /// coefficients for sampling.
     /// </summary>
     private SphericalHarmonicSample[] m_samples;
@@ -99,8 +107,8 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     }
 
     /// <summary>
-    /// Awake for TangoEnvironmentalLighting. Precomputes the coefficients,
-    /// polar coordiantes, and cartesian coordinates to be sampled.
+    /// Awake for TangoEnvironmentalLighting. Compute the coefficients,
+    /// polar coordinates, and cartesian coordinates to be sampled.
     /// </summary>
     public void Awake()
     {
@@ -157,18 +165,6 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
         if (tangoApplication != null)
         {
             tangoApplication.Register(this);
-            tangoApplication.OnDisplayChanged += _OnDisplayChanged;
-
-            // Pass YUV textures to shader for process.
-            m_textures = tangoApplication.GetVideoOverlayTextureYUV();
-            Shader.SetGlobalFloat("_TangoLightingTexWidth", m_textures.m_videoOverlayTextureY.width);
-            Shader.SetGlobalFloat("_TangoLightingTexHeight", m_textures.m_videoOverlayTextureY.height);
-            Shader.SetGlobalTexture("_TangoLightingYTex", m_textures.m_videoOverlayTextureY);
-            Shader.SetGlobalTexture("_TangoLightingUTex", m_textures.m_videoOverlayTextureCb);
-            Shader.SetGlobalTexture("_TangoLightingVTex", m_textures.m_videoOverlayTextureCr);
-
-            Shader.SetGlobalInt("_TangoLightingColorCameraRotation",
-                (int)TangoSupport.RotateFromAToB(AndroidHelper.GetDisplayRotation(), AndroidHelper.GetColorCameraRotation()));
         }
     }
 
@@ -177,13 +173,17 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     /// </summary>
     public void Update()
     {
-        if (m_enableEnvironmentalLighting)
+        if (m_enableEnvironmentalLighting && m_environmentMap != null)
         {
-            Shader.SetGlobalFloat("_TangoLightingTexWidth", m_textures.m_videoOverlayTextureY.width);
-            Shader.SetGlobalFloat("_TangoLightingTexHeight", m_textures.m_videoOverlayTextureY.height);
-            Shader.SetGlobalTexture("_TangoLightingYTex", m_textures.m_videoOverlayTextureY);
-            Shader.SetGlobalTexture("_TangoLightingUTex", m_textures.m_videoOverlayTextureCb);
-            Shader.SetGlobalTexture("_TangoLightingVTex", m_textures.m_videoOverlayTextureCr);
+            API.TangoUnity_updateEnvironmentMap(m_environmentMap.GetNativeTexturePtr().ToInt32(),
+                                                m_environmentMap.width,
+                                                m_environmentMap.height);
+
+            // Rendering the latest frame changes a bunch of OpenGL state.  Ensure Unity knows the current OpenGL 
+            // state.
+            GL.InvalidateState();
+
+            Shader.SetGlobalTexture("_TangoLightingEnvironmentMap", m_environmentMap);
         }
         else
         {
@@ -200,19 +200,39 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     {
         _ComputeDiffuseCoefficients(imageBuffer);
     }
+    
+    /// <summary>
+    /// This is called when the permission granting process is finished.
+    /// </summary>
+    /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
+    public void OnTangoPermissions(bool permissionsGranted)
+    {
+    }
 
     /// <summary>
-    /// Called when device orientation is changed.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
-    /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
-    /// rotation standard.</param>
-    /// <param name="colorCameraRotation">Orientation of current color camera sensor. Index enum is same as Android
-    /// camera rotation standard.</param>
-    private void _OnDisplayChanged(OrientationManager.Rotation displayRotation,
-                                   OrientationManager.Rotation colorCameraRotation)
+    public void OnTangoServiceConnected()
     {
-        Shader.SetGlobalInt("_TangoLightingColorCameraRotation",
-                (int)TangoSupport.RotateFromAToB(displayRotation, colorCameraRotation));
+#if UNITY_EDITOR
+        // Format needs to be ARGB32 in editor to use Texture2D.ReadPixels() in emulation
+        // in Unity 4.6.
+        RenderTexture environmentMap = new RenderTexture(EMULATED_CAMERA_WIDTH, EMULATED_CAMERA_HEIGHT, 0, RenderTextureFormat.ARGB32);
+        environmentMap.Create();
+
+        m_environmentMap = environmentMap;
+#else
+        TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
+        VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);
+        m_environmentMap = new Texture2D((int)intrinsics.width, (int)intrinsics.height, TextureFormat.RGBA32, false);
+#endif
+    }
+
+    /// <summary>
+    /// This is called when disconnected from the Tango service.
+    /// </summary>
+    public void OnTangoServiceDisconnected()
+    {
     }
 
     /// <summary>
@@ -267,7 +287,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     }
 
     /// <summary>
-    /// Returns the _Factorial at an index num.
+    /// Returns the _Factorial at an index <c>num</c>.
     /// </summary>
     /// <param name="num">The index of the desired factorial value.</param>
     /// <returns>The resulting factorial.</returns>
@@ -286,7 +306,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     /// Evaluate an Associated Legendre Polynomial P(l, m, x) at x.
     ///
     /// Referenced from the following paper:
-    /// http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf.
+    /// <![CDATA[http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf]]>.
     /// </summary>
     /// <param name="l">The spherical harmonic band level. Range from [0..N].</param>
     /// <param name="m">The order at band level l. Range from [-l..l].</param>
@@ -332,11 +352,11 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     /// Renormalization constant for SH function.
     ///
     /// Referenced from the following paper:
-    /// http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf.
+    /// <![CDATA[http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf]]>.
     /// </summary>
     /// <param name="l">The spherical harmonic band level. Range from [0..N].</param>
     /// <param name="m">The order at band level l. Range from [-l..l].</param>
-    /// <returns>The renomalization constant for the basis function.</returns>
+    /// <returns>The renormalization constant for the basis function.</returns>
     private float K(int l, int m)
     {
         float temp = (((2.0f * l) + 1.0f) * _Factorial(l - m)) / (4.0f * Mathf.PI * _Factorial(l + m));
@@ -346,13 +366,13 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     /// <summary>
     /// Return a point sample of a Spherical Harmonic basis function.
     /// This function returns the weights of a certain (theta, phi) at a given
-    /// level, lst, and order, m.
+    /// level, list, and order, m.
     ///
-    /// P is the orthogonal basis functoin.
+    /// P is the orthogonal basis function.
     /// K is the scaling factor to normalize the function.
     ///
     /// Referenced from the following paper:
-    /// http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf.
+    /// <![CDATA[http://www.research.scea.com/gdc2003/spherical-harmonic-lighting.pdf]]>.
     /// </summary>
     /// <param name="l">The spherical harmonic band level. Range from [0..N].</param>
     /// <param name="m">The order at band level l. Range from [-l..l].</param>
@@ -417,7 +437,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
     /// channel.
     ///
     /// Referenced from the following paper:
-    /// https://cseweb.ucsd.edu/~ravir/papers/envmap/envmap.pdf.
+    /// <![CDATA[https://cseweb.ucsd.edu/~ravir/papers/envmap/envmap.pdf]]>.
     /// </summary>
     /// <param name="i">The channel to compute. R is 0, G is 1, B is 2.</param>
     /// <returns>The coefficient matrix that encodes the color at a given spherical harmonic points.</returns>
@@ -445,6 +465,27 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay
         matrix.SetColumn(2, col2);
         matrix.SetColumn(3, col3);
         return matrix;
+    }
+
+    /// <summary>
+    /// The API for C level system calls.
+    /// </summary>
+    private struct API
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        [DllImport(Common.TANGO_UNITY_DLL)]
+        public static extern void TangoUnity_updateEnvironmentMap(Int32 glTextureId, int width, int height);
+#else
+        /// <summary>
+        /// Updates the specular environment map.
+        /// </summary>
+        /// <param name="glTextureId">Gl texture identifier.</param>
+        /// <param name="width">Texture width.</param>
+        /// <param name="height">Texture height.</param>
+        public static void TangoUnity_updateEnvironmentMap(Int32 glTextureId, int width, int height)
+        {
+        }
+#endif
     }
 
     /// <summary>

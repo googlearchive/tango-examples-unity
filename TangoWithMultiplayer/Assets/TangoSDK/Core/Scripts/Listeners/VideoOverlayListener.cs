@@ -86,7 +86,7 @@ namespace Tango
         private OnTangoCameraTextureAvailableEventHandler m_onTangoCameraTextureAvailable;
 
         /// <summary>
-        /// DEPRECATED: Called when a new Tange YUV texture is available (experimental version).
+        /// DEPRECATED: Called when a new Tango YUV texture is available (experimental version).
         /// </summary>
         private OnTangoCameraTextureAvailableEventHandler m_onTangoYUVTextureAvailable;
 

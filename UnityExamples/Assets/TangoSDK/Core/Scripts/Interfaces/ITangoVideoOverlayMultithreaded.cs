@@ -24,7 +24,7 @@ using UnityEngine;
 /// Tango video overlay interface where the handler will be invoked from multiple threads.
 /// 
 /// Use this if you want to get the image callbacks as soon as they are available.  The handler will be invoked as
-/// soon as the event happens, even if that is in another thread.  You must make sure your handler is threadsafe.
+/// soon as the event happens, even if that is in another thread.  You must make sure your handler is thread-safe.
 /// </summary>
 public interface ITangoVideoOverlayMultithreaded
 {

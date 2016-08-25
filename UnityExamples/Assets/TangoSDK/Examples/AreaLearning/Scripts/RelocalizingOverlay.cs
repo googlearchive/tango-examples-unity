@@ -27,7 +27,7 @@ using UnityEngine;
 public class RelocalizingOverlay : MonoBehaviour, ITangoPose, ITangoLifecycle
 {
     /// <summary>
-    /// The overlay image of the relocalizing process.
+    /// The overlay image of the relocalization process.
     /// </summary>
     public GameObject m_relocalizationOverlay;
 
@@ -91,7 +91,7 @@ public class RelocalizingOverlay : MonoBehaviour, ITangoPose, ITangoLifecycle
     }
     
     /// <summary>
-    /// This is called when succesfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango service.
     /// </summary>
     public void OnTangoServiceConnected()
     {

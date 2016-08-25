@@ -1,4 +1,4 @@
-﻿// <copyright file="TangoPointCloud.cs" company="Google">
+// <copyright file="TangoPointCloud.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
 //
@@ -27,7 +27,7 @@ using UnityEngine;
 /// Tango depth API. Used by the Tango Point Cloud prefab to enable depth point
 /// functionality. 
 /// </summary>
-public class TangoPointCloud : MonoBehaviour, ITangoDepth
+public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
 {
     /// <summary>
     /// If set, the point cloud will be transformed to be in the Area 
@@ -86,7 +86,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     public bool m_floorFound = false;
 
     /// <summary>
-    /// The maximum points displayed.  Just some const value.
+    /// The maximum points displayed.  Just some constant value.
     /// </summary>
     private const int MAX_POINT_COUNT = 61440;
 
@@ -206,110 +206,104 @@ public class TangoPointCloud : MonoBehaviour, ITangoDepth
     /// <summary>
     /// Callback that gets called when depth is available from the Tango Service.
     /// </summary>
-    /// <param name="tangoDepth">Depth information from Tango.</param>
-    public void OnTangoDepthAvailable(TangoUnityDepth tangoDepth)
+    /// <param name="pointCloud">Depth information from Tango.</param>
+    public void OnTangoPointCloudAvailable(TangoPointCloudData pointCloud)
     {
         // Calculate the time since the last successful depth data
         // collection.
         if (m_depthTimestamp != 0.0)
         {
-            m_depthDeltaTime = (float)((tangoDepth.m_timestamp - m_depthTimestamp) * 1000.0);
+            m_depthDeltaTime = (float)((pointCloud.m_timestamp - m_depthTimestamp) * 1000.0);
         }
         
         // Fill in the data to draw the point cloud.
-        if (tangoDepth != null && tangoDepth.m_points != null)
+        m_pointsCount = pointCloud.m_numPoints;
+        if (m_pointsCount > 0)
         {
-            m_pointsCount = tangoDepth.m_pointCount;
-            if (m_pointsCount > 0)
+            _SetUpCameraData();
+            TangoCoordinateFramePair pair;
+            TangoPoseData poseData = new TangoPoseData();
+
+            // Query pose to transform point cloud to world coordinates, here we are using the timestamp
+            // that we get from depth.
+            if (m_useAreaDescriptionPose)
             {
-                _SetUpCameraData();
-                TangoCoordinateFramePair pair;
-                TangoPoseData poseData = new TangoPoseData();
-
-                // Query pose to transform point cloud to world coordinates, here we are using the timestamp
-                // that we get from depth.
-                if (m_useAreaDescriptionPose)
-                {
-                    pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
-                    pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-                }
-                else
-                {
-                    pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
-                    pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
-                }
-
-                PoseProvider.GetPoseAtTime(poseData, tangoDepth.m_timestamp, pair);
-                if (poseData.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
-                {
-                    return;
-                }
-
-                Matrix4x4 startServiceTDevice = poseData.ToMatrix4x4();
-
-                // The transformation matrix that represents the pointcloud's pose. 
-                // Explanation: 
-                // The pointcloud which is in Depth camera's frame, is put in unity world's 
-                // coordinate system(wrt unity world).
-                // Then we are extracting the position and rotation from uwTuc matrix and applying it to 
-                // the PointCloud's transform.
-                Matrix4x4 unityWorldTDepthCamera = m_unityWorldTStartService * startServiceTDevice * Matrix4x4.Inverse(m_imuTDevice) * m_imuTDepthCamera;
-                transform.position = Vector3.zero;
-                transform.rotation = Quaternion.identity;
-
-                // Add offset to the pointcloud depending on the offset from TangoDeltaPoseController
-                Matrix4x4 unityWorldOffsetTDepthCamera;
-                if (m_tangoDeltaPoseController != null)
-                {
-                    unityWorldOffsetTDepthCamera = m_tangoDeltaPoseController.UnityWorldOffset * unityWorldTDepthCamera;
-                }
-                else
-                {
-                    unityWorldOffsetTDepthCamera = unityWorldTDepthCamera;
-                }
-
-                // Converting points array to world space.
-                m_overallZ = 0;
-                for (int i = 0; i < m_pointsCount; ++i)
-                {
-                    float x = tangoDepth.m_points[(i * 3) + 0];
-                    float y = tangoDepth.m_points[(i * 3) + 1];
-                    float z = tangoDepth.m_points[(i * 3) + 2];
-
-                    m_points[i] = unityWorldOffsetTDepthCamera.MultiplyPoint(new Vector3(x, y, z));
-                    m_overallZ += z;
-                }
-
-                m_overallZ = m_overallZ / m_pointsCount;
-                m_depthTimestamp = tangoDepth.m_timestamp;
-
-                if (m_updatePointsMesh)
-                {
-                    // Need to update indicies too!
-                    int[] indices = new int[m_pointsCount];
-                    for (int i = 0; i < m_pointsCount; ++i)
-                    {
-                        indices[i] = i;
-                    }
-
-                    m_mesh.Clear();
-                    m_mesh.vertices = m_points;
-                    m_mesh.SetIndices(indices, MeshTopology.Points, 0);
-                }
-
-                // The color should be pose relative, we need to store enough info to go back to pose values.
-                m_renderer.material.SetMatrix("depthCameraTUnityWorld", unityWorldOffsetTDepthCamera.inverse);
-
-                // Try to find the floor using this set of depth points if requested.
-                if (m_findFloorWithDepth)
-                {
-                    _FindFloorWithDepth();
-                }
+                pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             }
             else
             {
-                m_overallZ = 0;
+                pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+                pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
             }
+
+            PoseProvider.GetPoseAtTime(poseData, pointCloud.m_timestamp, pair);
+            if (poseData.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
+            {
+                return;
+            }
+
+            Matrix4x4 startServiceTDevice = poseData.ToMatrix4x4();
+
+            // The transformation matrix that represents the pointcloud's pose. 
+            // Explanation: 
+            // The pointcloud which is in Depth camera's frame, is put in unity world's 
+            // coordinate system(wrt unity world).
+            // Then we are extracting the position and rotation from uwTuc matrix and applying it to 
+            // the PointCloud's transform.
+            Matrix4x4 unityWorldTDepthCamera = m_unityWorldTStartService * startServiceTDevice * Matrix4x4.Inverse(m_imuTDevice) * m_imuTDepthCamera;
+            transform.position = Vector3.zero;
+            transform.rotation = Quaternion.identity;
+
+            // Add offset to the pointcloud depending on the offset from TangoDeltaPoseController
+            Matrix4x4 unityWorldOffsetTDepthCamera;
+            if (m_tangoDeltaPoseController != null)
+            {
+                unityWorldOffsetTDepthCamera = m_tangoDeltaPoseController.UnityWorldOffset * unityWorldTDepthCamera;
+            }
+            else
+            {
+                unityWorldOffsetTDepthCamera = unityWorldTDepthCamera;
+            }
+
+            // Converting points array to world space.
+            m_overallZ = 0;
+            for (int i = 0; i < m_pointsCount; ++i)
+            {
+                Vector3 point = pointCloud[i];
+                m_points[i] = unityWorldOffsetTDepthCamera.MultiplyPoint3x4(point);
+                m_overallZ += point.z;
+            }
+
+            m_overallZ = m_overallZ / m_pointsCount;
+            m_depthTimestamp = pointCloud.m_timestamp;
+
+            if (m_updatePointsMesh)
+            {
+                // Need to update indicies too!
+                int[] indices = new int[m_pointsCount];
+                for (int i = 0; i < m_pointsCount; ++i)
+                {
+                    indices[i] = i;
+                }
+
+                m_mesh.Clear();
+                m_mesh.vertices = m_points;
+                m_mesh.SetIndices(indices, MeshTopology.Points, 0);
+            }
+
+            // The color should be pose relative, we need to store enough info to go back to pose values.
+            m_renderer.material.SetMatrix("depthCameraTUnityWorld", unityWorldOffsetTDepthCamera.inverse);
+
+            // Try to find the floor using this set of depth points if requested.
+            if (m_findFloorWithDepth)
+            {
+                _FindFloorWithDepth();
+            }
+        }
+        else
+        {
+            m_overallZ = 0;
         }
     }
 

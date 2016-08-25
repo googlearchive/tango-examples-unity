@@ -95,7 +95,7 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
-    /// Registers for on orientaiton change event.
+    /// Registers for on orientation change event.
     /// </summary>
     /// <param name="onChanged">Delegate to call when the screen orientation changes.</param>
     public static void RegisterOnDisplayChangedEvent(OnDisplayChangedEventHandler onChanged)
@@ -419,7 +419,7 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
-    /// Inializes the AndroidJavaProxy for the Android lifecycle callbacks.
+    /// Initializes the AndroidJavaProxy for the Android lifecycle callbacks.
     /// </summary>
     private static void _RegisterCallbacks()
     {

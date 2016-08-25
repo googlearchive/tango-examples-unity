@@ -35,7 +35,7 @@ public class ARMarker : MonoBehaviour
     public int m_type = 0;
 
     /// <summary>
-    /// The Tango time stamp when this objec is created
+    /// The Tango time stamp when this object is created
     /// 
     /// This field is used in the Area Learning example, the timestamp is save for the position adjustment when the
     /// loop closure happens.

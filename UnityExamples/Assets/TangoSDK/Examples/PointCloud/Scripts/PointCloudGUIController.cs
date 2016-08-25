@@ -233,9 +233,9 @@ public class PointCloudGUIController : MonoBehaviour
     /// <summary>
     /// Return a string to get logging of FrameDeltaTime.
     /// </summary>
-    /// <returns>The get loggin string from frame delta time.</returns>
+    /// <returns>The logging string from frame delta time.</returns>
     /// <param name="frameDeltaTime">Frame delta time.</param>
-    private string _GetLogginStringFromFrameDeltaTime(float frameDeltaTime)
+    private string _GetLoggingStringFromFrameDeltaTime(float frameDeltaTime)
     {
         if (frameDeltaTime == -1.0)
         {

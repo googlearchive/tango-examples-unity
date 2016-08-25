@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="app_name">Hybrid</string>
+  <string name="text_legend">Click on a model object to select it. Choose from the list to apply a color to it.</string>
+</resources>

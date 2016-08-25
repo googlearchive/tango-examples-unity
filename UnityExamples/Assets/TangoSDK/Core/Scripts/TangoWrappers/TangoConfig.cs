@@ -47,7 +47,7 @@ namespace Tango
         /// A TangoConfig is passed to TangoService_connect() which starts the service running with
         /// the parameters set at that time in that TangoConfig.  This function can be used to find the current
         /// configuration of the service (i.e. what would be run if no config is specified on TangoService_connect()),
-        /// or to create one of a few "template" TangoConfigs.
+        /// or to create one of a few "template" TangoConfig objects.
         /// 
         /// The class is needed only at the time of TangoService_connect() where it is used to configure the service
         /// and can safely be disposed after it has been used in TangoService_connect().
@@ -61,7 +61,7 @@ namespace Tango
         /// <summary>
         /// Delegate for internal API call that sets a config option.
         /// 
-        /// This matches the signature of TangoConfig_setBool, TangoConfig_setDouble, etc. 
+        /// This matches the signature of <c>TangoConfig_setBool</c>, <c>TangoConfig_setDouble</c>, etc. 
         /// </summary>
         /// <typeparam name="T">Type of the value being set.</typeparam>
         /// <param name="configHandle">TangoConfig handle.</param>
@@ -76,7 +76,7 @@ namespace Tango
         /// <summary>
         /// Delegate for internal API call that gets a config option.
         /// 
-        /// This matches the signature of TangoConfig_getBool, TangoConfig_getDouble, etc. 
+        /// This matches the signature of <c>TangoConfig_getBool</c>, <c>TangoConfig_getDouble</c>, etc. 
         /// </summary>
         /// <typeparam name="T">Type of the value being retrieved.</typeparam>
         /// <param name="configHandle">TangoConfig handle.</param>
@@ -87,6 +87,17 @@ namespace Tango
         /// not be set.
         /// </returns>
         private delegate int ConfigAPIGetter<T>(IntPtr configHandle, string key, ref T val);
+
+        /// <summary>
+        /// Values for the DEPTH_MODE config option.
+        /// </summary>
+        internal enum DepthMode
+        {
+            /// <summary>
+            /// PointCloud mode.
+            /// </summary>
+            XYZC = 0
+        }
 
         /// <summary>
         /// Releases all resource used by the <see cref="Tango.TangoConfig"/> object.
@@ -150,7 +161,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set an Int32 configuration parameter.
+        /// Set an <c>Int32</c> configuration parameter.
         /// </summary>
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
@@ -161,7 +172,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set an Int64 configuration parameter.
+        /// Set an <c>Int64</c> configuration parameter.
         /// </summary>
         /// <returns><c>true</c> on success, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to set.</param>
@@ -205,7 +216,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Get an Int32 configuration parameter.
+        /// Get an <c>Int32</c> configuration parameter.
         /// </summary>
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
@@ -216,7 +227,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Get an Int64 configuration parameter.
+        /// Get an <c>Int64</c> configuration parameter.
         /// </summary>
         /// <returns><c>true</c>, if the value was retrieved, <c>false</c> otherwise.</returns>
         /// <param name="key">The string key value of the configuration parameter to get.</param>
@@ -314,7 +325,7 @@ namespace Tango
         /// Helper method for getting a configuration parameter.
         /// </summary>
         /// <returns><c>true</c>, if the API call returned success, <c>false</c> otherwise.</returns>
-        /// <param name="apiCall">The API call to perfom.</param>
+        /// <param name="apiCall">The API call to perform.</param>
         /// <param name="key">The key of the configuration parameter to get.</param>
         /// <param name="value">On success, this is filled with the value of the configuration parameter.</param>
         /// <param name="tangoMethodName">Name of the calling method. Used for logging purposes.</param>
@@ -356,6 +367,7 @@ namespace Tango
 
             // Depth Perception
             public const string ENABLE_DEPTH_PERCEPTION_BOOL = "config_enable_depth";
+            public const string DEPTH_MODE = "config_depth_mode";
 
             // Video overlay
             public const string ENABLE_COLOR_CAMERA_BOOL = "config_enable_color_camera";
