@@ -29,7 +29,7 @@ namespace Tango
     public class OrientationManager
     {
         /// <summary>
-        /// Rotation enum in clockwise.
+        /// The clockwise rotation of the screen.
         /// </summary>
         public enum Rotation
         {

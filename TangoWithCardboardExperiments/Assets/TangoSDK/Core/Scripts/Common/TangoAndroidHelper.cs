@@ -349,38 +349,6 @@ public partial class AndroidHelper
     }
 
     /// <summary>
-    /// Binds to the Tango Cloud Android Service.
-    /// </summary>
-    /// <returns><c>true</c> if we successfully connect; otherwise, <c>false</c>.</returns>
-    internal static bool BindTangoCloudService()
-    {
-        AndroidJavaObject tangoObject = GetTangoHelperObject();
-
-        if (tangoObject != null)
-        {
-            return tangoObject.Call<bool>("bindTangoCloudService");
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Unbinds from the Tango Cloud Android Service.
-    /// </summary>
-    /// <returns><c>true</c> if we successfully disconnect; otherwise, <c>false</c>.</returns>
-    internal static bool UnbindTangoCloudService()
-    {
-        AndroidJavaObject tangoObject = GetTangoHelperObject();
-
-        if (tangoObject != null)
-        {
-            return tangoObject.Call<bool>("unbindTangoCloudService");
-        }
-
-        return false;
-    }
-
-    /// <summary>
     /// Call export ADF permission activity.
     /// </summary>
     /// <param name="srcAdfUuid">ADF that is going to be exported.</param>

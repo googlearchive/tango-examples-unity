@@ -196,7 +196,8 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
             m_screenUpdateTime = VideoOverlayProvider.UpdateARScreen(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR);
         }
     }
-
+    
+    /// @endcond
     /// <summary>
     /// Rotate color camera render material's UV based on the color camera orientation and current activity orientation.
     /// </summary>
