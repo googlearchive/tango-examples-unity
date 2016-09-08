@@ -361,6 +361,7 @@ namespace Tango
             // Area Learning
             public const string ENABLE_AREA_LEARNING_BOOL = "config_enable_learning_mode";
             public const string LOAD_AREA_DESCRIPTION_UUID_STRING = "config_load_area_description_UUID";
+            public const string ENABLE_CLOUD_ADF_BOOL = "config_experimental_use_cloud_adf";
 
             // Experimental COM
             public const string EXPERIMENTAL_ENABLE_DRIFT_CORRECTION_BOOL = "config_enable_drift_correction";

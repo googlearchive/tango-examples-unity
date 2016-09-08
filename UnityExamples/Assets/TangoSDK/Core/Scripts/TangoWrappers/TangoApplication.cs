@@ -192,7 +192,7 @@ namespace Tango
         public int m_initialPointCloudMaxPoints = 0;
 
         /// <summary>
-        /// Event of display rotation change.
+        /// Event triggered when display is rotated.
         /// </summary>
         public OnDisplayChangedEventHandler OnDisplayChanged;
 
@@ -232,7 +232,6 @@ namespace Tango
         private DepthListener m_depthListener;
         private VideoOverlayListener m_videoOverlayListener;
         private TangoEventListener m_tangoEventListener;
-        private TangoCloudEventListener m_tangoCloudEventListener;
         private AreaDescriptionEventListener m_areaDescriptionEventListener;
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
@@ -354,12 +353,6 @@ namespace Tango
                 _RegisterOnTangoDisconnect(tangoLifecycle.OnTangoServiceDisconnected);
             }
 
-            ITangoCloudEvent tangoCloudEvent = tangoObject as ITangoCloudEvent;
-            if (tangoCloudEvent != null)
-            {
-                _RegisterOnTangoCloudEvent(tangoCloudEvent.OnTangoCloudEventAvailableEventHandler);
-            }
-
             if (m_enableMotionTracking)
             {
                 ITangoPose poseHandler = tangoObject as ITangoPose;
@@ -478,12 +471,6 @@ namespace Tango
                 _UnregisterPermissionsCallback(tangoLifecycle.OnTangoPermissions);
                 _UnregisterOnTangoConnect(tangoLifecycle.OnTangoServiceConnected);
                 _UnregisterOnTangoDisconnect(tangoLifecycle.OnTangoServiceDisconnected);
-            }
-
-            ITangoCloudEvent tangoCloudEvent = tangoObject as ITangoCloudEvent;
-            if (tangoCloudEvent != null)
-            {
-                _UnregisterOnTangoCloudEvent(tangoCloudEvent.OnTangoCloudEventAvailableEventHandler);
             }
 
             if (m_enableMotionTracking)
@@ -849,26 +836,6 @@ namespace Tango
         }
 
         /// <summary>
-        /// Propagates an event from the java plugin connected to the Cloud Service through UnitySendMessage().
-        /// </summary>
-        /// <param name="message">A string representation of the cloud event key and value.</param>
-        internal void SendCloudEvent(string message)
-        {
-            Debug.Log("New message from Cloud Service: " + message);
-            string[] keyValue = message.Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
-
-            int key;
-            int value;
-            if (m_tangoCloudEventListener != null &&
-                    keyValue.Length == 2 &&
-                    Int32.TryParse(keyValue[0], out key) &&
-                    Int32.TryParse(keyValue[1], out value))
-            {
-                m_tangoCloudEventListener.OnCloudEventAvailable(key, value);
-            }
-        }
-
-        /// <summary>
         /// Register to get Tango pose callbacks.
         /// 
         /// See TangoApplication.Register for more details.
@@ -893,34 +860,6 @@ namespace Tango
             if (m_poseListener != null)
             {
                 m_poseListener.UnregisterTangoPoseAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Register to get Tango cloud event callbacks.
-        /// 
-        /// See TangoApplication.Register for details.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnTangoCloudEvent(OnTangoCloudEventAvailableEventHandler handler)
-        {
-            if (m_tangoCloudEventListener != null)
-            {
-                m_tangoCloudEventListener.RegisterOnTangoCloudEventAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango cloud event callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnTangoCloudEvent(OnTangoCloudEventAvailableEventHandler handler)
-        {
-            if (m_tangoCloudEventListener != null)
-            {
-                m_tangoCloudEventListener.UnregisterOnTangoCloudEventAvailable(handler);
             }
         }
 
@@ -1207,11 +1146,7 @@ namespace Tango
                 {
                     if (!m_enableDriftCorrection)
                     {
-                        if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL,
-                                                  m_areaDescriptionLearningMode) && m_areaDescriptionLearningMode)
-                        {
-                            Debug.Log("Area Learning is enabled.");
-                        }
+                        m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_AREA_LEARNING_BOOL, m_areaDescriptionLearningMode);
 
                         if (!string.IsNullOrEmpty(uuid))
                         {
@@ -1219,6 +1154,14 @@ namespace Tango
                             {
                                 usedUUID = true;
                             }
+                        }
+
+                        if (m_enableCloudADF)
+                        {
+                            m_tangoConfig.SetString(TangoConfig.Keys.LOAD_AREA_DESCRIPTION_UUID_STRING, string.Empty);
+                            m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_CLOUD_ADF_BOOL, true);
+                            Debug.Log("Local AreaDescription cannot be loaded when cloud ADF is enabled, Tango is starting" +
+                                      "with cloud Area Description only." + Environment.StackTrace);
                         }
                     }
                     else
@@ -1249,12 +1192,6 @@ namespace Tango
             m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_LOW_LATENCY_IMU_INTEGRATION, true);
 
             m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_MOTION_TRACKING_AUTO_RECOVERY_BOOL, m_motionTrackingAutoReset);
-
-            if (m_enableCloudADF)
-            {
-                Debug.Log("Connect to Cloud Service.");
-                AndroidHelper.BindTangoCloudService();
-            }
 
             // Check if the UUID passed in was actually used.
             if (!usedUUID && !string.IsNullOrEmpty(uuid))
@@ -1360,11 +1297,6 @@ namespace Tango
                 }
             }
 
-            if (m_enableCloudADF)
-            {
-                Debug.Log("Disconnect from Cloud Service.");
-                AndroidHelper.UnbindTangoCloudService();
-            }
 #if UNITY_EDITOR
             PoseProvider.ResetTangoEmulation();
 #endif
@@ -1505,11 +1437,6 @@ namespace Tango
             // Setup listeners.
             m_tangoEventListener = new TangoEventListener();
             m_areaDescriptionEventListener = new AreaDescriptionEventListener();
-
-            if (m_enableCloudADF)
-            {
-                m_tangoCloudEventListener = new TangoCloudEventListener();
-            }
 
             if (m_enableMotionTracking)
             {
@@ -1771,11 +1698,6 @@ namespace Tango
             if (m_tangoEventListener != null)
             {
                 m_tangoEventListener.SendIfTangoEventAvailable();
-            }
-
-            if (m_tangoCloudEventListener != null)
-            {
-                m_tangoCloudEventListener.SendIfTangoCloudEventAvailable();
             }
 
             if (m_depthListener != null)

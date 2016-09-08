@@ -307,7 +307,7 @@ namespace Tango
         /// <param name="pointCloud">Tango depth.</param>
         public void OnTangoPointCloudMultithreadedAvailable(ref TangoPointCloudIntPtr pointCloud)
         {
-            if (!m_enabled)
+            if (!m_enabled || pointCloud.m_points == IntPtr.Zero)
             {
                 return;
             }
