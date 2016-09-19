@@ -111,6 +111,70 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
+    /// Unregisters for the Android pause event.
+    /// </summary>
+    /// <param name="onPause">On pause.</param>
+    public static void UnregisterPauseEvent(OnPauseEventHandler onPause)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+        
+        m_callbacks.UnregisterOnPause(onPause);
+        #endif
+    }
+
+    /// <summary>
+    /// Unregisters for the Android resume event.
+    /// </summary>
+    /// <param name="onResume">On resume.</param>
+    public static void UnregisterResumeEvent(OnResumeEventHandler onResume)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+        
+        m_callbacks.UnregisterOnResume(onResume);
+        #endif
+    }
+
+    /// <summary>
+    /// Unregisters for the Android on activity result event.
+    /// </summary>
+    /// <param name="onActivityResult">On activity result.</param>
+    public static void UnregisterOnActivityResultEvent(OnActivityResultEventHandler onActivityResult)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+        
+        m_callbacks.UnregisterOnActivityResult(onActivityResult);
+        #endif
+    }
+
+    /// <summary>
+    /// Unregisters for on orientation change event.
+    /// </summary>
+    /// <param name="onChanged">Delegate to call when the screen orientation changes.</param>
+    public static void UnregisterOnDisplayChangedEvent(OnDisplayChangedEventHandler onChanged)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+        
+        m_callbacks.UnregisterOnDisplayChanged(onChanged);
+        #endif
+    }
+
+    /// <summary>
     /// Gets the unity activity.
     /// </summary>
     /// <returns>The unity activity.</returns>

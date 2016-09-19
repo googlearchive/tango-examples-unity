@@ -99,6 +99,23 @@ namespace Tango
             }
         }
 
+        /// <summary>
+        /// Clear the C callback for the Tango depth interface.
+        /// </summary>
+        internal static void ClearCallback()
+        {
+            API.TangoServiceHidden_connectOnPointCloudParcelAvailable(IntPtr.Zero);
+            int returnValue = API.TangoService_connectOnPointCloudAvailable(null);
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log("DepthProvider.ClearCallback() Callback was not cleared!");
+            }
+            else
+            {
+                Debug.Log("DepthProvider.ClearCallback() Callback was cleared!");
+            }
+        }
+
 #if UNITY_EDITOR
         /// <summary>
         /// INTERNAL USE: Update the Tango emulation state for depth data.

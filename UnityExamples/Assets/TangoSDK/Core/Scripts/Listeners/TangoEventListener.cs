@@ -32,14 +32,44 @@ namespace Tango
     /// <summary>
     /// Marshals Tango event data between the C callbacks in one thread and the main Unity thread.
     /// </summary>
-    internal class TangoEventListener
+    internal static class TangoEventListener
     {
-        private TangoEvents.TangoService_onEventAvailable m_onEventAvaialableCallback;
-        private OnTangoEventAvailableEventHandler m_onTangoEventAvailable;
-        private OnTangoEventAvailableEventHandler m_onTangoEventMultithreadedAvailable;
-        private TangoEvent m_tangoEvent;
-        private System.Object m_lockObject = new System.Object();
-        private bool m_isDirty;
+        /// <summary>
+        /// The lock object used as a mutex.
+        /// </summary>
+        private static System.Object m_lockObject = new System.Object();
+
+        private static TangoEventProvider.APIOnEventAvailable m_onEventAvailableCallback;
+        private static OnTangoEventAvailableEventHandler m_onTangoEventAvailable;
+        private static OnTangoEventAvailableEventHandler m_onTangoEventMultithreadedAvailable;
+        private static TangoEvent m_tangoEvent;
+        private static bool m_isDirty;
+
+        /// <summary>
+        /// Initializes the <see cref="Tango.TangoEventListener"/> class.
+        /// </summary>
+        static TangoEventListener()
+        {
+            Reset();
+        }
+
+        /// <summary>
+        /// Stop getting Tango event callbacks.
+        /// </summary>
+        internal static void Reset()
+        {
+            // Avoid calling into tango_client_api before the correct library is loaded.
+            if (m_onEventAvailableCallback != null)
+            {
+                TangoEventProvider.ClearCallback();
+            }
+
+            m_onEventAvailableCallback = null;
+            m_onTangoEventAvailable = null;
+            m_onTangoEventMultithreadedAvailable = null;
+            m_tangoEvent = new TangoEvent();
+            m_isDirty = false;
+        }
 
         /// <summary>
         /// Register to get Tango event callbacks.
@@ -47,19 +77,29 @@ namespace Tango
         /// NOTE: Tango event callbacks happen on a different thread than the main
         /// Unity thread.
         /// </summary>
-        internal void SetCallback()
+        internal static void SetCallback()
         {
-            m_onEventAvaialableCallback = new TangoEvents.TangoService_onEventAvailable(_onEventAvailable);
-            TangoEvents.SetCallback(m_onEventAvaialableCallback);
-            m_tangoEvent = new TangoEvent();
-            m_isDirty = false;
+            if (m_onEventAvailableCallback != null)
+            {
+                Debug.Log("TangoEventListener.SetCallback() called when callback is already set.");
+                return;
+            }
+
+            Debug.Log("TangoEventListener.SetCallback()");
+            m_onEventAvailableCallback = new TangoEventProvider.APIOnEventAvailable(_OnEventAvailable);
+            TangoEventProvider.SetCallback(m_onEventAvailableCallback);
         }
 
         /// <summary>
         /// Raise a Tango event if there is new data.
         /// </summary>
-        internal void SendIfTangoEventAvailable()
+        internal static void SendIfAvailable()
         {
+            if (m_onEventAvailableCallback == null)
+            {
+                return;
+            }
+
             if (m_isDirty && m_onTangoEventAvailable != null)
             {
                 lock (m_lockObject)
@@ -75,7 +115,7 @@ namespace Tango
         /// Register a Unity main thread handler for Tango events.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
+        internal static void RegisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -87,7 +127,7 @@ namespace Tango
         /// Unregister a Unity main thread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to unregister.</param>
-        internal void UnregisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
+        internal static void UnregisterOnTangoEventAvailable(OnTangoEventAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -99,7 +139,7 @@ namespace Tango
         /// Register a multithread handler for Tango events.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
+        internal static void RegisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -111,7 +151,7 @@ namespace Tango
         /// Unregister a multithread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to unregister.</param>
-        internal void UnregisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
+        internal static void UnregisterOnTangoEventMultithreadedAvailable(OnTangoEventAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -124,7 +164,8 @@ namespace Tango
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="tangoEvent">Tango event.</param>
-        private void _onEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
+        [AOT.MonoPInvokeCallback(typeof(TangoEventProvider.APIOnEventAvailable))]
+        private static void _OnEventAvailable(IntPtr callbackContext, TangoEvent tangoEvent)
         {
             if (tangoEvent != null)
             {

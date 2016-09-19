@@ -86,14 +86,14 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleIdentifier: com.projecttango.unityexamples
-  bundleVersion: 1.43
+  bundleVersion: 1.44
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   metroEnableLowLatencyPresentationAPI: 0
   xboxOneDisableKinectGpuReservation: 0
   virtualRealitySupported: 0
   productGUID: c6391136f507d40acbbba7382166aeb8
-  AndroidBundleVersionCode: 43
+  AndroidBundleVersionCode: 44
   AndroidMinSdkVersion: 17
   AndroidPreferredInstallLocation: 1
   aotOptions: 
@@ -115,7 +115,6 @@ PlayerSettings:
   iPhoneTargetOSVersion: 22
   uIPrerenderedIcon: 0
   uIRequiresPersistentWiFi: 0
-  uIRequiresFullScreen: 1
   uIStatusBarHidden: 1
   uIExitOnSuspend: 0
   uIStatusBarStyle: 0
@@ -164,36 +163,22 @@ PlayerSettings:
   m_BuildTargetIcons:
   - m_BuildTarget: 
     m_Icons:
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 850bb448c3700456290c4778005de0fa, type: 3}
-      m_Width: 0
-      m_Height: 0
+    - m_Icon: {fileID: 2800000, guid: 850bb448c3700456290c4778005de0fa, type: 3}
+      m_Size: 0
   - m_BuildTarget: Android
     m_Icons:
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
-    - serializedVersion: 2
-      m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
-      m_Width: 0
-      m_Height: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
+    - m_Icon: {fileID: 2800000, guid: 87944d11c2cdb43679e685502eff846c, type: 3}
+      m_Size: 0
   m_BuildTargetBatching:
   - m_BuildTarget: Android
     m_StaticBatching: 1
@@ -293,10 +278,6 @@ PlayerSettings:
   ps4pnGameCustomData: 1
   playerPrefsSupport: 0
   ps4ReprojectionSupport: 0
-  ps4UseAudio3dBackend: 0
-  ps4Audio3dVirtualSpeakerCount: 14
-  ps4attribCpuUsage: 0
-  ps4SocialScreenEnabled: 0
   ps4attribUserManagement: 0
   ps4attribMoveSupport: 0
   ps4attrib3DSupport: 0

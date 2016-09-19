@@ -74,7 +74,7 @@ namespace Tango
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="pose">Pose data.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onPoseAvailable(IntPtr callbackContext, [In, Out] TangoPoseData pose);
+        internal delegate void APIOnPoseAvailable(IntPtr callbackContext, [In, Out] TangoPoseData pose);
 
         /// <summary>
         /// Get a pose at a given timestamp from the base to the target frame.
@@ -105,7 +105,7 @@ namespace Tango
 #if UNITY_EDITOR
             GetEmulatedPoseAtTime(poseData, timeStamp, framePair);
 #else
-            int returnValue = PoseProviderAPI.TangoService_getPoseAtTime(timeStamp, framePair, poseData);
+            int returnValue = API.TangoService_getPoseAtTime(timeStamp, framePair, poseData);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".GetPoseAtTime() Could not get pose at time : " + timeStamp);
@@ -126,7 +126,7 @@ namespace Tango
         /// </summary>
         public static void ResetMotionTracking()
         {
-            PoseProviderAPI.TangoService_resetMotionTracking();
+            API.TangoService_resetMotionTracking();
         }
 
         /// <summary>
@@ -134,9 +134,9 @@ namespace Tango
         /// </summary>
         /// <param name="framePairs">Passed in to the C API.</param>
         /// <param name="callback">Callback method.</param>
-        internal static void SetCallback(TangoCoordinateFramePair[] framePairs, TangoService_onPoseAvailable callback)
+        internal static void SetCallback(TangoCoordinateFramePair[] framePairs, APIOnPoseAvailable callback)
         {
-            int returnValue = PoseProviderAPI.TangoService_connectOnPoseAvailable(framePairs.Length, framePairs, callback);
+            int returnValue = API.TangoService_connectOnPoseAvailable(framePairs.Length, framePairs, callback);
             if (returnValue != Common.ErrorType.TANGO_SUCCESS)
             {
                 Debug.Log(CLASS_NAME + ".SetCallback() Callback was not set!");
@@ -144,6 +144,22 @@ namespace Tango
             else
             {
                 Debug.Log(CLASS_NAME + ".SetCallback() OnPose callback was set!");
+            }
+        }
+
+        /// <summary>
+        /// Clear the C callback for the Tango pose interface.
+        /// </summary>
+        internal static void ClearCallback()
+        {
+            int returnValue = API.TangoService_connectOnPoseAvailable(0, null, null);
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Callback was not cleared!");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() OnPose callback was cleared!");
             }
         }
 
@@ -716,42 +732,28 @@ namespace Tango
         [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
                                                          "SA1600:ElementsMustBeDocumented",
                                                          Justification = "C API Wrapper.")]
-        private struct PoseProviderAPI
+        private struct API
         { 
 #if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_connectOnPoseAvailable(int count,
-                                                                         TangoCoordinateFramePair[] framePairs,
-                                                                         TangoService_onPoseAvailable onPoseAvailable);
+            public static extern int TangoService_connectOnPoseAvailable(
+                int count, TangoCoordinateFramePair[] framePairs, APIOnPoseAvailable callback);
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_getPoseAtTime(double timestamp,
-                                                                TangoCoordinateFramePair framePair,
-                                                                [In, Out] TangoPoseData pose);
-
-            [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_setPoseListenerFrames(int count,
-                                                                        ref TangoCoordinateFramePair frames);
+            public static extern int TangoService_getPoseAtTime(
+                double timestamp, TangoCoordinateFramePair framePair, [In, Out] TangoPoseData pose);
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern void TangoService_resetMotionTracking();
 #else
-            public static int TangoService_connectOnPoseAvailable(int count,
-                                                                  TangoCoordinateFramePair[] framePairs,
-                                                                  TangoService_onPoseAvailable onPoseAvailable)
+            public static int TangoService_connectOnPoseAvailable(
+                int count, TangoCoordinateFramePair[] framePairs, APIOnPoseAvailable callback)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoService_getPoseAtTime(double timestamp,
-                                                         TangoCoordinateFramePair framePair,
-                                                         [In, Out] TangoPoseData pose)
-            {
-                return Common.ErrorType.TANGO_SUCCESS;
-            }
-
-            public static int TangoService_setPoseListenerFrames(int count,
-                                                                 ref TangoCoordinateFramePair frames)
+            public static int TangoService_getPoseAtTime(
+                double timestamp, TangoCoordinateFramePair framePair, [In, Out] TangoPoseData pose)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }

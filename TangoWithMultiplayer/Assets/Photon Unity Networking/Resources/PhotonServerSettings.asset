@@ -64,4 +64,8 @@ MonoBehaviour:
   - _ToReceiver_TransferBuffer
   - _ToSender_StartTransferAck
   - _ToSender_TransferBufferAck
+  - _Receiver_StartTransfer
+  - _Receiver_TransferBuffer
+  - _Sender_StartTransferACK
+  - _Sender_TransferBufferACK
   DisableAutoOpenWizard: 1
