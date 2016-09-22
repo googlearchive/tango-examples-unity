@@ -147,6 +147,11 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     private Vector3[][] m_gridIndexConfigs;
 
     /// <summary>
+    /// The bounding box of the mesh.
+    /// </summary>
+    private Bounds m_bounds;
+
+    /// <summary>
     /// Gets the number of queued mesh updates still waiting for processing.
     /// 
     /// May be slightly overestimated if there have been too many updates to process and some
@@ -479,6 +484,15 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     }
 
     /// <summary>
+    /// Gets the bounds of the mesh.
+    /// </summary>
+    /// <returns>The bounds.</returns>
+    public Bounds GetBounds()
+    {
+        return m_bounds;
+    }
+
+    /// <summary>
     /// Given a time value indicating when meshing started this frame,
     /// returns a value indicating whether this frame's time budget for meshing has been exceeded.
     /// </summary>
@@ -556,6 +570,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             }
             
             m_meshes.Add(gridIndex, dynamicMesh);
+            _UpdateBounds(gridIndex);
         }
 
         // Skip updating this grid index if it is considered completed.
@@ -881,6 +896,51 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         }
     }
 
+    /// <summary>
+    /// Update the bounding box.
+    /// </summary>
+    /// <param name="gridIndex">Grid index to include in bounds.</param>
+    private void _UpdateBounds(Tango3DReconstruction.GridIndex gridIndex)
+    {
+        float gridIndexSize = m_tangoApplication.m_3drResolutionMeters * 16;
+        Vector3 pointToCompare = gridIndexSize * new Vector3(gridIndex.x, gridIndex.y, gridIndex.z);
+
+        Vector3 min = m_bounds.min;
+        Vector3 max = m_bounds.max;
+
+        if (m_bounds.min.x > pointToCompare.x)
+        {
+            min.x = pointToCompare.x;
+        }
+
+        if (m_bounds.min.y > pointToCompare.y)
+        {
+            min.y = pointToCompare.y;
+        }
+
+        if (m_bounds.min.z > pointToCompare.z)
+        {
+            min.z = pointToCompare.z;
+        }
+
+        if (m_bounds.max.x < pointToCompare.x)
+        {
+            max.x = pointToCompare.x;
+        }
+
+        if (m_bounds.max.y < pointToCompare.y)
+        {
+            max.y = pointToCompare.y;
+        }
+
+        if (m_bounds.max.z < pointToCompare.z)
+        {
+            max.z = pointToCompare.z;
+        }
+
+        m_bounds.SetMinMax(min, max);
+    }
+    
     /// <summary>
     /// Component for a dynamic, resizable mesh.
     /// 

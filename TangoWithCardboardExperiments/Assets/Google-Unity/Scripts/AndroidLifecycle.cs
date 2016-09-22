@@ -178,7 +178,7 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     /// Unregisters the on OnDisplayChanged callback to Android.
     /// </summary>
     /// <param name="onDisplayChanged">On screen display changed.</param>
-    public void UnregisterDisplayChanged(OnDisplayChangedEventHandler onDisplayChanged)
+    public void UnregisterOnDisplayChanged(OnDisplayChangedEventHandler onDisplayChanged)
     {
         if (onDisplayChanged != null)
         {

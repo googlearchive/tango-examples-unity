@@ -520,7 +520,7 @@ public class MultiplayerCubeStackerUIController : Photon.PunBehaviour, ITangoAre
         {
             // If first 4 values of full Area Description is 0, we consider the file sender is a debugging host.
             // In that case, we will start play in motion tracking mode.
-            m_tangoApplication.GetComponent<RelocalizingOverlay>().SetOverlayActive(false);
+            m_tangoApplication.GetComponent<RelocalizingOverlay>().m_relocalizationOverlay.SetActive(false);
             m_tangoApplication.m_enableAreaDescriptions = false;
             m_tangoApplication.Startup(null);
             _StartPlayer();

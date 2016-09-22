@@ -126,7 +126,7 @@ namespace Tango
         /// <param name="cameraId">Camera ID.</param>
         /// <param name="image">Image buffer.</param> 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onImageAvailable(
+        internal delegate void APIOnImageAvailable(
             IntPtr context, TangoEnums.TangoCameraId cameraId, [In, Out] TangoImageBuffer image);
 
         /// <summary>
@@ -135,7 +135,7 @@ namespace Tango
         /// <param name="context">Callback context.</param>
         /// <param name="cameraId">Camera ID.</param>
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        internal delegate void TangoService_onTextureAvailable(IntPtr context, TangoEnums.TangoCameraId cameraId);
+        internal delegate void APIOnTextureAvailable(IntPtr context, TangoEnums.TangoCameraId cameraId);
 
         /// <summary>
         /// DEPRECATED: Update the texture that has been connected to camera referenced by TangoCameraId with the latest image
@@ -387,7 +387,7 @@ namespace Tango
         /// <param name="textures">The texture IDs to use for the Y, Cb, and Cr planes.</param>
         /// <param name="callback">Callback method.</param>
         internal static void ExperimentalConnectTexture(
-            TangoEnums.TangoCameraId cameraId, YUVTexture textures, TangoService_onTextureAvailable callback)
+            TangoEnums.TangoCameraId cameraId, YUVTexture textures, APIOnTextureAvailable callback)
         {
 #if UNITY_EDITOR
             if (cameraId == TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
@@ -428,7 +428,7 @@ namespace Tango
         /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
         /// </param>
         /// <param name="callback">Function called when a new frame is available from the camera.</param>
-        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, TangoService_onImageAvailable callback)
+        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, APIOnImageAvailable callback)
         {
             int returnValue = API.TangoService_connectOnFrameAvailable(cameraId, IntPtr.Zero, callback);
             if (returnValue == Common.ErrorType.TANGO_SUCCESS)
@@ -449,7 +449,7 @@ namespace Tango
         /// <code>TANGO_CAMERA_FISHEYE</code> are supported.
         /// </param>
         /// <param name="callback">Function called when a new frame is available from the camera.</param>
-        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, TangoService_onTextureAvailable callback)
+        internal static void SetCallback(TangoEnums.TangoCameraId cameraId, APIOnTextureAvailable callback)
         {
             int returnValue = API.TangoService_connectOnTextureAvailable(cameraId, IntPtr.Zero, callback);
             if (returnValue == Common.ErrorType.TANGO_SUCCESS)
@@ -459,6 +459,44 @@ namespace Tango
             else
             {
                 Debug.Log(CLASS_NAME + ".SetCallback(OnTextureAvailable) Callback was not set!");
+            }
+        }
+
+        /// <summary>
+        /// Clear all camera callbacks.
+        /// </summary>
+        /// <param name="cameraId">Camera identifier.</param>
+        internal static void ClearCallback(TangoEnums.TangoCameraId cameraId)
+        {
+            int returnValue = API.TangoService_Experimental_connectTextureIdUnity(cameraId, 0, 0, 0, 
+                                                                                  IntPtr.Zero, null);
+            if (returnValue == Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Unity callback was cleared.");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Unity callback was not cleared!");
+            }
+
+            returnValue = API.TangoService_connectOnFrameAvailable(cameraId, IntPtr.Zero, null);
+            if (returnValue == Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Frame callback was cleared.");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Frame callback was not cleared!");
+            }
+            
+            returnValue = API.TangoService_connectOnTextureAvailable(cameraId, IntPtr.Zero, null);
+            if (returnValue == Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Texture callback was cleared.");
+            }
+            else
+            {
+                Debug.Log(CLASS_NAME + ".ClearCallback() Texture callback was not cleared!");
             }
         }
 
@@ -634,11 +672,6 @@ namespace Tango
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_connectOnFrameAvailable(
-                TangoEnums.TangoCameraId cameraId, IntPtr context, 
-                [In, Out] TangoService_onImageAvailable onImageAvailable);
-
-            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_updateTexture(
                 TangoEnums.TangoCameraId cameraId, ref double timestamp);
 
@@ -651,13 +684,18 @@ namespace Tango
                 TangoEnums.TangoCameraId cameraId, [Out] TangoCameraIntrinsics intrinsics);
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
+            public static extern int TangoService_connectOnFrameAvailable(
+                TangoEnums.TangoCameraId cameraId, IntPtr context, 
+                [In, Out] APIOnImageAvailable callback);
+
+            [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_connectOnTextureAvailable(
-                TangoEnums.TangoCameraId cameraId, IntPtr ContextMenu, TangoService_onTextureAvailable callback);
+                TangoEnums.TangoCameraId cameraId, IntPtr ContextMenu, APIOnTextureAvailable callback);
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_Experimental_connectTextureIdUnity(
                 TangoEnums.TangoCameraId id, UInt32 texture_y, UInt32 texture_Cb, UInt32 texture_Cr, IntPtr context, 
-                TangoService_onTextureAvailable onUnityFrameAvailable);
+                APIOnTextureAvailable callback);
 
             [DllImport(Common.TANGO_UNITY_DLL)]
             public static extern UInt32 TangoUnity_getArTexture();
@@ -691,20 +729,20 @@ namespace Tango
 
             public static int TangoService_connectOnFrameAvailable(
                 TangoEnums.TangoCameraId cameraId, IntPtr context, 
-                [In, Out] TangoService_onImageAvailable onImageAvailable)
+                [In, Out] APIOnImageAvailable callback)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
             public static int TangoService_connectOnTextureAvailable(
-                TangoEnums.TangoCameraId cameraId, IntPtr context, TangoService_onTextureAvailable callback)
+                TangoEnums.TangoCameraId cameraId, IntPtr context, APIOnTextureAvailable callback)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
             public static int TangoService_Experimental_connectTextureIdUnity(
-                TangoEnums.TangoCameraId id, UInt32 texture_y, UInt32 texture_Cb, UInt32 texture_Cr, IntPtr context,
-                TangoService_onTextureAvailable onUnityFrameAvailable)
+                TangoEnums.TangoCameraId id, UInt32 texture_y, UInt32 texture_Cb, UInt32 texture_Cr, 
+                IntPtr context, APIOnTextureAvailable callback)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }

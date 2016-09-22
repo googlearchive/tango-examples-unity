@@ -53,40 +53,75 @@ namespace Tango
     /// Marshals Tango depth data between the C callbacks in one thread and
     /// the main Unity thread.
     /// </summary>
-    internal class DepthListener
+    internal static class DepthListener
     {
-        private Tango.DepthProvider.APIOnPointCloudAvailable m_onPointCloudAvailableCallback;
+        /// <summary>
+        /// The lock object used as a mutex.
+        /// </summary>
+        private static System.Object m_lockObject = new System.Object();
 
-        private bool m_isDirty = false;
-        private TangoPointCloudData m_pointCloud;
-        private float[] m_xyzPoints;
-        private System.Object m_lockObject = new System.Object();
+        private static Tango.DepthProvider.APIOnPointCloudAvailable m_onPointCloudAvailableCallback;
+
+        private static bool m_isDirty;
+        private static TangoPointCloudData m_pointCloud;
+        private static float[] m_xyzPoints;
 
         /// <summary>
         /// Maximum number of depth points DepthListener will pass on from the tango service.
         /// If value is 0, no limit is imposed.
         /// </summary>
-        private int m_maxNumReducedDepthPoints = 0;
+        private static int m_maxNumReducedDepthPoints;
 
         /// <summary>
         /// Called when a new Tango depth is available.
         /// </summary>
-        private OnTangoDepthAvailableEventHandler m_onTangoDepthAvailable;
+        private static OnTangoDepthAvailableEventHandler m_onTangoDepthAvailable;
 
         /// <summary>
         /// Called when a new Tango depth is available on the thread the depth came from.
         /// </summary>
-        private OnTangoDepthMulithreadedAvailableEventHandler m_onTangoDepthMultithreadedAvailable;
+        private static OnTangoDepthMulithreadedAvailableEventHandler m_onTangoDepthMultithreadedAvailable;
 
         /// <summary>
         /// Called when a new PointCloud is available.
         /// </summary>
-        private OnPointCloudAvailableEventHandler m_onPointCloudAvailable;
+        private static OnPointCloudAvailableEventHandler m_onPointCloudAvailable;
 
         /// <summary>
         /// Called when a new PointCloud is available on the thread the point cloud came from.
         /// </summary>
-        private OnPointCloudMultithreadedAvailableEventHandler m_onPointCloudMultithreadedAvailable;
+        private static OnPointCloudMultithreadedAvailableEventHandler m_onPointCloudMultithreadedAvailable;
+
+        /// <summary>
+        /// Initializes the <see cref="Tango.DepthListener"/> class.
+        /// </summary>
+        static DepthListener()
+        {
+            Reset();
+        }
+
+        /// <summary>
+        /// Stop getting Tango depth callbacks, clear all listeners.
+        /// </summary>
+        internal static void Reset()
+        {
+            // Avoid calling into tango_client_api before the correct library is loaded.
+            if (m_onPointCloudAvailableCallback != null)
+            {
+                Tango.DepthProvider.ClearCallback();
+            }
+
+            m_onPointCloudAvailableCallback = null;
+            m_isDirty = false;
+            m_pointCloud = new TangoPointCloudData();
+            m_pointCloud.m_points = new float[Common.MAX_NUM_POINTS * 4];
+            m_xyzPoints = new float[Common.MAX_NUM_POINTS * 3];
+            m_maxNumReducedDepthPoints = 0;
+            m_onTangoDepthAvailable = null;
+            m_onTangoDepthMultithreadedAvailable = null;
+            m_onPointCloudAvailable = null;
+            m_onPointCloudMultithreadedAvailable = null;
+        }
 
         /// <summary>
         /// Register to get Tango depth callbacks.
@@ -94,11 +129,15 @@ namespace Tango
         /// NOTE: Tango depth callbacks happen on a different thread than the main
         /// Unity thread.
         /// </summary>
-        internal void SetCallback()
+        internal static void SetCallback()
         {
-            m_pointCloud = new TangoPointCloudData();
-            m_pointCloud.m_points = new float[Common.MAX_NUM_POINTS * 4];
-            m_xyzPoints = new float[Common.MAX_NUM_POINTS * 3];
+            if (m_onPointCloudAvailableCallback != null)
+            {
+                Debug.Log("DepthListener.SetCallback() called when callback is already set.");
+                return;
+            }
+
+            Debug.Log("DepthListener.SetCallback()");
             m_onPointCloudAvailableCallback = new DepthProvider.APIOnPointCloudAvailable(_OnPointCloudAvailable);
             Tango.DepthProvider.SetCallback(m_onPointCloudAvailableCallback);
         }
@@ -106,8 +145,13 @@ namespace Tango
         /// <summary>
         /// Raise a Tango depth event if there is new data.
         /// </summary>
-        internal void SendDepthIfAvailable()
+        internal static void SendIfAvailable()
         {
+            if (m_onPointCloudAvailableCallback == null)
+            {
+                return;
+            }
+
 #if UNITY_EDITOR
             lock (m_lockObject)
             {
@@ -173,7 +217,7 @@ namespace Tango
         /// Register a Unity main thread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
+        internal static void RegisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -185,7 +229,7 @@ namespace Tango
         /// Unregisters a Unity main thread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to unregister.</param>
-        internal void UnregisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
+        internal static void UnregisterOnTangoDepthAvailable(OnTangoDepthAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -197,7 +241,7 @@ namespace Tango
         /// Register a multithread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnTangoDepthMultithreadedAvailable(OnTangoDepthMulithreadedAvailableEventHandler handler)
+        internal static void RegisterOnTangoDepthMultithreadedAvailable(OnTangoDepthMulithreadedAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -209,7 +253,7 @@ namespace Tango
         /// Unregisters a multithread handler for the Tango depth event.
         /// </summary>
         /// <param name="handler">Event handler to unregister.</param>
-        internal void UnregisterOnTangoDepthMultithreadedAvailable(OnTangoDepthMulithreadedAvailableEventHandler handler)
+        internal static void UnregisterOnTangoDepthMultithreadedAvailable(OnTangoDepthMulithreadedAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -221,7 +265,7 @@ namespace Tango
         /// Registers a Unity main thread handler for the Tango point cloud event.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnPointCloudAvailable(OnPointCloudAvailableEventHandler handler)
+        internal static void RegisterOnPointCloudAvailable(OnPointCloudAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -233,7 +277,7 @@ namespace Tango
         /// Unregisters a Unity main thread handler for the Tango point cloud event.
         /// </summary>
         /// <param name="handler">Event handler to unregister.</param>
-        internal void UnregisterOnPointCloudAvailable(OnPointCloudAvailableEventHandler handler)
+        internal static void UnregisterOnPointCloudAvailable(OnPointCloudAvailableEventHandler handler)
         {
             if (handler != null)
             {
@@ -245,7 +289,7 @@ namespace Tango
         /// Registers a Unity multithread handler for the Tango point cloud event.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void RegisterOnPointCloudMultithreadedAvailable(
+        internal static void RegisterOnPointCloudMultithreadedAvailable(
             OnPointCloudMultithreadedAvailableEventHandler handler)
         {
             if (handler != null)
@@ -258,7 +302,7 @@ namespace Tango
         /// Unregisters a Unity multithread handler for the Tango point cloud event.
         /// </summary>
         /// <param name="handler">Event handler to register.</param>
-        internal void UnregisterOnPointCloudMultithreadedAvailable(
+        internal static void UnregisterOnPointCloudMultithreadedAvailable(
             OnPointCloudMultithreadedAvailableEventHandler handler)
         {
             if (handler != null)
@@ -272,50 +316,18 @@ namespace Tango
         /// Hopefully a temporary workaround 'till this is implemented as an option C-side.
         /// </summary>
         /// <param name="maxPoints">Max points.</param>
-        internal void SetPointCloudLimit(int maxPoints)
+        internal static void SetPointCloudLimit(int maxPoints)
         {
             m_maxNumReducedDepthPoints = maxPoints;
         }
 
         /// <summary>
-        /// Reduces depth points down to below a fixed number of points.
-        /// 
-        /// TODO: Do this sort of thing in C code before before passing to Unity instead.
-        /// </summary>
-        /// <param name="pointCloud">Tango depth data to reduce.</param>
-        /// <param name="maxNumPoints">Max points to reduce down to.</param>
-        private void _ReducePointCloudPoints(TangoPointCloudData pointCloud, int maxNumPoints)
-        {
-            if (maxNumPoints > 0 && pointCloud.m_numPoints > maxNumPoints)
-            {
-                // Here (maxNumPoints - 1) rather than maxPoints is just a quick and
-                // dirty way to avoid any possibile edge-case accumulated FP error
-                // in the sketchy code below.
-                float keepFraction = (maxNumPoints - 1) / (float)pointCloud.m_numPoints;
-                
-                int keptPoints = 0;
-                float keepCounter = 0;
-                for (int i = 0; i < pointCloud.m_numPoints; i++)
-                {
-                    keepCounter += keepFraction;
-                    if (keepCounter > 1)
-                    {
-                        pointCloud.m_points[keptPoints] = pointCloud.m_points[i];
-                        keepCounter--;
-                        keptPoints++;
-                    }
-                }
-                
-                pointCloud.m_numPoints = keptPoints;
-            }
-        }
-        
-        /// <summary>
         /// Callback that gets called when depth is available from the Tango Service.
         /// </summary>
         /// <param name="callbackContext">Callback context.</param>
         /// <param name="rawPointCloud">The depth data returned from Tango.</param>
-        private void _OnPointCloudAvailable(IntPtr callbackContext, ref TangoPointCloudIntPtr rawPointCloud)
+        [AOT.MonoPInvokeCallback(typeof(DepthProvider.APIOnPointCloudAvailable))]
+        private static void _OnPointCloudAvailable(IntPtr callbackContext, ref TangoPointCloudIntPtr rawPointCloud)
         {
             // Fill in the data to draw the point cloud.
             if (m_onPointCloudMultithreadedAvailable != null)
@@ -362,12 +374,45 @@ namespace Tango
             }
         }
 
+        /// <summary>
+        /// Reduces depth points down to below a fixed number of points.
+        /// 
+        /// TODO: Do this sort of thing in C code before before passing to Unity instead.
+        /// </summary>
+        /// <param name="pointCloud">Tango depth data to reduce.</param>
+        /// <param name="maxNumPoints">Max points to reduce down to.</param>
+        private static void _ReducePointCloudPoints(TangoPointCloudData pointCloud, int maxNumPoints)
+        {
+            if (maxNumPoints > 0 && pointCloud.m_numPoints > maxNumPoints)
+            {
+                // Here (maxNumPoints - 1) rather than maxPoints is just a quick and
+                // dirty way to avoid any possibile edge-case accumulated FP error
+                // in the sketchy code below.
+                float keepFraction = (maxNumPoints - 1) / (float)pointCloud.m_numPoints;
+                
+                int keptPoints = 0;
+                float keepCounter = 0;
+                for (int i = 0; i < pointCloud.m_numPoints; i++)
+                {
+                    keepCounter += keepFraction;
+                    if (keepCounter > 1)
+                    {
+                        pointCloud.m_points[keptPoints] = pointCloud.m_points[i];
+                        keepCounter--;
+                        keptPoints++;
+                    }
+                }
+                
+                pointCloud.m_numPoints = keptPoints;
+            }
+        }
+
 #if UNITY_EDITOR
         /// <summary>
         /// Fill out <c>pointCloudData</c> with emulated values from Tango.
         /// </summary>
         /// <param name="pointCloudData">The point cloud data to fill out.</param>
-        private void _FillEmulatedPointCloud(ref TangoPointCloudData pointCloud)
+        private static void _FillEmulatedPointCloud(ref TangoPointCloudData pointCloud)
         {
             List<Vector3> emulated = DepthProvider.GetTangoEmulation(out pointCloud.m_timestamp);
 
@@ -388,7 +433,7 @@ namespace Tango
         /// <returns>Emulated raw xyzij data.</returns>
         /// <param name="depth">Emulated point cloud data.</param>>
         /// <param name="pinnedPoints">Pinned array of pointCloudData.m_points.</param>
-        private TangoXYZij _GetEmulatedRawXyzijData(TangoUnityDepth depth, GCHandle pinnedPoints)
+        private static TangoXYZij _GetEmulatedRawXyzijData(TangoUnityDepth depth, GCHandle pinnedPoints)
         {
             TangoXYZij data = new TangoXYZij();
             data.xyz = pinnedPoints.AddrOfPinnedObject();
@@ -407,7 +452,7 @@ namespace Tango
         /// <returns>Emulated TangoPointCloudIntPtr instance.</returns>
         /// <param name="pointCloud">Emulated point cloud data.</param>>
         /// <param name="pinnedPoints">Pinned array of pointCloudData.m_points.</param>
-        private TangoPointCloudIntPtr _GetEmulatedRawData(TangoPointCloudData pointCloud, GCHandle pinnedPoints)
+        private static TangoPointCloudIntPtr _GetEmulatedRawData(TangoPointCloudData pointCloud, GCHandle pinnedPoints)
         {
             TangoPointCloudIntPtr raw;
             raw.m_version = 0;

@@ -72,14 +72,14 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleIdentifier: com.projecttango.videodemo
-  bundleVersion: 1.43
+  bundleVersion: 1.44
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   metroEnableLowLatencyPresentationAPI: 0
   xboxOneDisableKinectGpuReservation: 0
   virtualRealitySupported: 0
   productGUID: 6f4e1a8813f6b4ce1aebdbc608afc4df
-  AndroidBundleVersionCode: 43
+  AndroidBundleVersionCode: 44
   AndroidMinSdkVersion: 17
   AndroidPreferredInstallLocation: 1
   aotOptions: 

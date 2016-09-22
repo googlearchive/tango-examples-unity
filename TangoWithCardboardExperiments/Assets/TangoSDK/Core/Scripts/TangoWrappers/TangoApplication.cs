@@ -228,11 +228,6 @@ namespace Tango
         private bool m_sendPermissions = false;
         private bool m_permissionsSuccessful = false;
         private bool m_displayChanged = false;
-        private PoseListener m_poseListener;
-        private DepthListener m_depthListener;
-        private VideoOverlayListener m_videoOverlayListener;
-        private TangoEventListener m_tangoEventListener;
-        private AreaDescriptionEventListener m_areaDescriptionEventListener;
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
         private TangoConfig m_tangoRuntimeConfig;
@@ -328,21 +323,22 @@ namespace Tango
             ITangoAreaDescriptionEvent areaDescriptionEvent = tangoObject as ITangoAreaDescriptionEvent;
             if (areaDescriptionEvent != null)
             {
-                _RegisterOnAreaDescriptionEvent(areaDescriptionEvent.OnAreaDescriptionImported,
-                                                areaDescriptionEvent.OnAreaDescriptionExported);
+                AreaDescriptionEventListener.Register(areaDescriptionEvent.OnAreaDescriptionImported,
+                                                      areaDescriptionEvent.OnAreaDescriptionExported);
             }
 
             ITangoEvent tangoEvent = tangoObject as ITangoEvent;
             if (tangoEvent != null)
             {
-                _RegisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+                TangoEventListener.RegisterOnTangoEventAvailable(tangoEvent.OnTangoEventAvailableEventHandler);
             }
 
             ITangoEventMultithreaded tangoEventMultithreaded = tangoObject as ITangoEventMultithreaded;
 
             if (tangoEventMultithreaded != null)
             {
-                _RegisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
+                TangoEventListener.RegisterOnTangoEventMultithreadedAvailable(
+                    tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
             }
 
             ITangoLifecycle tangoLifecycle = tangoObject as ITangoLifecycle;
@@ -358,48 +354,48 @@ namespace Tango
                 ITangoPose poseHandler = tangoObject as ITangoPose;
                 if (poseHandler != null)
                 {
-                    _RegisterOnTangoPoseEvent(poseHandler.OnTangoPoseAvailable);
+                    PoseListener.RegisterTangoPoseAvailable(poseHandler.OnTangoPoseAvailable);
                 }
             }
 
-            if (m_enableDepth && m_depthListener != null)
+            if (m_enableDepth)
             {
                 ITangoPointCloud pointCloudHandler = tangoObject as ITangoPointCloud;
                 if (pointCloudHandler != null)
                 {
-                    m_depthListener.RegisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
+                    DepthListener.RegisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
                 }
 
                 ITangoPointCloudMultithreaded pointCloudMultithreadedHandler
                     = tangoObject as ITangoPointCloudMultithreaded;
                 if (pointCloudMultithreadedHandler != null)
                 {
-                    m_depthListener.RegisterOnPointCloudMultithreadedAvailable(
+                    DepthListener.RegisterOnPointCloudMultithreadedAvailable(
                         pointCloudMultithreadedHandler.OnTangoPointCloudMultithreadedAvailable);
                 }
 
                 ITangoDepth depthHandler = tangoObject as ITangoDepth;
                 if (depthHandler != null)
                 {
-                    m_depthListener.RegisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
+                    DepthListener.RegisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
                 }
 
                 ITangoDepthMultithreaded depthMultithreadedHandler = tangoObject as ITangoDepthMultithreaded;
                 if (depthMultithreadedHandler != null)
                 {
-                    m_depthListener.RegisterOnTangoDepthMultithreadedAvailable(
+                    DepthListener.RegisterOnTangoDepthMultithreadedAvailable(
                         depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
                 }
             }
             
-            if (m_enableVideoOverlay && m_videoOverlayListener != null)
+            if (m_enableVideoOverlay)
             {
                 if (m_videoOverlayUseTextureMethod)
                 {
                     ITangoCameraTexture handler = tangoObject as ITangoCameraTexture;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.RegisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
+                        VideoOverlayListener.RegisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
                     }
                 }
 
@@ -408,7 +404,7 @@ namespace Tango
                     IExperimentalTangoVideoOverlay handler = tangoObject as IExperimentalTangoVideoOverlay;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.RegisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
+                        VideoOverlayListener.RegisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
                     }
                 }
 
@@ -417,13 +413,13 @@ namespace Tango
                     ITangoVideoOverlay handler = tangoObject as ITangoVideoOverlay;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.RegisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
+                        VideoOverlayListener.RegisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
                     }
 
                     ITangoVideoOverlayMultithreaded multithreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
-                    if (multithreadedHandler != null && m_videoOverlayListener != null)
+                    if (multithreadedHandler != null)
                     {
-                        m_videoOverlayListener.RegisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
+                        VideoOverlayListener.RegisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
                     }
                 }
             }
@@ -449,20 +445,21 @@ namespace Tango
             ITangoAreaDescriptionEvent areaDescriptionEvent = tangoObject as ITangoAreaDescriptionEvent;
             if (areaDescriptionEvent != null)
             {
-                _UnregisterOnAreaDescriptionEvent(areaDescriptionEvent.OnAreaDescriptionImported,
-                                                  areaDescriptionEvent.OnAreaDescriptionExported);
+                AreaDescriptionEventListener.Unregister(areaDescriptionEvent.OnAreaDescriptionImported,
+                                                        areaDescriptionEvent.OnAreaDescriptionExported);
             }
 
             ITangoEvent tangoEvent = tangoObject as ITangoEvent;
             if (tangoEvent != null)
             {
-                _UnregisterOnTangoEvent(tangoEvent.OnTangoEventAvailableEventHandler);
+                TangoEventListener.UnregisterOnTangoEventAvailable(tangoEvent.OnTangoEventAvailableEventHandler);
             }
 
             ITangoEventMultithreaded tangoEventMultithreaded = tangoObject as ITangoEventMultithreaded;
             if (tangoEventMultithreaded != null)
             {
-                _UnregisterOnTangoEventMultithreaded(tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
+                TangoEventListener.UnregisterOnTangoEventMultithreadedAvailable(
+                    tangoEventMultithreaded.OnTangoEventMultithreadedAvailableEventHandler);
             }
 
             ITangoLifecycle tangoLifecycle = tangoObject as ITangoLifecycle;
@@ -478,47 +475,47 @@ namespace Tango
                 ITangoPose poseHandler = tangoObject as ITangoPose;
                 if (poseHandler != null)
                 {
-                    _UnregisterOnTangoPoseEvent(poseHandler.OnTangoPoseAvailable);
+                    PoseListener.UnregisterTangoPoseAvailable(poseHandler.OnTangoPoseAvailable);
                 }
             }
 
-            if (m_enableDepth && m_depthListener != null)
+            if (m_enableDepth)
             {
                 ITangoPointCloud pointCloudHandler = tangoObject as ITangoPointCloud;
                 if (pointCloudHandler != null)
                 {
-                    m_depthListener.UnregisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
+                    DepthListener.UnregisterOnPointCloudAvailable(pointCloudHandler.OnTangoPointCloudAvailable);
                 }
 
                 ITangoPointCloudMultithreaded pointCloudMultithreaded = tangoObject as ITangoPointCloudMultithreaded;
                 if (pointCloudMultithreaded != null)
                 {
-                    m_depthListener.UnregisterOnPointCloudMultithreadedAvailable(
+                    DepthListener.UnregisterOnPointCloudMultithreadedAvailable(
                         pointCloudMultithreaded.OnTangoPointCloudMultithreadedAvailable);
                 }
 
                 ITangoDepth depthHandler = tangoObject as ITangoDepth;
                 if (depthHandler != null)
                 {
-                    m_depthListener.UnregisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
+                    DepthListener.UnregisterOnTangoDepthAvailable(depthHandler.OnTangoDepthAvailable);
                 }
 
                 ITangoDepthMultithreaded depthMultithreadedHandler = tangoObject as ITangoDepthMultithreaded;
                 if (depthMultithreadedHandler != null)
                 {
-                    m_depthListener.UnregisterOnTangoDepthMultithreadedAvailable(
+                    DepthListener.UnregisterOnTangoDepthMultithreadedAvailable(
                         depthMultithreadedHandler.OnTangoDepthMultithreadedAvailable);
                 }
             }
 
-            if (m_enableVideoOverlay && m_videoOverlayListener != null)
+            if (m_enableVideoOverlay)
             {
                 if (m_videoOverlayUseTextureMethod)
                 {
                     ITangoCameraTexture handler = tangoObject as ITangoCameraTexture;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.UnregisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
+                        VideoOverlayListener.UnregisterOnTangoCameraTextureAvailable(handler.OnTangoCameraTextureAvailable);
                     }
                 }
 
@@ -527,7 +524,7 @@ namespace Tango
                     IExperimentalTangoVideoOverlay handler = tangoObject as IExperimentalTangoVideoOverlay;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.UnregisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
+                        VideoOverlayListener.UnregisterOnTangoYUVTextureAvailable(handler.OnExperimentalTangoImageAvailable);
                     }
                 }
 
@@ -536,13 +533,13 @@ namespace Tango
                     ITangoVideoOverlay handler = tangoObject as ITangoVideoOverlay;
                     if (handler != null)
                     {
-                        m_videoOverlayListener.UnregisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
+                        VideoOverlayListener.UnregisterOnTangoImageAvailable(handler.OnTangoImageAvailableEventHandler);
                     }
 
                     ITangoVideoOverlayMultithreaded multithreadedHandler = tangoObject as ITangoVideoOverlayMultithreaded;
                     if (multithreadedHandler != null)
                     {
-                        m_videoOverlayListener.UnregisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
+                        VideoOverlayListener.UnregisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
                     }
                 }
             }
@@ -642,7 +639,7 @@ namespace Tango
                 && m_tangoConfig.SetInt32(TangoConfig.Keys.DEPTH_MODE, (int)TangoConfig.DepthMode.XYZC)
                 && m_enableDepth)
             {
-                _SetDepthCallbacks();
+                DepthListener.SetCallback();
             }
 
             if (m_tangoConfig.SetBool(TangoConfig.Keys.ENABLE_COLOR_CAMERA_BOOL, m_enableVideoOverlay) && 
@@ -651,7 +648,7 @@ namespace Tango
                 _SetVideoOverlayCallbacks();
             }
 
-            _SetEventCallbacks();
+            TangoEventListener.SetCallback();
 
             if (m_enable3DReconstruction)
             {
@@ -728,10 +725,7 @@ namespace Tango
         /// <param name="maxDepthPoints">Maximum number of depth points. A value of 0 means no limit.</param>
         public void SetMaxDepthPoints(int maxDepthPoints)
         {
-            if (m_depthListener != null)
-            {
-                m_depthListener.SetPointCloudLimit(maxDepthPoints);
-            }
+            DepthListener.SetPointCloudLimit(maxDepthPoints);
         }
 
         /// <summary>
@@ -833,122 +827,6 @@ namespace Tango
         public void Set3DReconstructionEnabled(bool enabled)
         {
             m_tango3DReconstruction.SetEnabled(enabled);
-        }
-
-        /// <summary>
-        /// Register to get Tango pose callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Callback handler.</param>
-        private void _RegisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
-        {
-            if (m_poseListener != null)
-            {
-                m_poseListener.RegisterTangoPoseAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango pose callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnTangoPoseEvent(OnTangoPoseAvailableEventHandler handler)
-        {
-            if (m_poseListener != null)
-            {
-                m_poseListener.UnregisterTangoPoseAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Register to get Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for details.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
-        {
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.RegisterOnTangoEventAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event handler to remove.</param>
-        private void _UnregisterOnTangoEvent(OnTangoEventAvailableEventHandler handler)
-        {
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.UnregisterOnTangoEventAvailable(handler);
-            }
-        }
-        
-        /// <summary>
-        /// Register to get Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for details.
-        /// </summary>
-        /// <param name="handler">Event handler.</param>
-        private void _RegisterOnTangoEventMultithreaded(OnTangoEventAvailableEventHandler handler)
-        {
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.RegisterOnTangoEventMultithreadedAvailable(handler);
-            }
-        }
-        
-        /// <summary>
-        /// Unregister from the Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="handler">Event to remove.</param>
-        private void _UnregisterOnTangoEventMultithreaded(OnTangoEventAvailableEventHandler handler)
-        {
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.UnregisterOnTangoEventMultithreadedAvailable(handler);
-            }
-        }
-
-        /// <summary>
-        /// Register to get Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for details.
-        /// </summary>
-        /// <param name="import">The handler to the import callback function.</param>
-        /// <param name="export">The handler to the export callback function.</param>
-        private void _RegisterOnAreaDescriptionEvent(OnAreaDescriptionImportEventHandler import,
-                                                     OnAreaDescriptionExportEventHandler export)
-        {
-            if (m_areaDescriptionEventListener != null)
-            {
-                m_areaDescriptionEventListener.Register(import, export);
-            }
-        }
-
-        /// <summary>
-        /// Unregister from the Tango event callbacks.
-        /// 
-        /// See TangoApplication.Register for more details.
-        /// </summary>
-        /// <param name="import">The handler to the import callback function.</param>
-        /// <param name="export">The handler to the export callback function.</param>
-        private void _UnregisterOnAreaDescriptionEvent(OnAreaDescriptionImportEventHandler import,
-                                                       OnAreaDescriptionExportEventHandler export)
-        {
-            if (m_areaDescriptionEventListener != null)
-            {
-                m_areaDescriptionEventListener.Unregister(import, export);
-            }
         }
 
         /// <summary>
@@ -1058,69 +936,25 @@ namespace Tango
         }
 
         /// <summary>
-        /// Set callbacks on all PoseListener objects.
-        /// </summary>
-        /// <param name="framePairs">Frame pairs.</param>
-        private void _SetMotionTrackingCallbacks(TangoCoordinateFramePair[] framePairs)
-        {
-            Debug.Log("TangoApplication._SetMotionTrackingCallbacks()");
-
-            if (m_poseListener != null)
-            {
-                m_poseListener.AutoReset = m_motionTrackingAutoReset;
-                m_poseListener.SetCallback(framePairs);
-            }
-        }
-
-        /// <summary>
-        /// Set callbacks for all DepthListener objects.
-        /// </summary>
-        private void _SetDepthCallbacks()
-        {
-            Debug.Log("TangoApplication._SetDepthCallbacks()");
-
-            if (m_depthListener != null)
-            {
-                m_depthListener.SetCallback();
-            }
-        }
-
-        /// <summary>
-        /// Set callbacks for all TangoEventListener objects.
-        /// </summary>
-        private void _SetEventCallbacks()
-        {
-            Debug.Log("TangoApplication._SetEventCallbacks()");
-
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.SetCallback();
-            }
-        }
-
-        /// <summary>
         /// Set callbacks for all VideoOverlayListener objects.
         /// </summary>
         private void _SetVideoOverlayCallbacks()
         {
             Debug.Log("TangoApplication._SetVideoOverlayCallbacks()");
 
-            if (m_videoOverlayListener != null)
+            if (m_videoOverlayUseTextureMethod)
             {
-                if (m_videoOverlayUseTextureMethod)
-                {
-                    m_videoOverlayListener.SetCallbackTextureMethod();
-                }
+                VideoOverlayListener.SetCallbackTextureMethod();
+            }
 
-                if (m_videoOverlayUseYUVTextureIdMethod)
-                {
-                    m_videoOverlayListener.SetCallbackYUVTextureIdMethod(m_yuvTexture);
-                }
+            if (m_videoOverlayUseYUVTextureIdMethod)
+            {
+                VideoOverlayListener.SetCallbackYUVTextureIdMethod(m_yuvTexture);
+            }
 
-                if (m_videoOverlayUseByteBufferMethod)
-                {
-                    m_videoOverlayListener.SetCallbackByteBufferMethod();
-                }
+            if (m_videoOverlayUseByteBufferMethod)
+            {
+                VideoOverlayListener.SetCallbackByteBufferMethod();
             }
         }
         
@@ -1185,7 +1019,7 @@ namespace Tango
 
             if (framePairs.Count > 0)
             {
-                _SetMotionTrackingCallbacks(framePairs.ToArray());
+                PoseListener.SetCallback(framePairs.ToArray());
             }
 
             // The C API does not default this to on, but it is locked down.
@@ -1283,18 +1117,17 @@ namespace Tango
 
             Debug.Log(CLASS_NAME + ".Disconnect() Disconnecting from the Tango Service");
             m_isServiceConnected = false;
-            if (API.TangoService_disconnect() != Common.ErrorType.TANGO_SUCCESS)
-            {
-                Debug.Log(CLASS_NAME + ".Disconnect() Could not disconnect from the Tango Service!");
-            }
-            else
-            {
-                Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
 
-                if (OnTangoDisconnect != null)
-                {
-                    OnTangoDisconnect();
-                }
+            // This is necessary because tango_client_api clears camera callbacks when
+            // TangoService_disconnect() is called, unlike other callbacks.
+            VideoOverlayListener.ClearTangoCallbacks();
+
+            API.TangoService_disconnect();
+            Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
+
+            if (OnTangoDisconnect != null)
+            {
+                OnTangoDisconnect();
             }
 
 #if UNITY_EDITOR
@@ -1434,20 +1267,9 @@ namespace Tango
             AndroidHelper.RegisterOnTangoServiceConnected(_androidOnTangoServiceConnected);
             AndroidHelper.RegisterOnTangoServiceDisconnected(_androidOnTangoServiceDisconnected);
 
-            // Setup listeners.
-            m_tangoEventListener = new TangoEventListener();
-            m_areaDescriptionEventListener = new AreaDescriptionEventListener();
-
-            if (m_enableMotionTracking)
-            {
-                m_poseListener = new PoseListener();
-            }
-
             if (m_enableDepth)
             {
-                m_depthListener = new DepthListener();
-
-                m_depthListener.SetPointCloudLimit(m_initialPointCloudMaxPoints);
+                DepthListener.SetPointCloudLimit(m_initialPointCloudMaxPoints);
             }
 
             if (m_enableVideoOverlay)
@@ -1458,7 +1280,6 @@ namespace Tango
                 int uvTextureHeight = 0;
 
                 m_yuvTexture = new YUVTexture(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight, TextureFormat.RGBA32, false);
-                m_videoOverlayListener = new VideoOverlayListener();
             }
 
             if (m_enable3DReconstruction)
@@ -1480,6 +1301,10 @@ namespace Tango
             {
                 _ChangeResolutionForPerformance();
             }
+
+            // Importing and exporting Area Descriptions can be done before you connect. We must
+            // propogate those events if they happen.
+            AreaDescriptionEventListener.SetCallback();
 
 #if UNITY_EDITOR
             if (m_doSlowEmulation && (m_enableDepth || m_enableVideoOverlay))
@@ -1690,30 +1515,11 @@ namespace Tango
             }
 #endif
 
-            if (m_poseListener != null)
-            {
-                m_poseListener.SendPoseIfAvailable(m_enableAreaDescriptions);
-            }
-
-            if (m_tangoEventListener != null)
-            {
-                m_tangoEventListener.SendIfTangoEventAvailable();
-            }
-
-            if (m_depthListener != null)
-            {
-                m_depthListener.SendDepthIfAvailable();
-            }
-
-            if (m_videoOverlayListener != null)
-            {
-                m_videoOverlayListener.SendIfVideoOverlayAvailable();
-            }
-
-            if (m_areaDescriptionEventListener != null)
-            {
-                m_areaDescriptionEventListener.SendEventIfAvailable();
-            }
+            PoseListener.SendIfAvailable(m_enableAreaDescriptions);
+            DepthListener.SendIfAvailable();
+            VideoOverlayListener.SendIfAvailable();
+            TangoEventListener.SendIfAvailable();
+            AreaDescriptionEventListener.SendIfAvailable();
 
             if (m_tango3DReconstruction != null)
             {
@@ -1735,6 +1541,13 @@ namespace Tango
         /// </summary>
         private void OnDestroy()
         {
+            Debug.Log("TangoApplication.OnDestroy()");
+            PoseListener.Reset();
+            DepthListener.Reset();
+            VideoOverlayListener.Reset();
+            TangoEventListener.Reset();
+            AreaDescriptionEventListener.Reset();
+
             Shutdown();
 
             // Clean up configs.
@@ -1768,7 +1581,7 @@ namespace Tango
             public static extern int TangoService_connect(IntPtr callbackContext, IntPtr config);
             
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
-            public static extern int TangoService_disconnect();
+            public static extern void TangoService_disconnect();
             #else
             public static int TangoService_initialize(IntPtr jniEnv, IntPtr appContext)
             {
@@ -1780,9 +1593,8 @@ namespace Tango
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoService_disconnect()
+            public static void TangoService_disconnect()
             {
-                return Common.ErrorType.TANGO_SUCCESS;
             }
 #endif
         }

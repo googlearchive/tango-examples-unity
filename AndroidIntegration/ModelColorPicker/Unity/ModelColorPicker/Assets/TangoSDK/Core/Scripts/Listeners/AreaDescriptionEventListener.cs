@@ -42,53 +42,97 @@ namespace Tango
     /// <summary>
     /// The Area Description event is responsible for listening the callback from Area Description import and export.
     /// </summary>
-    internal class AreaDescriptionEventListener
+    internal static class AreaDescriptionEventListener
     {
-        private bool m_isImportFinished = false;
-        private bool m_isExportFinished = false;
-        private System.Object m_lockObject = new System.Object();
-        private string m_eventString;
-        private bool m_isSuccessful = false;
+        /// <summary>
+        /// The lock object used as a mutex.
+        /// </summary>
+        private static System.Object m_lockObject = new System.Object();
 
         /// <summary>
-        /// AreaDescriptionEventListener constructor.
-        /// 
-        /// The activity result callback is registered when the listener is initialized.
+        /// If <c>true</c>, a callback has been set up, otherwise <c>false</c>.
         /// </summary>
-        public AreaDescriptionEventListener()
-        {
-            AndroidHelper.RegisterOnActivityResultEvent(_androidOnActivityResult);
-        }
+        private static bool m_isCallbackSet;
+
+        private static bool m_isImportFinished;
+        private static bool m_isExportFinished;
+        private static string m_eventString;
+        private static bool m_isSuccessful;
 
         /// <summary>
         /// Called when import ADF file is finished.
         /// </summary>
-        private event OnAreaDescriptionImportEventHandler OnTangoAreaDescriptionImported;
+        private static OnAreaDescriptionImportEventHandler m_onTangoAreaDescriptionImported;
 
         /// <summary>
         /// Called when export ADF file is finished.
         /// </summary>
-        private event OnAreaDescriptionExportEventHandler OnTangoAreaDescriptionExported;
+        private static OnAreaDescriptionExportEventHandler m_onTangoAreaDescriptionExported;
+
+        /// <summary>
+        /// Initializes the <see cref="Tango.AreaDescriptionEventListener"/> class.
+        /// </summary>
+        static AreaDescriptionEventListener()
+        {
+            Reset();
+        }
+
+        /// <summary>
+        /// Stop getting Area Description callbacks, clear all listeners.
+        /// </summary>
+        internal static void Reset()
+        {
+            m_isCallbackSet = false;
+            AndroidHelper.UnregisterOnActivityResultEvent(_OnActivityResult);
+
+            m_isImportFinished = false;
+            m_isExportFinished = false;
+            m_eventString = String.Empty;
+            m_isSuccessful = false;
+            m_onTangoAreaDescriptionImported = null;
+            m_onTangoAreaDescriptionExported = null;
+        }
+
+        /// <summary>
+        /// Setup getting Area Description callbacks from onActivityResult.
+        /// </summary>
+        internal static void SetCallback()
+        {
+            if (m_isCallbackSet)
+            {
+                Debug.Log("AreaDescriptionEventListener.SetCallback() called when callback is already set.");
+                return;
+            }
+
+            Debug.Log("AreaDescriptionEventListener.SetCallback()");
+            m_isCallbackSet = true;
+            AndroidHelper.RegisterOnActivityResultEvent(_OnActivityResult);
+        }
 
         /// <summary>
         /// Raise a Tango Area Description event if there is new data.
         /// </summary>
-        internal void SendEventIfAvailable()
+        internal static void SendIfAvailable()
         {
-            if (OnTangoAreaDescriptionExported != null && OnTangoAreaDescriptionImported != null)
+            if (!m_isCallbackSet)
+            {
+                return;
+            }
+
+            if (m_onTangoAreaDescriptionExported != null && m_onTangoAreaDescriptionImported != null)
             {
                 lock (m_lockObject)
                 {
                     if (m_isImportFinished)
                     {
-                        OnTangoAreaDescriptionImported(m_isSuccessful, AreaDescription.ForUUID(m_eventString));
+                        m_onTangoAreaDescriptionImported(m_isSuccessful, AreaDescription.ForUUID(m_eventString));
                         m_isImportFinished = false;
                         m_eventString = string.Empty;
                     }
 
                     if (m_isExportFinished)
                     {
-                        OnTangoAreaDescriptionExported(m_isSuccessful);
+                        m_onTangoAreaDescriptionExported(m_isSuccessful);
                         m_isExportFinished = false;
                     }
                 }
@@ -100,17 +144,17 @@ namespace Tango
         /// </summary>
         /// <param name="importHandler">Event handler for import function.</param>
         /// <param name="exportHandler">Event handler for export function.</param>
-        internal void Register(OnAreaDescriptionImportEventHandler importHandler,
-                               OnAreaDescriptionExportEventHandler exportHandler)
+        internal static void Register(OnAreaDescriptionImportEventHandler importHandler,
+                                      OnAreaDescriptionExportEventHandler exportHandler)
         {
             if (exportHandler != null)
             {
-                OnTangoAreaDescriptionExported += exportHandler;
+                m_onTangoAreaDescriptionExported += exportHandler;
             }
 
             if (importHandler != null)
             {
-                OnTangoAreaDescriptionImported += importHandler;
+                m_onTangoAreaDescriptionImported += importHandler;
             }
         }
 
@@ -119,17 +163,17 @@ namespace Tango
         /// </summary>
         /// <param name="importHandler">Event handler for import function.</param>
         /// <param name="exportHandler">Event handler for export function.</param>
-        internal void Unregister(OnAreaDescriptionImportEventHandler importHandler,
-                                 OnAreaDescriptionExportEventHandler exportHandler)
+        internal static void Unregister(OnAreaDescriptionImportEventHandler importHandler,
+                                        OnAreaDescriptionExportEventHandler exportHandler)
         {
             if (exportHandler != null)
             {
-                OnTangoAreaDescriptionExported -= exportHandler;
+                m_onTangoAreaDescriptionExported -= exportHandler;
             }
 
             if (importHandler != null)
             {
-                OnTangoAreaDescriptionImported -= importHandler;
+                m_onTangoAreaDescriptionImported -= importHandler;
             }
         }
 
@@ -139,7 +183,7 @@ namespace Tango
         /// <param name="requestCode">Request code.</param>
         /// <param name="resultCode">Result code.</param>
         /// <param name="data">Intent data that returned from the activity.</param>
-        private void _androidOnActivityResult(int requestCode, int resultCode, AndroidJavaObject data)
+        private static void _OnActivityResult(int requestCode, int resultCode, AndroidJavaObject data)
         {
             if (requestCode == Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE)
             {
