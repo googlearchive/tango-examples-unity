@@ -655,15 +655,12 @@ namespace Tango
                 GCHandle mostRecentDepthPointsHandle = GCHandle.Alloc(m_mostRecentDepthPoints, GCHandleType.Pinned);
                 m_mostRecentDepth.points = Marshal.UnsafeAddrOfPinnedArrayElement(m_mostRecentDepthPoints, 0);
 
-                GCHandle thisHandle = GCHandle.Alloc(this, GCHandleType.Pinned);
-
                 IntPtr rawUpdatedIndices;
                 Status result = (Status)API.Tango3DR_update(
                     m_context, ref m_mostRecentDepth, ref m_mostRecentDepthPose,
                     ref apiImage, ref apiImagePose, out rawUpdatedIndices);
 
                 m_mostRecentDepthIsValid = false;
-                thisHandle.Free();
                 mostRecentDepthPointsHandle.Free();
 
                 if (result != Status.SUCCESS)
