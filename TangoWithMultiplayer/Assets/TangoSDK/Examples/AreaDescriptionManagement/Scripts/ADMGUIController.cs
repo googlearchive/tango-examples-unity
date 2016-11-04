@@ -180,7 +180,10 @@ public class ADMGUIController : MonoBehaviour, ITangoLifecycle, ITangoEvent
         {
             if (m_managementRoot.activeSelf)
             {
-                Application.Quit();
+                // This is a fix for a lifecycle issue where calling
+                // Application.Quit() here, and restarting the application
+                // immediately results in a deadlocked app.
+                AndroidHelper.AndroidQuit();
             }
             else
             {
