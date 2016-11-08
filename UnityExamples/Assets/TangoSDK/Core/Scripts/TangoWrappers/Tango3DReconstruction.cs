@@ -264,7 +264,11 @@ namespace Tango
             colorCameraCalibration.distortion2 = intrinsics.distortion2;
             colorCameraCalibration.distortion3 = intrinsics.distortion3;
             colorCameraCalibration.distortion4 = intrinsics.distortion4;
-            status = (Status)API.Tango3DR_setColorCalibration(m_context, ref colorCameraCalibration);
+            lock (m_lockObject)
+            {
+                status = (Status)API.Tango3DR_setColorCalibration(m_context, ref colorCameraCalibration);
+            }
+
             if (status != Status.SUCCESS)
             {
                 Debug.Log("Unable to set color calibration." + Environment.StackTrace);
@@ -284,7 +288,11 @@ namespace Tango
             depthCameraCalibration.distortion2 = intrinsics.distortion2;
             depthCameraCalibration.distortion3 = intrinsics.distortion3;
             depthCameraCalibration.distortion4 = intrinsics.distortion4;
-            status = (Status)API.Tango3DR_setDepthCalibration(m_context, ref depthCameraCalibration);
+            lock (m_lockObject)
+            {
+                status = (Status)API.Tango3DR_setDepthCalibration(m_context, ref depthCameraCalibration);
+            }
+
             if (status != Status.SUCCESS)
             {
                 Debug.Log("Unable to set depth calibration." + Environment.StackTrace);

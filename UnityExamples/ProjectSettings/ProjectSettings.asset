@@ -86,14 +86,14 @@ PlayerSettings:
     16:9: 1
     Others: 1
   bundleIdentifier: com.projecttango.unityexamples
-  bundleVersion: 1.45
+  bundleVersion: 1.46
   preloadedAssets: []
   metroEnableIndependentInputSource: 0
   metroEnableLowLatencyPresentationAPI: 0
   xboxOneDisableKinectGpuReservation: 0
   virtualRealitySupported: 0
   productGUID: c6391136f507d40acbbba7382166aeb8
-  AndroidBundleVersionCode: 45
+  AndroidBundleVersionCode: 46
   AndroidMinSdkVersion: 17
   AndroidPreferredInstallLocation: 1
   aotOptions: 

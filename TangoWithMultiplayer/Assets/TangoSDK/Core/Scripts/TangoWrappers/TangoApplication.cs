@@ -222,12 +222,38 @@ namespace Tango
 
         private PermissionsTypes m_requiredPermissions = 0;
         private IntPtr m_callbackContext = IntPtr.Zero;
-        private bool m_isServiceInitialized = false;
-        private bool m_isServiceConnected = false;
+
+        /// <summary>
+        /// If true, the device has a compatible version of Tango Core. Otherwise false.
+        /// </summary>
+        private bool m_isTangoUpToDate = false;
+
+        /// <summary>
+        /// If true, the TangoService is running and providing data to client, e.g motion tracking 
+        /// and point cloud data. Otherwise false.
+        /// </summary>
+        private bool m_isTangoStarted = false;
+
+        /// <summary>
+        /// If true, the TangoApplication instance will request permission when application is resumed.
+        /// Otherwise false. This is used to handle Tango Service connection when application resumed from
+        /// pause.
+        /// </summary>
         private bool m_shouldReconnectService = false;
+
+        /// <summary>
+        /// The flag to transfer permission event from Anroid main thread to Unity main thread
+        /// (Update function).
+        /// </summary>
         private bool m_sendPermissions = false;
         private bool m_permissionsSuccessful = false;
+
+        /// <summary>
+        /// The flag to transfer onDisplayChanged event from Anroid main thread to Unity main thread
+        /// (Update function).
+        /// </summary>
         private bool m_displayChanged = false;
+
         private YUVTexture m_yuvTexture;
         private TangoConfig m_tangoConfig;
         private TangoConfig m_tangoRuntimeConfig;
@@ -267,7 +293,7 @@ namespace Tango
         /// <value><c>true</c> if connected to a Tango service; otherwise, <c>false</c>.</value>
         public bool IsServiceConnected
         {
-            get { return m_isServiceConnected; }
+            get { return m_isTangoStarted; }
         }
 
         /// <summary>
@@ -1062,7 +1088,7 @@ namespace Tango
                 }
             }
 
-            m_isServiceInitialized = true;
+            m_isTangoUpToDate = true;
             Debug.Log(CLASS_NAME + ".Initialize() Tango was initialized!");
             return true;
         }
@@ -1074,14 +1100,14 @@ namespace Tango
         {
             Debug.Log("TangoApplication._TangoConnect()");
 
-            if (!m_isServiceInitialized)
+            if (!m_isTangoUpToDate)
             {
                 return;
             }
 
-            if (!m_isServiceConnected)
+            if (!m_isTangoStarted)
             {
-                m_isServiceConnected = true;
+                m_isTangoStarted = true;
                 AndroidHelper.PerformanceLog("Unity _TangoConnect start");
                 if (API.TangoService_connect(m_callbackContext, m_tangoConfig.GetHandle()) != Common.ErrorType.TANGO_SUCCESS)
                 {
@@ -1106,17 +1132,16 @@ namespace Tango
         /// </summary>
         private void _TangoDisconnect()
         {
-            AndroidHelper.UnbindTangoService();
-
-            if (!m_isServiceConnected)
+            if (!m_isTangoStarted)
             {
+                AndroidHelper.UnbindTangoService();
                 Debug.Log(CLASS_NAME + ".Disconnect() Not disconnecting from Tango Service "
                           + "as this TangoApplication was not connected");
                 return;
             }
 
             Debug.Log(CLASS_NAME + ".Disconnect() Disconnecting from the Tango Service");
-            m_isServiceConnected = false;
+            m_isTangoStarted = false;
 
             // This is necessary because tango_client_api clears camera callbacks when
             // TangoService_disconnect() is called, unlike other callbacks.
@@ -1130,6 +1155,7 @@ namespace Tango
                 OnTangoDisconnect();
             }
 
+            AndroidHelper.UnbindTangoService();
 #if UNITY_EDITOR
             PoseProvider.ResetTangoEmulation();
 #endif
@@ -1140,7 +1166,7 @@ namespace Tango
         /// </summary>
         private void _androidOnPause()
         {
-            if (m_isServiceConnected && m_requiredPermissions == PermissionsTypes.NONE)
+            if (m_isTangoStarted && m_requiredPermissions == PermissionsTypes.NONE)
             {
                 Debug.Log("Pausing services");
                 m_shouldReconnectService = true;
@@ -1497,7 +1523,7 @@ namespace Tango
 
             // Update any emulation
 #if UNITY_EDITOR
-            if(m_isServiceConnected)
+            if(m_isTangoStarted)
             {
                 PoseProvider.UpdateTangoEmulation();
                 if (m_doSlowEmulation)
@@ -1526,7 +1552,7 @@ namespace Tango
                 m_tango3DReconstruction.SendEventIfAvailable();
             }
 
-            if (m_displayChanged && m_isServiceConnected)
+            if (m_displayChanged && m_isTangoStarted)
             {
                 OrientationManager.Rotation displayRotation = AndroidHelper.GetDisplayRotation();
                 OrientationManager.Rotation colorCameraRotation = AndroidHelper.GetColorCameraRotation();
@@ -1561,6 +1587,11 @@ namespace Tango
             {
                 m_tangoRuntimeConfig.Dispose();
                 m_tangoRuntimeConfig = null;
+            }
+
+            if (m_tango3DReconstruction != null)
+            {
+                m_tango3DReconstruction.Dispose();
             }
         }
 

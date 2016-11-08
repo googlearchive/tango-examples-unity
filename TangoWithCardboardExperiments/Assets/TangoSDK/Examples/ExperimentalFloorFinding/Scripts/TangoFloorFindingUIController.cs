@@ -75,7 +75,10 @@ public class TangoFloorFindingUIController : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.Escape))
         {
-            Application.Quit();
+            // This is a fix for a lifecycle issue where calling
+            // Application.Quit() here, and restarting the application
+            // immediately results in a deadlocked app.
+            AndroidHelper.AndroidQuit();
         }
 
         if (!m_findingFloor)

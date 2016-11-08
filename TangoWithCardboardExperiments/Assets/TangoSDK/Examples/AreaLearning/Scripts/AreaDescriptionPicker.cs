@@ -150,7 +150,11 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
         else
         {
             AndroidHelper.ShowAndroidToastMessage("Motion Tracking and Area Learning Permissions Needed");
-            Application.Quit();
+            
+            // This is a fix for a lifecycle issue where calling
+            // Application.Quit() here, and restarting the application
+            // immediately results in a deadlocked app.
+            AndroidHelper.AndroidQuit();
         }
     }
     
@@ -200,7 +204,10 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
     {
         if (Input.GetKey(KeyCode.Escape))
         {
-            Application.Quit();
+            // This is a fix for a lifecycle issue where calling
+            // Application.Quit() here, and restarting the application
+            // immediately results in a deadlocked app.
+            AndroidHelper.AndroidQuit();
         }
     }
 
