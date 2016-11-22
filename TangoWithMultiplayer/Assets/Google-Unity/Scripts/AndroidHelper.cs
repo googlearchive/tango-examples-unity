@@ -111,6 +111,23 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
+    /// Registers for the Android on request permissions result event.
+    /// </summary>
+    /// <param name="onRequestPermissionsResult">On request permissions result.</param>
+    public static void RegisterOnRequestPermissionsResultEvent(
+        OnRequestPermissionsResultHandler onRequestPermissionsResult)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
+
+        m_callbacks.RegisterOnActivityResult(onRequestPermissionsResult);
+        #endif
+    }
+
+    /// <summary>
     /// Unregisters for the Android pause event.
     /// </summary>
     /// <param name="onPause">On pause.</param>
@@ -171,6 +188,22 @@ public partial class AndroidHelper : MonoBehaviour
         }
         
         m_callbacks.UnregisterOnDisplayChanged(onChanged);
+        #endif
+    }
+
+    /// <summary>
+    /// Unregisters for the Android on request permissions result event.
+    /// </summary>
+    /// <param name="onRequestPermissionsResult">On request permissions result.</param>
+    public static void UnregisterOnActivityResultEvent(OnRequestPermissionsResultHandler onRequestPermissionsResult)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+
+        m_callbacks.UnregisterOnRequestPermissionsResult(onRequestPermissionsResult);
         #endif
     }
 
@@ -453,6 +486,121 @@ public partial class AndroidHelper : MonoBehaviour
             Debug.Log("AndroidJavaException : " + e.Message);
         }
         #endif
+    }
+
+    /// <summary>
+    /// Check if an Android permission is granted.
+    /// </summary>
+    /// <returns><c>true</c>, if permission is granted, <c>false</c> otherwise.</returns>
+    /// <param name="permission">Android permission to check.</param>
+    public static bool CheckPermission(string permission)
+    {
+        AndroidJavaObject unityActivity = GetUnityActivity();
+
+        if (unityActivity != null)
+        {
+            try
+            {
+                return unityActivity.Call<bool>("checkAndroidPermission", permission);
+            }
+            catch (AndroidJavaException e)
+            {
+                Debug.Log("AndroidJavaException : " + e.Message);
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Request an Android permission.
+    /// 
+    /// The result of the request is reported to a delegate registered via
+    /// RegisterOnRequestPermissionsResultEvent.
+    /// </summary>
+    /// <param name="permission">Permission to request.</param>
+    /// <param name="requestCode">
+    /// Request code passed to RegisterOnRequestPermissionsResultEvent.
+    /// </param>
+    public static void RequestPermission(string permission, int requestCode)
+    {
+        RequestPermissions(new string[] { permission }, requestCode);
+    }
+
+    /// <summary>
+    /// Request multiple Android permissions.
+    /// 
+    /// The result of the request is reported to a delegate registered via
+    /// RegisterOnRequestPermissionsResultEvent.
+    /// </summary>
+    /// <param name="permissions">Permissions to request.</param>
+    /// <param name="requestCode">
+    /// Request code passed to RegisterOnRequestPermissionsResultEvent.
+    /// </param>
+    public static void RequestPermissions(string[] permissions, int requestCode)
+    {
+        AndroidJavaObject unityActivity = GetUnityActivity();
+        
+        if (unityActivity != null)
+        {
+            try
+            {
+                unityActivity.Call("requestAndroidPermissions", permissions, requestCode);
+            }
+            catch (AndroidJavaException e)
+            {
+                Debug.Log("AndroidJavaException : " + e.Message);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Check if the App should show rationale for requesting a permission.
+    /// 
+    /// Corresponds to ActivityCompat.shouldShowRequestPermissionRationale.
+    /// </summary>
+    /// <returns><c>true</c>, if the app should show rationale, <c>false</c> otherwise.</returns>
+    /// <param name="permission">Permission to show rationale for.</param>
+    public static bool ShouldShouldRequestPermissionRationale(string permission)
+    {
+        AndroidJavaObject unityActivity = GetUnityActivity();
+
+        if (unityActivity != null)
+        {
+            try
+            {
+                return unityActivity.Call<bool>("shouldShowRequestAndroidPermissionRationale", permission);
+            }
+            catch (AndroidJavaException e)
+            {
+                Debug.Log("AndroidJavaException : " + e.Message);
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Launch this application's detailed settings.
+    /// 
+    /// This is useful to provide the user a way to turn settings back on if they have denied a
+    /// critical permission and asked to not be notified again.
+    /// </summary>
+    public static void LaunchApplicationDetailsSettings()
+    {
+        AndroidJavaObject unityActivity = GetUnityActivity();
+
+        if (unityActivity != null)
+        {
+            try
+            {
+                unityActivity.Call("launchApplicationDetailsSettings");
+            }
+            catch (AndroidJavaException e)
+            {
+                Debug.Log("AndroidJavaException : " + e.Message);
+            }
+        }
     }
 
     /// <summary>

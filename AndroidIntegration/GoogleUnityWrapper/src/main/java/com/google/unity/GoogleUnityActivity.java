@@ -19,10 +19,15 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.NativeActivity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.PixelFormat;
 import android.hardware.display.DisplayManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -37,7 +42,9 @@ import com.unity3d.player.UnityPlayer;
 /**
  * Custom Unity Activity that passes through Android lifecycle events from Unity appropriately.
  */
-public class GoogleUnityActivity extends Activity {
+public class GoogleUnityActivity
+    extends Activity
+    implements ActivityCompat.OnRequestPermissionsResultCallback {
     /**
      * Callbacks for common Android lifecycle events.
      */
@@ -48,6 +55,9 @@ public class GoogleUnityActivity extends Activity {
 
         public void onActivityResult(int requestCode, int resultCode, Intent data);
 
+        public void onRequestPermissionsResult(
+            int requestCode, String[] permissions, int[] grantResults);
+
         public void onDisplayChanged();
     }
 
@@ -55,6 +65,8 @@ public class GoogleUnityActivity extends Activity {
     protected UnityPlayer mUnityPlayer;
 
     protected AndroidLifecycleListener mAndroidLifecycleListener;
+
+    protected boolean mIsUnityQuit = false;
 
     // Setup activity layout
     @Override
@@ -130,6 +142,26 @@ public class GoogleUnityActivity extends Activity {
         startActivityForResult(intent, requestcode);
     }
 
+    public boolean checkAndroidPermission(String permission) {
+        int permissionCheck = ContextCompat.checkSelfPermission(this, permission);
+        return permissionCheck == PackageManager.PERMISSION_GRANTED;
+    }
+
+    public void requestAndroidPermissions(String[] permissions, int requestCode) {
+        ActivityCompat.requestPermissions(this, permissions, requestCode);
+    }
+
+    public boolean shouldShowRequestAndroidPermissionRationale(String permission) {
+        return ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
+    }
+
+    public void launchApplicationDetailsSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        Uri uri = Uri.fromParts("package", getPackageName(), null);
+        intent.setData(uri);
+        startActivity(intent);
+    }
+
     // CHECKSTYLE:OFF
     public void LaunchIntent(String packageName, String className, String[] args, int requestcode) {
     // CHECKSTYLE:ON
@@ -148,10 +180,21 @@ public class GoogleUnityActivity extends Activity {
         }
     }
 
+    @Override
+    public void onRequestPermissionsResult(
+        int requestCode, String[] permissions, int[] grantResults) {
+        if (mAndroidLifecycleListener != null) {
+            mAndroidLifecycleListener.onRequestPermissionsResult(
+                requestCode, permissions, grantResults);
+        }
+    }
+
+
     // Quit Unity
     @Override
     protected void onDestroy() {
         mUnityPlayer.quit();
+        mIsUnityQuit = true;
         super.onDestroy();
     }
 
@@ -162,7 +205,10 @@ public class GoogleUnityActivity extends Activity {
         if (mAndroidLifecycleListener != null) {
             mAndroidLifecycleListener.onPause();
         }
-        mUnityPlayer.pause();
+
+        if (!mIsUnityQuit) {
+            mUnityPlayer.pause();
+        }
     }
 
     // Resume Unity
@@ -172,7 +218,10 @@ public class GoogleUnityActivity extends Activity {
         if (mAndroidLifecycleListener != null) {
             mAndroidLifecycleListener.onResume();
         }
-        mUnityPlayer.resume();
+
+        if (!mIsUnityQuit) {
+            mUnityPlayer.resume();
+        }
     }
 
     public void logAndroidErrorMessage(String message) {
@@ -182,14 +231,18 @@ public class GoogleUnityActivity extends Activity {
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
-        mUnityPlayer.configurationChanged(newConfig);
+        if (!mIsUnityQuit) {
+            mUnityPlayer.configurationChanged(newConfig);
+        }
     }
 
     // Notify Unity of the focus change.
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        mUnityPlayer.windowFocusChanged(hasFocus);
+        if (!mIsUnityQuit) {
+            mUnityPlayer.windowFocusChanged(hasFocus);
+        }
     }
 
     // For some reason the multiple keyevent type is not supported by the ndk.
@@ -205,7 +258,6 @@ public class GoogleUnityActivity extends Activity {
     // Pass any events not handled by (unfocused) views straight to UnityPlayer
     @Override
     public boolean onKeyUp(int keyCode, KeyEvent event) {
-
         return mUnityPlayer.injectEvent(event);
     }
 

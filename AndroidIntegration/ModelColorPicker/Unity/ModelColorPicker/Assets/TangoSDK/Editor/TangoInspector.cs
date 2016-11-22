@@ -371,6 +371,8 @@ public class TangoInspector : Editor
                            "Set an upper limit on the number of points in the point cloud. If value is 0, no limit is imposed."),
                 m_tangoApplication.m_initialPointCloudMaxPoints);
 
+            tangoApplication.m_keepScreenAwake = EditorGUILayout.Toggle("Keep Screen Awake", tangoApplication.m_keepScreenAwake);
+
             tangoApplication.m_adjustScreenResolution = EditorGUILayout.Toggle(
                 new GUIContent("Reduce Resolution", 
                            "Whether to adjust the size of the application's main render buffer for performance reasons"),

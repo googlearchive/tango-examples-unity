@@ -91,11 +91,7 @@ public partial class AndroidHelper
         if (tangoObject != null)
         {
             int requestCode = 0;
-            if (permissionsType == Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS)
-            {
-                requestCode = Tango.Common.TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE;
-            }
-            else if (permissionsType == Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS)
+            if (permissionsType == Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS)
             {
                 requestCode = Tango.Common.TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE;
             }

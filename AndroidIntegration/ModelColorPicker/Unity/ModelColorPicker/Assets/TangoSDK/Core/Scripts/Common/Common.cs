@@ -44,19 +44,14 @@ namespace Tango
         internal const string TANGO_UNITY_DLL = "tango_unity_lib";
 
         /// <summary>
-        /// Motion Tracking permission intent string.
-        /// </summary>
-        internal const string TANGO_MOTION_TRACKING_PERMISSIONS = "MOTION_TRACKING_PERMISSION";
-
-        /// <summary>
         /// ADF Load/Save permission intent string.
         /// </summary>
         internal const string TANGO_ADF_LOAD_SAVE_PERMISSIONS = "ADF_LOAD_SAVE_PERMISSION";
 
         /// <summary>
-        /// Code used to identify the result came from the Motion Tracking permission request.
+        /// The Android camera permission string.
         /// </summary>
-        internal const int TANGO_MOTION_TRACKING_PERMISSIONS_REQUEST_CODE = 42;
+        internal const string ANDROID_CAMERA_PERMISSION = "android.permission.CAMERA";
 
         /// <summary>
         /// Code used to identify the result came from the ADF Load/Save permission request.
@@ -72,6 +67,11 @@ namespace Tango
         /// Code used to identify the result came from the ADF export activity.
         /// </summary>
         internal const int TANGO_ADF_EXPORT_REQUEST_CODE = 45;
+
+        /// <summary>
+        /// Code used to identify the result came from requesting Android permissions.
+        /// </summary>
+        internal const int ANDROID_PERMISSION_REQUEST_CODE = 46;
 
         /// <summary>
         /// Max number of vertices the Point Cloud supports.
