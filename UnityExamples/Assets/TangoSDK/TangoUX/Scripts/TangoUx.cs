@@ -38,6 +38,7 @@ namespace Tango
         public TangoUxEnums.UxHoldPostureType m_holdPosture = TangoUxEnums.UxHoldPostureType.NONE;
 
         private TangoApplication m_tangoApplication;
+        private bool m_isTangoUxStarted = false;
 
         /// <summary>
         /// Start this instance.
@@ -104,6 +105,15 @@ namespace Tango
             if (m_enableUXLibrary && permissionsGranted)
             {
                 StartCoroutine(_StartExceptionsListener());
+
+                if (m_tangoApplication.m_autoConnectToService)
+                {
+                    if (!m_isTangoUxStarted)
+                    {
+                        AndroidHelper.StartTangoUX(m_tangoApplication.m_enableMotionTracking && m_showConnectionScreen);
+                        m_isTangoUxStarted = true;
+                    }
+                }
             }
         }
 
@@ -114,7 +124,11 @@ namespace Tango
         {
             if (m_enableUXLibrary)
             {
-                AndroidHelper.StartTangoUX(m_tangoApplication.m_enableMotionTracking && m_showConnectionScreen);
+                if (!m_isTangoUxStarted)
+                {
+                    AndroidHelper.StartTangoUX(m_tangoApplication.m_enableMotionTracking && m_showConnectionScreen);
+                    m_isTangoUxStarted = true;
+                }
             }
         }
 
@@ -126,6 +140,7 @@ namespace Tango
             if (m_enableUXLibrary)
             {
                 AndroidHelper.StopTangoUX();
+                m_isTangoUxStarted = false;
             }
         }
 
