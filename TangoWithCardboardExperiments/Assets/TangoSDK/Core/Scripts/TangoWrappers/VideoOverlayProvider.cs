@@ -274,10 +274,7 @@ namespace Tango
         /// For example, if the device orientation is portrait and camera intrinsics is in
         /// landscape. This function will inverse the intrinsic x and y, and report intrinsics in portrait mode.
         /// 
-        /// The intrinsics are as specified by the TangoCameraIntrinsics struct.  Intrinsics are read from the
-        /// on-device intrinsics file (typically <code>/sdcard/config/calibration.xml</code>, but to ensure 
-        /// compatibility applications should only access these parameters via the API), or default internal model 
-        /// parameters corresponding to the device are used if the calibration.xml file is not found.
+        /// The intrinsics are as specified by the TangoCameraIntrinsics struct and are accessed via the API.
         /// </summary>
         /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
         /// <param name="alignedIntrinsics">
@@ -328,10 +325,7 @@ namespace Tango
         /// <summary>
         /// Get the intrinsic calibration parameters for a given camera.
         /// 
-        /// The intrinsics are as specified by the TangoCameraIntrinsics struct.  Intrinsics are read from the
-        /// on-device intrinsics file (typically <code>/sdcard/config/calibration.xml</code>, but to ensure 
-        /// compatibility applications should only access these parameters via the API), or default internal model 
-        /// parameters corresponding to the device are used if the calibration.xml file is not found.
+        /// The intrinsics are as specified by the TangoCameraIntrinsics struct and are accessed via the API.
         /// </summary>
         /// <param name="cameraId">The camera ID to retrieve the calibration intrinsics for.</param>
         /// <param name="intrinsics">A TangoCameraIntrinsics filled with calibration intrinsics for the camera.</param>
