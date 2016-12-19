@@ -779,14 +779,7 @@ namespace Tango
         /// <param name="rate">The rate in frames per second, for the depth camera to run at.</param>
         public void SetDepthCameraRate(int rate)
         {
-            if (rate < 0)
-            {
-                Debug.Log("Invalid rate passed to SetDepthCameraRate");
-                return;
-            }
-
-            m_tangoRuntimeConfig.SetInt32(TangoConfig.Keys.RUNTIME_DEPTH_FRAMERATE, rate);
-            m_tangoRuntimeConfig.SetRuntimeConfig();
+            _SetDepthCameraRate(rate);
             m_appDepthCameraRate = rate;
         }
 
@@ -1147,6 +1140,26 @@ namespace Tango
             Debug.Log(CLASS_NAME + ".Initialize() Tango was initialized!");
             return true;
         }
+
+        /// <summary>
+        /// Set the frame rate of the depth camera.
+        /// Unlike public SetDepthCameraRate function. This function doesn't set m_appDepthCameraRate.
+        ///
+        /// Disabling or reducing the frame rate of the depth camera when it is running can save a significant amount
+        /// of battery.
+        /// </summary>
+        /// <param name="rate">The rate in frames per second, for the depth camera to run at.</param>
+        private void _SetDepthCameraRate(int rate)
+        {
+            if (rate < 0)
+            {
+                Debug.Log("Invalid rate passed to SetDepthCameraRate");
+                return;
+            }
+
+            m_tangoRuntimeConfig.SetInt32(TangoConfig.Keys.RUNTIME_DEPTH_FRAMERATE, rate);
+            m_tangoRuntimeConfig.SetRuntimeConfig();
+        }
         
         /// <summary>
         /// Connect to the Tango Service.
@@ -1207,6 +1220,8 @@ namespace Tango
                 // This is necessary because tango_client_api clears camera callbacks when
                 // TangoService_disconnect() is called, unlike other callbacks.
                 VideoOverlayListener.ClearTangoCallbacks();
+
+                _SetDepthCameraRate(5);
 
                 API.TangoService_disconnect();
                 Debug.Log(CLASS_NAME + ".Disconnect() Tango client disconnected from service!");
@@ -1562,7 +1577,7 @@ namespace Tango
                     if (m_shouldReconnectService)
                     {
                         m_shouldReconnectService = false;
-                        SetDepthCameraRate(m_appDepthCameraRate);
+                        _SetDepthCameraRate(m_appDepthCameraRate);
                     }
 
                     break;
