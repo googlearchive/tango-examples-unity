@@ -31,7 +31,7 @@ namespace Tango
     /// Represents a Tango UX Exception Event.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public class UxExceptionEvent
+    public struct UxExceptionEvent
     {
         /// <summary>
         /// The type for this UX Exception Event.
@@ -50,15 +50,5 @@ namespace Tango
         /// </summary>
         [MarshalAs(UnmanagedType.I4)]
         public TangoUxEnums.UxExceptionEventStatus status;
-
-        /// <summary>
-        /// Initialize a new instance of <c>Tango.UxExceptionEvent</c>.
-        /// </summary>
-        public UxExceptionEvent()
-        {
-            type = TangoUxEnums.UxExceptionEventType.NA;
-            value = float.NaN;
-            status = TangoUxEnums.UxExceptionEventStatus.NA;
-        }
     }
 }

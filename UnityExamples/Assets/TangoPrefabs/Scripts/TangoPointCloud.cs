@@ -56,6 +56,12 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     public int m_pointsCount = 0;
 
     /// <summary>
+    /// The Tango timestamp from the last update of m_points.
+    /// </summary>
+    [HideInInspector]
+    public double m_depthTimestamp;
+
+    /// <summary>
     /// The average depth (relative to the depth camera).
     /// </summary>
     [HideInInspector]
@@ -130,11 +136,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     /// </summary>
     private bool m_cameraDataSetUp;
 
-    /// <summary>
-    /// The Tango timestamp from the last update of m_points.
-    /// </summary>
-    private double m_depthTimestamp;
-    
     /// <summary>
     /// Mesh this script will modify.
     /// </summary>
@@ -345,6 +346,57 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     }
 
     /// <summary>
+    /// Estimates the depth of a point on a screen, based on nearest neighbors.
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> if a successful depth estimate was obtained.
+    /// </returns>
+    /// <param name="cam">The Unity camera.</param>
+    /// <param name="pos">The point in pixel coordinates to perform depth estimation.</param>
+    /// <param name="colorCameraPoint">
+    /// The point (x, y, z), where (x, y) is the back-projection of the UV
+    /// coordinates to the color camera space and z is the z coordinate of
+    /// the point in the point cloud nearest to the user selection after
+    /// projection onto the image plane. If there is not a point cloud point
+    /// close to the user selection after projection onto the image plane,
+    /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
+    /// be set to false.
+    /// </param>
+    public bool EstimateDepthOnScreen(Camera cam, Vector2 pos, out Vector3 colorCameraPoint)
+    {
+        // Set up parameters
+        Matrix4x4 colorCameraTUnityWorld = m_colorCameraTUnityCamera * cam.transform.worldToLocalMatrix;
+        Vector2 normalizedPos = cam.ScreenToViewportPoint(pos);
+
+        // If the camera has a TangoARScreen attached, it is not displaying the entire color camera image.  Correct
+        // the normalized coordinates by taking the clipping into account.
+        TangoARScreen arScreen = cam.gameObject.GetComponent<TangoARScreen>();
+        if (arScreen != null)
+        {
+            normalizedPos = arScreen.ViewportPointToCameraImagePoint(normalizedPos);
+        }
+
+        bool isValidPoint;
+        int returnType = TangoSupport.ScreenCoordinateToWorldNearestNeighbor(
+                             m_points,
+                             m_pointsCount,
+                             m_depthTimestamp,
+                             m_colorCameraIntrinsics,
+                             ref colorCameraTUnityWorld,
+                             normalizedPos,
+                             out colorCameraPoint,
+                             out isValidPoint);
+
+        if (returnType != Common.ErrorType.TANGO_SUCCESS)
+        {
+            Debug.LogErrorFormat("TangoSupport.ScreenCoordinateToWorldNearestNeighbor failed with error code {0}.",
+                returnType);
+        }
+
+        return (returnType == Common.ErrorType.TANGO_SUCCESS) && isValidPoint;
+    }
+
+    /// <summary>
     /// Given a screen coordinate, finds a plane that most closely fits the
     /// depth values in that area.
     /// 
@@ -379,8 +431,8 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
         }
 
         TangoCameraIntrinsics alignedIntrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
-                                                                  alignedIntrinsics);
+        VideoOverlayProvider.GetDeviceOrientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                                                   alignedIntrinsics);
         int returnValue = TangoSupport.FitPlaneModelNearClick(
                 m_points, m_pointsCount, m_depthTimestamp, alignedIntrinsics, ref colorCameraTUnityWorld,
                 normalizedPos, out planeCenter, out plane);

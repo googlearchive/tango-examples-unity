@@ -102,5 +102,6 @@ public class MeshBuilderWithPhysicsGUIController : MonoBehaviour
         // existing 3D reconstruction state no longer is lined up with the
         // real world. Best we can do is clear the state.
         m_dynamicMesh.Clear();
+        m_tangoApplication.Tango3DRClear();
     }
 }

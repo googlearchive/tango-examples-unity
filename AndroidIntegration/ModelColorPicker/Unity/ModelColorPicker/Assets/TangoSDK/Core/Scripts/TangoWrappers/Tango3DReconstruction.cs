@@ -264,11 +264,7 @@ namespace Tango
             colorCameraCalibration.distortion2 = intrinsics.distortion2;
             colorCameraCalibration.distortion3 = intrinsics.distortion3;
             colorCameraCalibration.distortion4 = intrinsics.distortion4;
-            lock (m_lockObject)
-            {
-                status = (Status)API.Tango3DR_setColorCalibration(m_context, ref colorCameraCalibration);
-            }
-
+            status = (Status)API.Tango3DR_setColorCalibration(m_context, ref colorCameraCalibration);
             if (status != Status.SUCCESS)
             {
                 Debug.Log("Unable to set color calibration." + Environment.StackTrace);
@@ -288,11 +284,7 @@ namespace Tango
             depthCameraCalibration.distortion2 = intrinsics.distortion2;
             depthCameraCalibration.distortion3 = intrinsics.distortion3;
             depthCameraCalibration.distortion4 = intrinsics.distortion4;
-            lock (m_lockObject)
-            {
-                status = (Status)API.Tango3DR_setDepthCalibration(m_context, ref depthCameraCalibration);
-            }
-
+            status = (Status)API.Tango3DR_setDepthCalibration(m_context, ref depthCameraCalibration);
             if (status != Status.SUCCESS)
             {
                 Debug.Log("Unable to set depth calibration." + Environment.StackTrace);
@@ -491,35 +483,38 @@ namespace Tango
         }
 
         /// <summary>
-        /// Extract a mesh for the entire 3D Reconstruction, into a suitable format for Unity Mesh.
+        /// Extracts a mesh of the entire 3D reconstruction into a suitable format for a Unity Mesh.
         /// </summary>
         /// <returns>
-        /// Returns Status.SUCCESS if the mesh is fully extracted and stored in the arrays.  In this case, <c>numVertices</c> 
-        /// and <c>numTriangles</c> will say how many vertices and triangles are used, the rest of the array is untouched.
-        /// 
-        /// Returns Status.INSUFFICIENT_SPACE if the mesh is partially extracted and stored in the arrays.  <c>numVertices</c> 
-        /// and <c>numTriangles</c> have the same meaning as if Status.SUCCESS is returned, but in this case the array should 
-        /// grow.
-        /// 
-        /// Returns Status.ERROR or Status.INVALID if some other error occurs.
-        /// </returns>
-        /// <param name="vertices">On successful extraction this will get filled out with the vertex positions.</param>
-        /// <param name="normals">On successful extraction this will get filled out with vertex normals.</param>
-        /// <param name="colors">On successful extraction this will get filled out with vertex colors.</param>
-        /// <param name="triangles">On successful extraction this will get filled out with vertex indexes.</param>
-        /// <param name="numVertices">Number of vertexes filled out.</param>
-        /// <param name="numTriangles">Number of triangles filled out.</param>
-        internal Status ExtractWholeMesh(
-            Vector3[] vertices, Vector3[] normals, Color32[] colors, int[] triangles, out int numVertices,
-            out int numTriangles)
+        /// Returns <c>Status.SUCCESS</c> if the mesh is fully extracted and stored in the lists. Otherwise, Status.ERROR or 
+        /// Status.INVALID is returned if some error occurs.</returns>
+        /// <param name="vertices">A list to which mesh vertices will be appended, can be null.</param>
+        /// <param name="normals">A list to which mesh normals will be appended, can be null.</param>
+        /// <param name="colors">A list to which mesh colors will be appended, can be null.</param>
+        /// <param name="triangles">A list to which vertex indices will be appended, can be null.</param>
+        internal Status ExtractWholeMesh(List<Vector3> vertices, List<Vector3> normals, List<Color32> colors, List<int> triangles)
         {
-            APIMeshGCHandles pinnedHandles = APIMeshGCHandles.Alloc(vertices, normals, colors, triangles);
-            APIMesh mesh = APIMesh.FromArrays(vertices, normals, colors, triangles);
+            IntPtr apiMeshIntPtr;
+            int result = API.Tango3DR_extractFullMesh(m_context, out apiMeshIntPtr);
 
-            int result = API.Tango3DR_extractPreallocatedFullMesh(m_context, ref mesh);
-            numVertices = (int)mesh.numVertices;
-            numTriangles = (int)mesh.numFaces;
-            pinnedHandles.Free();
+            if (((Status)result) == Status.SUCCESS)
+            {
+                // Marshal mesh structure into managed code.
+                APIMesh mesh = (APIMesh)Marshal.PtrToStructure(apiMeshIntPtr, typeof(APIMesh));
+
+                // Marshal structure arrays into managed code.
+                _MarshalUnmanagedStructArrayToList<Vector3>(mesh.vertices, mesh.numVertices, vertices);
+                _MarshalUnmanagedStructArrayToList<Vector3>(mesh.normals, mesh.numVertices, normals);
+                _MarshalUnmanagedStructArrayToList<Color32>(mesh.colors, mesh.numVertices, colors);
+
+                // Marshal face array to managed code and add to list.
+                int[] faces = new int[mesh.numFaces * 3];
+                Marshal.Copy(mesh.faces, faces, 0, mesh.numFaces * 3);
+                triangles.AddRange(faces);
+
+                // Free unmanaged mesh memory.
+                API.Tango3DR_Mesh_destroy(apiMeshIntPtr);
+            }
 
             return (Status)result;
         }
@@ -566,6 +561,38 @@ namespace Tango
             {
                 Debug.Log("Tango3DR_clear returned non-success." + Environment.StackTrace);
             }
+        }
+
+        /// <summary>
+        /// Adds the contents of an unmanaged struct array to a list.
+        /// </summary>
+        /// <param name="arrayPtr">A pointer to the unmanged array.</param>
+        /// <param name="arrayLength">The length of the unmanaged array.</param>
+        /// <param name="list">A list to append array elements to.</param>
+        /// <typeparam name="T">The type contained by the unmanaged array.</typeparam>
+        private void _MarshalUnmanagedStructArrayToList<T>(IntPtr arrayPtr, int arrayLength, List<T> list) where T : struct
+        {
+            if (arrayPtr == IntPtr.Zero || list == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < arrayLength; i++)
+            {
+                list.Add((T)Marshal.PtrToStructure(_GetPtrToUnmanagedArrayElement<T>(arrayPtr, i), typeof(T)));
+            }
+        }
+
+        /// <summary>
+        /// Returns a pointer to an element within an unmanaged array.
+        /// </summary>
+        /// <returns>A pointer to the desired unmanaged array element.</returns>
+        /// <param name="arrayPtr">A pointer to the start of the array.</param>
+        /// <param name="arrayIndex">The index of the desired element pointer.</param>
+        /// <typeparam name="T">The type contained by the unmanaged array.</typeparam>
+        private IntPtr _GetPtrToUnmanagedArrayElement<T>(IntPtr arrayPtr, int arrayIndex) where T : struct
+        {
+            return new IntPtr(arrayPtr.ToInt64() + (Marshal.SizeOf(typeof(T)) * arrayIndex));
         }
 
         /// <summary>
@@ -1121,6 +1148,9 @@ namespace Tango
             public static extern int Tango3DR_Config_destroy(IntPtr config);
 
             [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_Mesh_destroy(IntPtr mesh);
+
+            [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_Config_setBool(IntPtr config, string key, bool value);
 
             [DllImport(TANGO_3DR_DLL)]
@@ -1173,15 +1203,23 @@ namespace Tango
             public static extern int Tango3DR_extractPreallocatedFullMesh(IntPtr context, ref APIMesh mesh);
 
             [DllImport(TANGO_3DR_DLL)]
+            public static extern int Tango3DR_extractFullMesh(IntPtr context, out IntPtr mesh);
+
+            [DllImport(TANGO_3DR_DLL)]
             public static extern int Tango3DR_extractPreallocatedVoxelGridSegment(
                 IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, SignedDistanceVoxel[] voxels);
-            #else
+#else
             public static IntPtr Tango3DR_create(IntPtr config)
             {
                 return IntPtr.Zero;
             }
 
             public static int Tango3DR_destroy(IntPtr context)
+            {
+                return (int)Status.SUCCESS;
+            }
+
+            public static int Tango3DR_Mesh_destroy(IntPtr mesh)
             {
                 return (int)Status.SUCCESS;
             }
@@ -1294,12 +1332,18 @@ namespace Tango
                 return (int)Status.SUCCESS;
             }
 
+            public static int Tango3DR_extractFullMesh(IntPtr context, out IntPtr mesh)
+            {
+                mesh = new IntPtr();
+                return (int)Status.SUCCESS;
+            }
+
             public static int Tango3DR_extractPreallocatedVoxelGridSegment(
                 IntPtr context, ref GridIndex gridIndex, Int32 maxNumVoxels, SignedDistanceVoxel[] voxels)
             {
                 return (int)Status.SUCCESS;
             }
-            #endif
+#endif
         }
     }
 }

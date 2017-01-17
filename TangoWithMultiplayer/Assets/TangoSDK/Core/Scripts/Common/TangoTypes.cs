@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TangoTypes.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
@@ -96,7 +96,128 @@ namespace Tango
         /// </summary>
         public IntPtr m_points;
     }
+    
+     /// <summary>
+    /// Three element vector with doubles - used only to pass data between native and managed without allocations.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TangoTranslation
+    {
+        [MarshalAs(UnmanagedType.R8)]
+        public double x;
+        [MarshalAs(UnmanagedType.R8)]
+        public double y;
+        [MarshalAs(UnmanagedType.R8)]
+        public double z;
 
+        /// <summary>
+        /// Get or set x,y,z components (double) as 0,1,2 - other values throw an IndexOutOfRange exception.
+        /// </summary>
+        /// <param name="index">Set a component of the vector by int index.</param>
+        /// <returns>
+        /// Get a <see cref="System.Double"/> in the vector.
+        /// </returns>
+        public double this[int index]
+        {
+            get
+            {
+                switch (index)
+                {
+                    case 0:
+                        return x;
+                    case 1:
+                        return y;
+                    case 2:
+                        return z;
+                    default:
+                        throw new System.IndexOutOfRangeException();
+                }
+            }
+          
+            set
+            {
+                switch (index)
+                {
+                    case 0:
+                        x = value;
+                        return;
+                    case 1:
+                        y = value;
+                        return;
+                    case 2:
+                        z = value;
+                        return;
+                    default:
+                        throw new System.IndexOutOfRangeException();
+                }
+            }
+        }
+    }
+  
+    /// <summary>
+    /// Four element vector with doubles - used only to pass data between native and managed without allocations.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TangoOrientation
+    {
+        [MarshalAs(UnmanagedType.R8)]
+        public double x;
+        [MarshalAs(UnmanagedType.R8)]
+        public double y;
+        [MarshalAs(UnmanagedType.R8)]
+        public double z;
+        [MarshalAs(UnmanagedType.R8)]
+        public double w;
+
+        /// <summary>
+        /// Get or set x,y,z,w components (double) as 0,1,2,3 - other values throw an IndexOutOfRange exception.
+        /// </summary>
+        /// <param name="index">Set a component of the quaternion by int index.</param>
+        /// <returns>
+        /// A <see cref="System.Double"/> in the quaternion.
+        /// </returns>
+        public double this[int index]
+        {
+            get
+            {
+                switch (index)
+                {
+                    case 0:
+                        return x;
+                    case 1:
+                        return y;
+                    case 2:
+                        return z;
+                    case 3:
+                        return w;
+                    default:
+                        throw new System.IndexOutOfRangeException();
+                }
+            }
+          
+            set
+            {
+                switch (index)
+                {
+                    case 0:
+                        x = value;
+                        return;
+                    case 1:
+                        y = value;
+                        return;
+                    case 2:
+                        z = value;
+                        return;
+                    case 3:
+                        w = value;
+                        return;
+                    default:
+                        throw new System.IndexOutOfRangeException();
+                }
+            }
+        }
+    }
+  
     /// <summary>
     /// DEPRECATED: A <c>TangoXYZij</c> object contains information returned from the depth sensor.
     /// </summary>
@@ -434,15 +555,13 @@ namespace Tango
         ///   w = cos(RotationAngle / 2)
         /// </code>
         /// </summary>
-        [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 4, ArraySubType = UnmanagedType.R8)]
-        public double[] orientation;
+        public TangoOrientation orientation;
 
         /// <summary>
         /// Translation, ordered x, y, z, of the pose of the target frame
         /// with reference to the base frame.
         /// </summary>
-        [MarshalAsAttribute(UnmanagedType.ByValArray, SizeConst = 3, ArraySubType = UnmanagedType.R8)]
-        public double[] translation;
+        public TangoTranslation translation;
 
         /// <summary>
         /// The status of the pose, according to the pose lifecycle.
@@ -478,8 +597,8 @@ namespace Tango
         {
             version = 0;
             timestamp = 0.0;
-            orientation = new double[4];
-            translation = new double[3];
+            orientation = new TangoOrientation();
+            translation = new TangoTranslation();
             status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN;
             framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
             framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;

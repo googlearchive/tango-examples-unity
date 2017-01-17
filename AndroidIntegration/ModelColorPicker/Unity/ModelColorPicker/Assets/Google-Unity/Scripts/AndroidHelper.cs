@@ -47,6 +47,38 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
+    /// Registers for the Android start event.
+    /// </summary>
+    /// <param name="onStart">On start.</param>
+   public static void RegisterStartEvent(OnStartEventHandler onStart)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
+
+        m_callbacks.RegisterOnStart(onStart);
+        #endif
+    }
+
+    /// <summary>
+    /// Registers for the Android stop event.
+    /// </summary>
+    /// <param name="onStop">On stop.</param>
+    public static void RegisterStopEvent(OnStopEventHandler onStop)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            _RegisterCallbacks();
+        }
+
+        m_callbacks.RegisterOnStop(onStop);
+        #endif
+    }
+
+    /// <summary>
     /// Registers for the Android pause event.
     /// </summary>
     /// <param name="onPause">On pause.</param>
@@ -105,7 +137,7 @@ public partial class AndroidHelper : MonoBehaviour
         {
             _RegisterCallbacks();
         }
-        
+
         m_callbacks.RegisterOnDisplayChanged(onChanged);
         #endif
     }
@@ -128,6 +160,38 @@ public partial class AndroidHelper : MonoBehaviour
     }
 
     /// <summary>
+    /// Unregisters for the Android start event.
+    /// </summary>
+    /// <param name="onStart">On start.</param>
+    public static void UnregisterStartEvent(OnStartEventHandler onStart)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+
+        m_callbacks.UnregisterOnStart(onStart);
+        #endif
+    }
+
+    /// <summary>
+    /// Unregisters for the Android stop event.
+    /// </summary>
+    /// <param name="onStop">On stop.</param>
+    public static void UnregisterStopEvent(OnStopEventHandler onStop)
+    {
+        #if ANDROID_DEVICE
+        if (m_callbacks == null)
+        {
+            return;
+        }
+
+        m_callbacks.UnregisterOnStop(onStop);
+        #endif
+    }
+
+    /// <summary>
     /// Unregisters for the Android pause event.
     /// </summary>
     /// <param name="onPause">On pause.</param>
@@ -138,7 +202,7 @@ public partial class AndroidHelper : MonoBehaviour
         {
             return;
         }
-        
+
         m_callbacks.UnregisterOnPause(onPause);
         #endif
     }
@@ -154,7 +218,7 @@ public partial class AndroidHelper : MonoBehaviour
         {
             return;
         }
-        
+
         m_callbacks.UnregisterOnResume(onResume);
         #endif
     }
@@ -170,7 +234,7 @@ public partial class AndroidHelper : MonoBehaviour
         {
             return;
         }
-        
+
         m_callbacks.UnregisterOnActivityResult(onActivityResult);
         #endif
     }
@@ -186,7 +250,7 @@ public partial class AndroidHelper : MonoBehaviour
         {
             return;
         }
-        
+
         m_callbacks.UnregisterOnDisplayChanged(onChanged);
         #endif
     }
@@ -424,7 +488,7 @@ public partial class AndroidHelper : MonoBehaviour
     public static void ShowAndroidToastMessage(string message, bool callFinish)
     {
         ShowAndroidToastMessage(message);
-        
+
         if (callFinish)
         {
             AndroidFinish();
@@ -514,7 +578,7 @@ public partial class AndroidHelper : MonoBehaviour
 
     /// <summary>
     /// Request an Android permission.
-    /// 
+    ///
     /// The result of the request is reported to a delegate registered via
     /// RegisterOnRequestPermissionsResultEvent.
     /// </summary>
@@ -529,7 +593,7 @@ public partial class AndroidHelper : MonoBehaviour
 
     /// <summary>
     /// Request multiple Android permissions.
-    /// 
+    ///
     /// The result of the request is reported to a delegate registered via
     /// RegisterOnRequestPermissionsResultEvent.
     /// </summary>
@@ -540,7 +604,7 @@ public partial class AndroidHelper : MonoBehaviour
     public static void RequestPermissions(string[] permissions, int requestCode)
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
-        
+
         if (unityActivity != null)
         {
             try
@@ -556,7 +620,7 @@ public partial class AndroidHelper : MonoBehaviour
 
     /// <summary>
     /// Check if the App should show rationale for requesting a permission.
-    /// 
+    ///
     /// Corresponds to ActivityCompat.shouldShowRequestPermissionRationale.
     /// </summary>
     /// <returns><c>true</c>, if the app should show rationale, <c>false</c> otherwise.</returns>
@@ -582,7 +646,7 @@ public partial class AndroidHelper : MonoBehaviour
 
     /// <summary>
     /// Launch this application's detailed settings.
-    /// 
+    ///
     /// This is useful to provide the user a way to turn settings back on if they have denied a
     /// critical permission and asked to not be notified again.
     /// </summary>
@@ -611,7 +675,7 @@ public partial class AndroidHelper : MonoBehaviour
     private static void _ShowAndroidToastMessage(string message, ToastLength length)
     {
         AndroidJavaObject unityActivity = GetUnityActivity();
-        
+
         if (unityActivity != null)
         {
             try
@@ -637,7 +701,7 @@ public partial class AndroidHelper : MonoBehaviour
     {
         #if ANDROID_DEVICE
         m_callbacks = new AndroidLifecycleCallbacks();
-        
+
         m_unityActivity = GetUnityActivity();
         if (m_unityActivity != null)
         {
