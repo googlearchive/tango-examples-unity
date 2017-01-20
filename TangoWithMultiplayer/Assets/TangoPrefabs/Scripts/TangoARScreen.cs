@@ -337,8 +337,8 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
 
         TangoCameraIntrinsics alignedIntrinsics = new TangoCameraIntrinsics();
         TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
-                                                                  alignedIntrinsics);
+        VideoOverlayProvider.GetDeviceOrientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
+                                                                   alignedIntrinsics);
         VideoOverlayProvider.GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
                                            intrinsics);
 

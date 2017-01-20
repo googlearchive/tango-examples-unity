@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="TangoUx.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
@@ -52,6 +52,14 @@ namespace Tango
         }
 
         /// <summary>
+        /// Disperse any events related to TangoUX functionality.
+        /// </summary>
+        public void Update()
+        {
+            UxExceptionEventListener.SendIfAvailable();
+        }
+
+        /// <summary>
         /// Raises the destroy event.
         /// </summary>
         public void OnDestroy()
@@ -74,7 +82,14 @@ namespace Tango
                 
                 if (tangoUX != null)
                 {
-                    UxExceptionEventListener.GetInstance.RegisterOnUxExceptionEventHandler(tangoUX.OnUxExceptionEventHandler);
+                    UxExceptionEventListener.RegisterOnUxExceptionEventHandler(tangoUX.OnUxExceptionEventHandler);
+                }
+
+                ITangoUXMultithreaded tangoUXMultithreaded = tangoObject as ITangoUXMultithreaded;
+                
+                if (tangoUXMultithreaded != null)
+                {
+                    UxExceptionEventListener.RegisterOnOnUxExceptionEventMultithreadedAvailable(tangoUXMultithreaded.OnUxExceptionEventMultithreadedAvailableEventHandler);
                 }
             }
         }
@@ -91,16 +106,23 @@ namespace Tango
                 
                 if (tangoUX != null)
                 {
-                    UxExceptionEventListener.GetInstance.UnregisterOnUxExceptionEventHandler(tangoUX.OnUxExceptionEventHandler);
+                    UxExceptionEventListener.UnregisterOnUxExceptionEventHandler(tangoUX.OnUxExceptionEventHandler);
+                }
+
+                ITangoUXMultithreaded tangoUXMultithreaded = tangoObject as ITangoUXMultithreaded;
+                
+                if (tangoUXMultithreaded != null)
+                {
+                    UxExceptionEventListener.UnregisterOnUxExceptionEventMultithreadedAvailable(tangoUXMultithreaded.OnUxExceptionEventMultithreadedAvailableEventHandler);
                 }
             }
         }
 
         /// <summary>
-        /// This is called when the permission granting process is finished.
+        /// Callback to handle android permissions being granted.
         /// </summary>
-        /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
-        public void OnTangoPermissions(bool permissionsGranted)
+        /// <param name="permissionsGranted">If set to <c>true</c> then permissions were granted, otherwise <c>false</c>.</param>
+        public void OnAndroidPermissions(bool permissionsGranted)
         {
             if (m_enableUXLibrary && permissionsGranted)
             {
@@ -115,6 +137,14 @@ namespace Tango
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Callback to handle all tango permissions being granted.
+        /// </summary>
+        /// <param name="permissionsGranted">If set to <c>true</c> then permissions were granted, otherwise <c>false</c>.</param>
+        public void OnTangoPermissions(bool permissionsGranted)
+        {
         }
 
         /// <summary>

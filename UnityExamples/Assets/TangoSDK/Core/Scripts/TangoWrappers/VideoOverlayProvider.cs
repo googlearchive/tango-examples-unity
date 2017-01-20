@@ -281,8 +281,8 @@ namespace Tango
         /// A TangoCameraIntrinsics filled with calibration intrinsics for the camera, this intrinsics is also
         /// aligned with device orientation.
         /// </param>
-        public static void GetDeviceOientationAlignedIntrinsics(TangoEnums.TangoCameraId cameraId,
-                                                                TangoCameraIntrinsics alignedIntrinsics)
+        public static void GetDeviceOrientationAlignedIntrinsics(TangoEnums.TangoCameraId cameraId,
+                                                                 TangoCameraIntrinsics alignedIntrinsics)
         {
             TangoCameraIntrinsics intrinsics = new TangoCameraIntrinsics();
             GetIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR, intrinsics);

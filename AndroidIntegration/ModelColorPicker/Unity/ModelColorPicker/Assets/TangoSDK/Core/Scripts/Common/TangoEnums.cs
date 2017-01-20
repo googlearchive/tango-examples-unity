@@ -64,7 +64,7 @@ namespace Tango
             /// </summary>
             NA
         }
-        
+
         /// <summary>
         /// Tango coordinate frame enumerations.
         /// </summary>
@@ -72,7 +72,7 @@ namespace Tango
         {
             /// <summary>
             /// Coordinate system for the entire Earth.
-            /// 
+            ///
             /// See WGS84: [http://en.wikipedia.org/wiki/World_Geodetic_System].
             /// </summary>
             TANGO_COORDINATE_FRAME_GLOBAL_WGS84 = 0,
@@ -132,7 +132,7 @@ namespace Tango
             /// </summary>
             TANGO_MAX_COORDINATE_FRAME_TYPE
         }
-        
+
         /// <summary>
         /// Tango Camera enumerations.
         /// </summary>
@@ -203,7 +203,7 @@ namespace Tango
             /// Area Learning Event.
             /// </summary>
             TANGO_EVENT_AREA_LEARNING,
-        }    
+        }
 
         /// <summary>
         /// Tango runtime configuration enumerations.
@@ -255,13 +255,23 @@ namespace Tango
             /// See <![CDATA[http://scholar.google.com/scholar?cluster=13508836606423559694&hl=en&as_sdt=2005&sciodt=0,5]]>.
             /// </summary>
             TANGO_CALIBRATION_EQUIDISTANT,
+
+            /// <summary>
+            /// Brown's model, with the parameter vector representing Brown's model
+            ///  distortion as [k1, k2].
+            /// </summary>
             TANGO_CALIBRATION_POLYNOMIAL_2_PARAMETERS,
 
             /// <summary>
-            /// Tsai's k1,k2,k3 Model.
-            /// See <![CDATA[http://scholar.google.com/scholar?cluster=3512800631607394002&hl=en&as_sdt=0,5&sciodt=0,5]]>.
+            /// Brown's model, with the parameter vector representing Brown's model
+            ///  distortion as [k1, k2, k3].
             /// </summary>
             TANGO_CALIBRATION_POLYNOMIAL_3_PARAMETERS,
+
+            /// <summary>
+            /// Brown's model, with the parameter vector representing Brown's model
+            ///  distortion as [k1, k2, p1, p2, k3].
+            /// </summary>
             TANGO_CALIBRATION_POLYNOMIAL_5_PARAMETERS,
         }
 
@@ -274,7 +284,7 @@ namespace Tango
             /// <summary>
             /// YCrCb 4:2:0 Planar.
             /// </summary>
-            TANGO_HAL_PIXEL_FORMAT_YV12 = 0x32315659  
+            TANGO_HAL_PIXEL_FORMAT_YV12 = 0x32315659
         }
 
         /// <summary>

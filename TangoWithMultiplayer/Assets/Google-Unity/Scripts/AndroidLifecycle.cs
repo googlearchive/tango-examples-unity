@@ -25,6 +25,16 @@ using UnityEngine;
                                                          Justification = "Legacy support.")]
 
 /// <summary>
+/// Delegate for the Android onStart event.
+/// </summary>
+public delegate void OnStartEventHandler();
+
+/// <summary>
+/// Delegate for the Android onStop event.
+/// </summary>
+public delegate void OnStopEventHandler();
+
+/// <summary>
 /// Delegate for the Android onPause event.
 /// </summary>
 public delegate void OnPauseEventHandler();
@@ -78,8 +88,18 @@ public enum AndroidPermissionGrantResult
 /// <summary>
 /// Binds callbacks directly to Android lifecycle.
 /// </summary>
-public class AndroidLifecycleCallbacks : AndroidJavaProxy 
+public class AndroidLifecycleCallbacks : AndroidJavaProxy
 {
+    /// <summary>
+    /// Occurs when the Android onPause event is fired.
+    /// </summary>
+    private static OnStartEventHandler m_onStartEvent;
+
+    /// <summary>
+    /// Occurs when the Android onPause event is fired.
+    /// </summary>
+    private static OnStopEventHandler m_onStopEvent;
+
     /// <summary>
     /// Occurs when the Android onPause event is fired.
     /// </summary>
@@ -110,6 +130,30 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     /// </summary>
     public AndroidLifecycleCallbacks() : base("com.google.unity.GoogleUnityActivity$AndroidLifecycleListener")
     {
+    }
+
+    /// <summary>
+    /// Registers the on start callback to Android.
+    /// </summary>
+    /// <param name="onStart">On start.</param>
+    public void RegisterOnStart(OnStartEventHandler onStart)
+    {
+        if (onStart != null)
+        {
+            m_onStartEvent += onStart;
+        }
+    }
+
+    /// <summary>
+    /// Registers the on stop callback to Android.
+    /// </summary>
+    /// <param name="onStop">On stop.</param>
+    public void RegisterOnStop(OnStopEventHandler onStop)
+    {
+        if (onStop != null)
+        {
+            m_onStopEvent += onStop;
+        }
     }
 
     /// <summary>
@@ -173,6 +217,30 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
     }
 
     /// <summary>
+    /// Unregisters the on start callback to Android.
+    /// </summary>
+    /// <param name="onStart">On start.</param>
+    public void UnregisterOnStart(OnStartEventHandler onStart)
+    {
+        if (onStart != null)
+        {
+            m_onStartEvent -= onStart;
+        }
+    }
+
+    /// <summary>
+    /// Unregisters the on stop callback to Android.
+    /// </summary>
+    /// <param name="onStop">On stop.</param>
+    public void UnregisterOnStop(OnStopEventHandler onStop)
+    {
+        if (onStop != null)
+        {
+            m_onStopEvent -= onStop;
+        }
+    }
+
+    /// <summary>
     /// Unregisters the on pause callback to Android.
     /// </summary>
     /// <param name="onPause">On pause.</param>
@@ -219,7 +287,7 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
             m_onDisplayChangedEvent -= onDisplayChanged;
         }
     }
-    
+
     /// <summary>
     /// Unregisters the onRequestPermissionResult callback to Android.
     /// </summary>
@@ -243,7 +311,7 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
         if (methodName == "onRequestPermissionsResult")
         {
             // As of this writing, Unity versions 5.2 and up do not properly marshal Arrays from
-            // Java to Unity when using the AndroidJavaProxy. Bypass that code to properly get the 
+            // Java to Unity when using the AndroidJavaProxy. Bypass that code to properly get the
             // array from Java.
             onRequestPermissionsResult(
                 javaArgs[0].Call<int>("intValue", new object[0]),
@@ -254,6 +322,36 @@ public class AndroidLifecycleCallbacks : AndroidJavaProxy
         else
         {
             return base.Invoke(methodName, javaArgs);
+        }
+    }
+
+    /// <summary>
+    /// Implements the Android onStart.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
+                                                     "SA1300:ElementMustBeginWithUpperCaseLetter",
+                                                     Justification = "Android API.")]
+    protected void onStart()
+    {
+        if (m_onStartEvent != null)
+        {
+            Debug.Log("Unity got the Java onStart");
+            m_onStartEvent();
+        }
+    }
+
+    /// <summary>
+    /// Implements the Android onStop.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules",
+                                                     "SA1300:ElementMustBeginWithUpperCaseLetter",
+                                                     Justification = "Android API.")]
+    protected void onStop()
+    {
+        if (m_onStopEvent != null)
+        {
+            Debug.Log("Unity got the Java onStop");
+            m_onStopEvent();
         }
     }
 
