@@ -312,6 +312,15 @@ namespace Tango
                 return;
             }
 
+#if UNITY_EDITOR
+            if (m_context == IntPtr.Zero) 
+            {
+                Debug.LogError("Mesh Reconstruction is not currently supported in the Unity Editor.");
+                m_enabled = false;
+                return;
+            }
+#endif
+
             // Build World T depth camera
             TangoPoseData world_T_devicePose = new TangoPoseData();
             if (m_useAreaDescriptionPose)
@@ -356,6 +365,15 @@ namespace Tango
             {
                 return;
             }
+
+#if UNITY_EDITOR
+            if (m_context == IntPtr.Zero) 
+            {
+                Debug.LogError("Mesh Reconstruction is not currently supported in the Unity Editor.");
+                m_enabled = false;
+                return;
+            }
+#endif
 
             if (cameraId != TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR)
             {
