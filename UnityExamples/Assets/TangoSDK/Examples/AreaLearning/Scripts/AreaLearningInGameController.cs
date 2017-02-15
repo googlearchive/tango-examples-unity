@@ -389,7 +389,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         // When learning mode is off, and an Area Description is loaded, this callback indicates a
         // relocalization event. Relocalization is when the device finds out where it is with respect to the loaded
         // Area Description. In our case, when the device is relocalized, the markers will be loaded because we
-        // know the relatvie device location to the markers.
+        // know the relative device location to the markers.
         if (poseData.framePair.baseFrame == 
             TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION &&
             poseData.framePair.targetFrame ==
