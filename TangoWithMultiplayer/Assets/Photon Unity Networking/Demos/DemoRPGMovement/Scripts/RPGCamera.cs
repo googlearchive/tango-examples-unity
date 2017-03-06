@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class RPGCamera : MonoBehaviour 
+public class RPGCamera : MonoBehaviour
 {
     public Transform Target;
 
@@ -16,8 +16,8 @@ public class RPGCamera : MonoBehaviour
     Vector3 m_LookAtPoint;
     Vector3 m_LocalForwardVector;
     float m_Distance;
-    
-    void Start() 
+
+    void Start()
     {
         m_CameraTransform = transform.GetChild( 0 );
         m_LocalForwardVector = m_CameraTransform.forward;
@@ -27,7 +27,7 @@ public class RPGCamera : MonoBehaviour
         m_LookAtPoint = m_CameraTransform.localPosition + m_LocalForwardVector * m_Distance;
     }
 
-    void LateUpdate() 
+    void LateUpdate()
     {
         UpdateDistance();
         UpdateZoom();
@@ -57,12 +57,12 @@ public class RPGCamera : MonoBehaviour
 
     void UpdateRotation()
     {
-        if( Input.GetMouseButton( 0 ) == true || Input.GetMouseButton( 1 ) == true )
+        if( Input.GetMouseButton( 0 ) == true || Input.GetMouseButton( 1 ) == true || Input.GetButton("Fire1") || Input.GetButton("Fire2"))
         {
             transform.Rotate( 0, Input.GetAxis( "Mouse X" ) * TurnModifier, 0 );
         }
 
-        if( Input.GetMouseButton( 1 ) == true && Target != null )
+        if((Input.GetMouseButton( 1 ) || Input.GetButton("Fire2")) && Target != null )
         {
             Target.rotation = Quaternion.Euler( 0, transform.rotation.eulerAngles.y, 0 );
         }

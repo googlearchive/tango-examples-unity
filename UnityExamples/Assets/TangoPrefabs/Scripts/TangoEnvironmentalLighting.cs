@@ -29,7 +29,7 @@ using UnityEngine;
 /// diffuse environment map and passes the specular and diffuse data for image
 /// based lighting materials.
 ///
-/// If set, materials that use an image based lighting shader, such as
+/// If set, materials that use an image-based lighting shader such as
 /// EnvironmentalLighting will work.
 /// Note 1: Must have both TextureID and Raw Bytes enabled under Video
 /// Overlay in the Tango Manager.
@@ -108,7 +108,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITa
 
     /// <summary>
     /// Awake for TangoEnvironmentalLighting. Compute the coefficients,
-    /// polar coordinates, and cartesian coordinates to be sampled.
+    /// polar coordinates, and Cartesian coordinates to be sampled.
     /// </summary>
     public void Awake()
     {
@@ -202,7 +202,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITa
     }
     
     /// <summary>
-    /// This is called when the permission granting process is finished.
+    /// This is called when the permission-granting process is finished.
     /// </summary>
     /// <param name="permissionsGranted"><c>true</c> if permissions were granted, otherwise <c>false</c>.</param>
     public void OnTangoPermissions(bool permissionsGranted)
@@ -210,7 +210,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITa
     }
 
     /// <summary>
-    /// This is called when successfully connected to the Tango service.
+    /// This is called when successfully connected to the Tango Service.
     /// </summary>
     public void OnTangoServiceConnected()
     {
@@ -440,7 +440,7 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITa
     /// <![CDATA[https://cseweb.ucsd.edu/~ravir/papers/envmap/envmap.pdf]]>.
     /// </summary>
     /// <param name="i">The channel to compute. R is 0, G is 1, B is 2.</param>
-    /// <returns>The coefficient matrix that encodes the color at a given spherical harmonic points.</returns>
+    /// <returns>The coefficient matrix that encodes the color at given spherical harmonic points.</returns>
     private Matrix4x4 _SetShmMatrix(int i)
     {
         Matrix4x4 matrix = new Matrix4x4();
@@ -489,8 +489,8 @@ public class TangoEnvironmentalLighting : MonoBehaviour, ITangoVideoOverlay, ITa
     }
 
     /// <summary>
-    /// A single sample point with it's polar coordinates, cartesian
-    /// coordinates, and it's weight for each spherical harmonic level and
+    /// A single sample point with its polar coordinates, Cartesian
+    /// coordinates, and its weight for each spherical harmonic level and
     /// order.
     /// </summary>
     private struct SphericalHarmonicSample

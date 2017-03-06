@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class JumpAndRunMovement : MonoBehaviour 
+public class JumpAndRunMovement : MonoBehaviour
 {
     public float Speed;
     public float JumpForce;
@@ -12,14 +12,14 @@ public class JumpAndRunMovement : MonoBehaviour
 
     bool m_IsGrounded;
 
-    void Awake() 
+    void Awake()
     {
         m_Animator = GetComponent<Animator>();
         m_Body = GetComponent<Rigidbody2D>();
         m_PhotonView = GetComponent<PhotonView>();
     }
 
-    void Update() 
+    void Update()
     {
         UpdateIsGrounded();
         UpdateIsRunning();
@@ -51,11 +51,11 @@ public class JumpAndRunMovement : MonoBehaviour
 
     void UpdateJumping()
     {
-        if( Input.GetKey( KeyCode.Space ) == true && m_IsGrounded == true )
+        if (Input.GetButton("Jump") && m_IsGrounded)
         {
-            m_Animator.SetTrigger( "IsJumping" );
-            m_Body.AddForce( Vector2.up * JumpForce );
-            m_PhotonView.RPC( "DoJump", PhotonTargets.Others );
+            m_Animator.SetTrigger("IsJumping");
+            m_Body.AddForce(Vector2.up * JumpForce);
+            m_PhotonView.RPC("DoJump", PhotonTargets.Others);
         }
     }
 
@@ -72,7 +72,7 @@ public class JumpAndRunMovement : MonoBehaviour
         if( Input.GetAxisRaw( "Horizontal" ) > 0.5f )
         {
             movementVelocity.x = Speed;
-            
+
         }
         else if( Input.GetAxisRaw( "Horizontal" ) < -0.5f )
         {

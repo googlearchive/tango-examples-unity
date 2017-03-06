@@ -27,7 +27,7 @@ public class OnClickFlashRpc : Photon.PunBehaviour
         }
         isFlashing = true;
 
-        this.originalMaterial = GetComponent<Renderer>().material;
+		this.originalMaterial = GetComponent<Renderer>().material;
         if (!this.originalMaterial.HasProperty("_Emission"))
         {
             Debug.LogWarning("Doesnt have emission, can't flash " + gameObject);

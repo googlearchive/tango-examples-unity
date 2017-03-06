@@ -184,7 +184,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
             m_arCameraPostProcess.enabled = !m_arCameraPostProcess.enabled;
         }
 
-        if (m_showDebug && m_tangoApplication.HasRequestedPermissions())
+        if (m_showDebug && m_tangoApplication.HasRequiredPermissions)
         {
             Color oldColor = GUI.color;
             GUI.color = Color.white;
@@ -276,7 +276,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
             m_hideAllRect = new Rect(0, 0, 0, 0);
         }
     }
-    
+
     /// <summary>
     /// This is called when the permission granting process is finished.
     /// </summary>
@@ -284,7 +284,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     public void OnTangoPermissions(bool permissionsGranted)
     {
     }
-    
+
     /// <summary>
     /// This is called when successfully connected to the Tango service.
     /// </summary>
@@ -292,7 +292,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
     {
         m_tangoApplication.SetDepthCameraRate(TangoEnums.TangoDepthCameraRate.DISABLED);
     }
-    
+
     /// <summary>
     /// This is called when disconnected from the Tango service.
     /// </summary>
@@ -302,7 +302,7 @@ public class ARGUIController : MonoBehaviour, ITangoLifecycle, ITangoDepth
 
     /// <summary>
     /// This is called each time new depth data is available.
-    /// 
+    ///
     /// On the Tango tablet, the depth callback occurs at 5 Hz.
     /// </summary>
     /// <param name="tangoDepth">Tango depth.</param>

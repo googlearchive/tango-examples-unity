@@ -30,6 +30,7 @@ using ExitGames.Client.Photon;
 using UnityEngine;
 
 using Hashtable = ExitGames.Client.Photon.Hashtable;
+using SupportClassPun = ExitGames.Client.Photon.SupportClass;
 
 
 /// <summary>Defines the OnPhotonSerializeView method to make it easy to implement correctly for observable scripts.</summary>
@@ -329,7 +330,7 @@ public interface IPunCallbacks
     /// During development of a game, it might also fail due to wrong configuration on the server side.
     /// In those cases, logging the debugMessage is very important.
     ///
-    /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://www.exitgames.com/dashboard)),
+    /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://www.photonengine.com/dashboard)),
     /// this won't be called!
     /// </remarks>
     /// <param name="debugMessage">Contains a debug message why authentication failed. This has to be fixed during development time.</param>
@@ -442,12 +443,12 @@ namespace Photon
     {
         /// <summary>Cache field for the PhotonView on this GameObject.</summary>
         private PhotonView pvCache = null;
-        
+
         /// <summary>A cached reference to a PhotonView on this GameObject.</summary>
         /// <remarks>
         /// If you intend to work with a PhotonView in a script, it's usually easier to write this.photonView.
         ///
-        /// If you intend to remove the PhotonView component from the GameObject but keep this Photon.MonoBehaviour, 
+        /// If you intend to remove the PhotonView component from the GameObject but keep this Photon.MonoBehaviour,
         /// avoid this reference or modify this code to use PhotonView.Get(obj) instead.
         /// </remarks>
         public PhotonView photonView
@@ -462,7 +463,7 @@ namespace Photon
             }
         }
 
-
+        #if !UNITY_MIN_5_3
         /// <summary>
         /// This property is only here to notify developers when they use the outdated value.
         /// </summary>
@@ -477,7 +478,7 @@ namespace Photon
         /// public PhotonView networkView
         /// </remarks>
         [Obsolete("Use a photonView")]
-        new public PhotonView networkView
+        public new PhotonView networkView
         {
             get
             {
@@ -485,6 +486,7 @@ namespace Photon
                 return PhotonView.Get(this);
             }
         }
+        #endif
     }
 
 
@@ -795,7 +797,7 @@ namespace Photon
         /// During development of a game, it might also fail due to wrong configuration on the server side.
         /// In those cases, logging the debugMessage is very important.
         ///
-        /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://www.exitgames.com/dashboard)),
+        /// Unless you setup a custom authentication service for your app (in the [Dashboard](https://www.photonengine.com/dashboard)),
         /// this won't be called!
         /// </remarks>
         /// <param name="debugMessage">Contains a debug message why authentication failed. This has to be fixed during development time.</param>
@@ -873,22 +875,11 @@ namespace Photon
 /// Container class for info about a particular message, RPC or update.
 /// </summary>
 /// \ingroup publicApi
-public class PhotonMessageInfo
+public struct PhotonMessageInfo
 {
-    private int timeInt;
-    public PhotonPlayer sender;
-    public PhotonView photonView;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="PhotonMessageInfo"/> class.
-    /// To create an empty messageinfo only!
-    /// </summary>
-    public PhotonMessageInfo()
-    {
-        this.sender = PhotonNetwork.player;
-        this.timeInt = (int)(PhotonNetwork.time * 1000);
-        this.photonView = null;
-    }
+    private readonly int timeInt;
+    public readonly PhotonPlayer sender;
+    public readonly PhotonView photonView;
 
     public PhotonMessageInfo(PhotonPlayer player, int timestamp, PhotonView view)
     {
@@ -913,186 +904,7 @@ public class PhotonMessageInfo
     }
 }
 
-/// <summary>Wraps up common room properties needed when you create rooms.</summary>
-/// <remarks>This directly maps to what the fields in the Room class.</remarks>
-public class RoomOptions
-{
-    /// <summary>Defines if this room is listed in the lobby. If not, it also is not joined randomly.</summary>
-    /// <remarks>
-    /// A room that is not visible will be excluded from the room lists that are sent to the clients in lobbies.
-    /// An invisible room can be joined by name but is excluded from random matchmaking.
-    ///
-    /// Use this to "hide" a room and simulate "private rooms". Players can exchange a roomname and create it
-    /// invisble to avoid anyone else joining it.
-    /// </remarks>
-    public bool isVisible { get { return this.isVisibleField; } set { this.isVisibleField = value; } }
-    private bool isVisibleField = true;
 
-    /// <summary>Defines if this room can be joined at all.</summary>
-    /// <remarks>
-    /// If a room is closed, no player can join this. As example this makes sense when 3 of 4 possible players
-    /// start their gameplay early and don't want anyone to join during the game.
-    /// The room can still be listed in the lobby (set isVisible to control lobby-visibility).
-    /// </remarks>
-    public bool isOpen { get { return this.isOpenField; } set { this.isOpenField = value; } }
-    private bool isOpenField = true;
-
-    /// <summary>Max number of players that can be in the room at any time. 0 means "no limit".</summary>
-    public byte maxPlayers;
-
-    /// <summary>Time To Live (TTL) for an 'actor' in a room. If a client disconnects, this actor is inactive first and removed after this timeout. In milliseconds.</summary>
-    // public int PlayerTtl;
-
-    /// <summary>Time To Live (TTL) for a room when the last player leaves. Keeps room in memory for case a player re-joins soon. In milliseconds.</summary>
-    // public int EmptyRoomTtl;
-
-
-    /// <summary>Time To Live (TTL) for a room when the last player leaves. Keeps room in memory for case a player re-joins soon. In milliseconds.</summary>
-    //public int EmptyRoomTtl;
-
-    ///// <summary>Activates UserId checks on joining - allowing a users to be only once in the room.</summary>
-    ///// <remarks>
-    ///// Turnbased rooms should be created with this check turned on! They should also use custom authentication.
-    ///// Disabled by default for backwards-compatibility.
-    ///// </remarks>
-    //public bool checkUserOnJoin { get { return this.checkUserOnJoinField; } set { this.checkUserOnJoinField = value; } }
-    //private bool checkUserOnJoinField = false;
-
-    /// <summary>Removes a user's events and properties from the room when a user leaves.</summary>
-    /// <remarks>
-    /// This makes sense when in rooms where players can't place items in the room and just vanish entirely.
-    /// When you disable this, the event history can become too long to load if the room stays in use indefinitely.
-    /// Default: true. Cleans up the cache and props of leaving users.
-    /// </remarks>
-    public bool cleanupCacheOnLeave { get { return this.cleanupCacheOnLeaveField; } set { this.cleanupCacheOnLeaveField = value; } }
-    private bool cleanupCacheOnLeaveField = PhotonNetwork.autoCleanUpPlayerObjects;
-
-    /// <summary>The room's custom properties to set. Use string keys!</summary>
-    /// <remarks>
-    /// Custom room properties are any key-values you need to define the game's setup.
-    /// The shorter your keys are, the better.
-    /// Example: Map, Mode (could be "m" when used with "Map"), TileSet (could be "t").
-    /// </remarks>
-    public Hashtable customRoomProperties;
-
-    /// <summary>Defines the custom room properties that get listed in the lobby.</summary>
-    /// <remarks>
-    /// Name the custom room properties that should be available to clients that are in a lobby.
-    /// Use with care. Unless a custom property is essential for matchmaking or user info, it should
-    /// not be sent to the lobby, which causes traffic and delays for clients in the lobby.
-    ///
-    /// Default: No custom properties are sent to the lobby.
-    /// </remarks>
-    public string[] customRoomPropertiesForLobby = new string[0];
-
-    /// <summary>
-    /// Tells the server to skip room events for joining and leaving players.
-    /// </summary>
-    /// <remarks>
-    /// Using this makes the client unaware of the other players in a room.
-    /// That can save some traffic if you have some server logic that updates players
-    /// but it can also limit the client's usability.
-    ///
-    /// PUN will break if you use this, so it's not settable.
-    /// </remarks>
-    public bool suppressRoomEvents { get { return this.suppressRoomEventsField; } /*set { this.suppressRoomEventsField = value; }*/ }
-    private bool suppressRoomEventsField = false;
-
-
-    ///// <summary>
-    ///// Defines if the UserIds of players get "published" in the room. Useful for FindFriends, if players want to play another game together.
-    ///// </summary>
-    //public bool publishUserId { get { return this.publishUserIdField; } set { this.publishUserIdField = value; } }
-    //private bool publishUserIdField = false;
-}
-
-
-///// <summary>Refers to a specific lobby (and type) on the server.</summary>
-///// <remarks>
-///// The name and type are the unique identifier for a lobby.<br/>
-///// Join a lobby via PhotonNetwork.JoinLobby(TypedLobby lobby).<br/>
-///// The current lobby is stored in PhotonNetwork.lobby.
-///// </remarks>
-//public class TypedLobby
-//{
-//    /// <summary>
-//    /// The name of the Lobby. Can be any string. Default lobby uses "".
-//    /// </summary>
-//    public string Name;
-
-//    /// <summary>
-//    /// The type of the Lobby. Default lobby uses LobbyType.Default.
-//    /// </summary>
-//    public LobbyType Type;
-
-//    public static readonly TypedLobby Default = new TypedLobby();
-//    public bool IsDefault { get { return this.Type == LobbyType.Default && string.IsNullOrEmpty(this.Name); } }
-
-//    public TypedLobby()
-//    {
-//        this.Name = string.Empty;
-//        this.Type = LobbyType.Default;
-//    }
-
-//    public TypedLobby(string name, LobbyType type)
-//    {
-//        this.Name = name;
-//        this.Type = type;
-//    }
-
-//    public override string ToString()
-//    {
-//        return string.Format("Lobby '{0}'[{1}]", this.Name, this.Type);
-//    }
-//}
-
-
-///// <summary>Used in the PhotonNetwork.LobbyStatistics list of lobbies used by your application. Contains room- and player-count for each.</summary>
-//public class TypedLobbyInfo : TypedLobby
-//{
-//    public int PlayerCount;
-//    public int RoomCount;
-
-//    public override string ToString()
-//    {
-//        return string.Format("LobbyInfo '{0}'[{1}] rooms: {2} players: {3}", this.Name, this.Type, this.RoomCount, this.PlayerCount);
-//    }
-//}
-
-
-///// <summary>Aggregates several less-often used options for operation RaiseEvent. See field descriptions for usage details.</summary>
-//public class RaiseEventOptions
-//{
-//    /// <summary>Default options: CachingOption: DoNotCache, InterestGroup: 0, targetActors: null, receivers: Others, sequenceChannel: 0.</summary>
-//    public readonly static RaiseEventOptions Default = new RaiseEventOptions();
-
-//    /// <summary>Defines if the server should simply send the event, put it in the cache or remove events that are like this one.</summary>
-//    /// <remarks>
-//    /// When using option: SliceSetIndex, SlicePurgeIndex or SlicePurgeUpToIndex, set a CacheSliceIndex. All other options except SequenceChannel get ignored.
-//    /// </remarks>
-//    public EventCaching CachingOption;
-
-//    /// <summary>The number of the Interest Group to send this to. 0 goes to all users but to get 1 and up, clients must subscribe to the group first.</summary>
-//    public byte InterestGroup;
-
-//    /// <summary>A list of PhotonPlayer.IDs to send this event to. You can implement events that just go to specific users this way.</summary>
-//    public int[] TargetActors;
-
-//    /// <summary>Sends the event to All, MasterClient or Others (default). Be careful with MasterClient, as the client might disconnect before it got the event and it gets lost.</summary>
-//    public ReceiverGroup Receivers;
-
-//    /// <summary>Events are ordered per "channel". If you have events that are independent of others, they can go into another sequence or channel.</summary>
-//    public byte SequenceChannel;
-
-//    /// <summary>Events can be forwarded to Webhooks, which can evaluate and use the events to follow the game's state.</summary>
-//    public bool ForwardToWebhook;
-
-//    /// <summary>Used along with CachingOption SliceSetIndex, SlicePurgeIndex or SlicePurgeUpToIndex if you want to set or purge a specific cache-slice.</summary>
-//    public int CacheSliceIndex;
-
-//    /// <summary>Use rarely. The binary message gets encrpted before being sent. Any receiver in the room will be able to decrypt the message, of course.</summary>
-//    public bool Encrypt;
-//}
 
 /// <summary>Defines Photon event-codes as used by PUN.</summary>
 internal class PunEvent
@@ -1129,7 +941,7 @@ internal class PunEvent
 public class PhotonStream
 {
     bool write = false;
-    private List<object> writeData;
+    private Queue<object> writeData;
     private object[] readData;
     internal byte currentItem = 0; //Used to track the next item to receive.
 
@@ -1141,12 +953,24 @@ public class PhotonStream
         this.write = write;
         if (incomingData == null)
         {
-            this.writeData = new List<object>(10);
+            this.writeData = new Queue<object>(10);
         }
         else
         {
             this.readData = incomingData;
         }
+    }
+
+    public void SetReadStream(object[] incomingData, byte pos = 0)
+    {
+        this.readData = incomingData;
+        this.currentItem = pos;
+        this.write = false;
+    }
+
+    internal void ResetWriteStream()
+    {
+        writeData.Clear();
     }
 
     /// <summary>If true, this client should add data to the stream to send it.</summary>
@@ -1207,7 +1031,7 @@ public class PhotonStream
             return;
         }
 
-        this.writeData.Add(obj);
+        this.writeData.Enqueue(obj);
     }
 
     /// <summary>Turns the stream into a new object[].</summary>
@@ -1223,7 +1047,7 @@ public class PhotonStream
     {
         if (this.write)
         {
-            this.writeData.Add(myBool);
+            this.writeData.Enqueue(myBool);
         }
         else
         {
@@ -1242,7 +1066,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(myInt);
+            this.writeData.Enqueue(myInt);
         }
         else
         {
@@ -1261,7 +1085,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(value);
+            this.writeData.Enqueue(value);
         }
         else
         {
@@ -1280,7 +1104,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(value);
+            this.writeData.Enqueue(value);
         }
         else
         {
@@ -1299,7 +1123,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(value);
+            this.writeData.Enqueue(value);
         }
         else
         {
@@ -1318,7 +1142,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(obj);
+            this.writeData.Enqueue(obj);
         }
         else
         {
@@ -1337,7 +1161,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(obj);
+            this.writeData.Enqueue(obj);
         }
         else
         {
@@ -1356,7 +1180,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(obj);
+            this.writeData.Enqueue(obj);
         }
         else
         {
@@ -1375,7 +1199,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(obj);
+            this.writeData.Enqueue(obj);
         }
         else
         {
@@ -1394,7 +1218,7 @@ public class PhotonStream
     {
         if (write)
         {
-            this.writeData.Add(obj);
+            this.writeData.Enqueue(obj);
         }
         else
         {
@@ -1559,7 +1383,7 @@ public class WebRpcResponse
     /// <returns>String resembling the result.</returns>
     public string ToStringFull()
     {
-        return string.Format("{0}={2}: {1} \"{3}\"", Name, SupportClass.DictionaryToString(Parameters), ReturnCode, DebugMessage);
+        return string.Format("{0}={2}: {1} \"{3}\"", Name, SupportClassPun.DictionaryToString(Parameters), ReturnCode, DebugMessage);
     }
 }
 

@@ -94,7 +94,6 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
 
     /// <summary>
     /// Converts a color camera position into its corresponding normalized Unity viewport position.
-    /// image.
     /// </summary>
     /// <returns>Normalized position for the color camera.</returns>
     /// <param name="pos">Normalized position for the 3D viewport.</param>
@@ -229,7 +228,6 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     private static void _MaterialUpdateForIntrinsics(
         float uOffset, float vOffset, OrientationManager.Rotation colorCameraRDisplay)
     {
-        TangoApplication tangoApplication = GameObject.FindObjectOfType<TangoApplication>();
         Vector2[] uvs = new Vector2[4];
         uvs[0] = new Vector2(0 + uOffset, 0 + vOffset);
         uvs[1] = new Vector2(0 + uOffset, 1 - vOffset);
@@ -306,21 +304,23 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     private void _SetRenderAndCamera(OrientationManager.Rotation displayRotation,
                                      OrientationManager.Rotation colorCameraRotation)
     {
-        float cameraRatio = (float)Screen.width / (float)Screen.height;
         float cameraWidth = (float)Screen.width;
         float cameraHeight = (float)Screen.height;
-        bool needToFlipCameraRatio = false;
-
+        
+        #pragma warning disable 0219
         // Here we are computing if current display orientation is landscape or portrait.
-        // AndroidHelper.GetAndroidDefaultOrientation() returns 1 if deivce default orientation is in portrait,
+        // AndroidHelper.GetAndroidDefaultOrientation() returns 1 if device default orientation is in portrait,
         // returns 2 if device default orientation is landscape. Adding device default orientation with
-        // how much the display is rotation from default orientation will get us the result of current display
+        // how much the display is rotated from default orientation will get us the result of current display
         // orientation. (landscape vs. portrait)
         bool isLandscape = (AndroidHelper.GetDefaultOrientation() + (int)displayRotation) % 2 == 0;
-
+        bool needToFlipCameraRatio = false;
+        float cameraRatio = (float)Screen.width / (float)Screen.height;
+        #pragma warning restore 0219
+        
 #if !UNITY_EDITOR
-        // In most of the time, we don't need to flip the camera width and height. However, in some cases Unity camera
-        // only updates couple of frames after the display changed callback from Android, thus we need to flip the width
+        // In most cases, we don't need to flip the camera width and height. However, in some cases Unity camera
+        // only updates a couple of frames after the display changed callback from Android; thus, we need to flip the width
         // and height in this case.
         //
         // This does not happen in the editor, because the emulated device does not ever rotate.
@@ -381,7 +381,7 @@ public class TangoARScreen : MonoBehaviour, ITangoLifecycle, ITangoCameraTexture
     /// <summary>
     /// Called when device orientation is changed.
     /// </summary>
-    /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
+    /// <param name="displayRotation">Orientation of current activity. Index enum is same as Android screen
     /// rotation standard.</param>
     /// <param name="colorCameraRotation">Orientation of current color camera sensor. Index enum is same as Android
     /// camera rotation standard.</param>

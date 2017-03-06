@@ -130,31 +130,31 @@ Material:
       data:
         first:
           name: _Fx
-        second: 1043.13
+        second: 1051.474
       data:
         first:
           name: _Fy
-        second: 1038.62
+        second: 1051.474
       data:
         first:
           name: _Cx
-        second: 641.926025
+        second: 640
       data:
         first:
           name: _Cy
-        second: 359.115997
+        second: 360
       data:
         first:
           name: _K0
-        second: .246231005
+        second: 0
       data:
         first:
           name: _K1
-        second: -.727204025
+        second: 0
       data:
         first:
           name: _K2
-        second: .72606498
+        second: 0
       data:
         first:
           name: _Width

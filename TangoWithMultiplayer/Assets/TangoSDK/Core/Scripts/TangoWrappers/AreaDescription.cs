@@ -57,9 +57,9 @@ namespace Tango
         /// <summary>
         /// Extension used to identify the fake area description files
         /// used to aid in area description interface tests in the Editor.
-        /// 
+        ///
         /// Functions as a sanity check to avoid trying to load
-        /// miscellaneous files (e.g. generated .DS_Store files on Macs). 
+        /// miscellaneous files (e.g. generated .DS_Store files on Macs).
         /// </summary>
         private const string EMULATED_ADF_EXTENSION = ".ead";
 
@@ -67,14 +67,12 @@ namespace Tango
         /// Path to where the fake area description files useed to aid in
         /// area description interface tests in the Editor are to be kept.
         /// </summary>
-        private static readonly string EMULATED_ADF_SAVE_PATH = 
-            UnityEngine.Application.persistentDataPath
-                + "/TangoEmulation/AreaDescriptions/";
+        private static string EMULATED_ADF_SAVE_PATH;
 #endif
-        
+
         /// <summary>
         /// The date-time epoch for Tango Metadata.
-        /// 
+        ///
         /// This is the same as the Unix epoch, 00:00:00 UTC on January 1st, 1970.
         /// </summary>
         private static readonly DateTime METADATA_EPOCH = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -84,13 +82,13 @@ namespace Tango
         /// Xml serializer used for reading and writing metadata
         /// for fake area descriptions in the Editor.
         /// </summary>
-        private static System.Xml.Serialization.XmlSerializer metadataXmlSerializer = 
+        private static System.Xml.Serialization.XmlSerializer metadataXmlSerializer =
             new System.Xml.Serialization.XmlSerializer(typeof(Metadata));
 #endif
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.AreaDescription"/> class.
-        /// 
+        ///
         /// Private to make sure people use <c>AreaDescription.ForUUID</c>
         /// </summary>
         /// <param name="uuid">UUID string for an Area Description.</param>
@@ -146,7 +144,7 @@ namespace Tango
 
         /// <summary>
         /// Saves the current area description, returning the area description saved.
-        /// 
+        ///
         /// You can only save an area description while connected to the Tango Service and if you have enabled Area
         /// Learning mode. If you loaded an area description before connecting, then calling this method appends any
         /// new learned areas to that area description and returns an area description with the same UUID. If you did
@@ -155,7 +153,7 @@ namespace Tango
         /// </summary>
         /// <returns>
         /// AreaDescription instance for the newly saved area description if saved successfully, <c>null</c> otherwise.
-        /// 
+        ///
         /// See logcat for details of why a saved failed.
         /// </returns>
         public static AreaDescription SaveCurrent()
@@ -175,11 +173,11 @@ namespace Tango
 
                 EmulatedAreaDescriptionHelper.m_currentUUID = uuid;
 
-                try 
+                try
                 {
                     Directory.CreateDirectory(EMULATED_ADF_SAVE_PATH);
 
-                    using (StreamWriter streamWriter = 
+                    using (StreamWriter streamWriter =
                            new StreamWriter(File.Open(EMULATED_ADF_SAVE_PATH + uuid + EMULATED_ADF_EXTENSION,
                                                       FileMode.Create)))
                     {
@@ -193,7 +191,7 @@ namespace Tango
                 }
                 catch (IOException ioException)
                 {
-                    Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                    Debug.LogError("IO error in Area Description save/load emulation:\n"
                                    + ioException.Message);
                     return null;
                 }
@@ -220,9 +218,9 @@ namespace Tango
             return AreaDescription.ForUUID(uuid);
 #endif
         }
-        
+
         /// <summary>
-        /// Import an area description from a file path to the default area storage location. 
+        /// Import an area description from a file path to the default area storage location.
         /// </summary>
         /// <returns><c>true</c> if the area description was imported successfully, <c>false</c> otherwise.</returns>
         /// <param name="filePath">File path of the area description to be imported.</param>
@@ -245,9 +243,20 @@ namespace Tango
 #endif
         }
 
+#if UNITY_EDITOR
+        /// <summary>
+        /// Generates the emulated save path -- called on the main unity thread.
+        /// </summary>
+        public static void GenerateEmulatedSavePath()
+        {
+            EMULATED_ADF_SAVE_PATH = UnityEngine.Application.persistentDataPath
+                + "/TangoEmulation/AreaDescriptions/";
+        }
+#endif
+
         /// <summary>
         /// Export an area description from the default area storage location to the destination file directory.
-        /// 
+        ///
         /// The exported file will use the UUID as its file name.
         /// </summary>
         /// <returns>Returns <c>true</c> if the file was exported, or <c>false</c> if the export failed.</returns>
@@ -291,7 +300,7 @@ namespace Tango
             }
             catch (IOException ioException)
             {
-                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                Debug.LogError("IO error in Area Description save/load emulation:\n"
                                + ioException.Message);
             }
 
@@ -310,7 +319,7 @@ namespace Tango
 
         /// <summary>
         /// Get the metadata for the Area Description.
-        /// 
+        ///
         /// If you want to create a metadata for a not yet saved Area Description, you should instead use the default
         /// constructor.
         /// </summary>
@@ -327,7 +336,7 @@ namespace Tango
                     return null;
                 }
 
-                using (StreamReader streamReader = 
+                using (StreamReader streamReader =
                        new StreamReader(File.OpenRead(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION)))
                 {
                     metadata = (Metadata)metadataXmlSerializer.Deserialize(streamReader);
@@ -335,7 +344,7 @@ namespace Tango
             }
             catch (IOException ioException)
             {
-                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                Debug.LogError("IO error in Area Description save/load emulation:\n"
                                + ioException.Message);
                 return null;
             }
@@ -343,7 +352,7 @@ namespace Tango
             {
                 Debug.LogError("XML error in Area Description save/load emulation"
                                + " (corrupt file contents?); returning blank metadata (for file: "
-                               + EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION + ")\n" 
+                               + EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION + ")\n"
                                + "Error: " + xmlException.Message);
             }
 
@@ -411,7 +420,7 @@ namespace Tango
 #if UNITY_EDITOR
             try
             {
-                using (StreamWriter streamWriter = 
+                using (StreamWriter streamWriter =
                        new StreamWriter(File.Open(EMULATED_ADF_SAVE_PATH + m_uuid + EMULATED_ADF_EXTENSION,
                                                   FileMode.Create)))
                 {
@@ -420,11 +429,11 @@ namespace Tango
             }
             catch (IOException ioException)
             {
-                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                Debug.LogError("IO error in Area Description save/load emulation:\n"
                                + ioException.Message);
                 return false;
             }
-            
+
             return true;
 #else
             IntPtr rawMetadata = _GetMetadataPtr();
@@ -480,7 +489,7 @@ namespace Tango
         private static string[] _GetUUIDList()
         {
 #if UNITY_EDITOR
-            try 
+            try
             {
                 DirectoryInfo directory = new DirectoryInfo(EMULATED_ADF_SAVE_PATH);
                 if (directory.Exists)
@@ -500,7 +509,7 @@ namespace Tango
             }
             catch (IOException ioException)
             {
-                Debug.LogError("IO error in Area Description save/load emulation:\n" 
+                Debug.LogError("IO error in Area Description save/load emulation:\n"
                                + ioException.Message);
             }
 
@@ -513,7 +522,7 @@ namespace Tango
                 Debug.Log("Could not get ADF list from device.\n" + Environment.StackTrace);
                 return null;
             }
-            
+
             string listString = _ReadUTF8String(rawListString);
             return listString.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
 #endif
@@ -551,7 +560,7 @@ namespace Tango
                                         key));
                 return false;
             }
-            
+
             byte[] rawValueArray = new byte[rawValueSize];
             Marshal.Copy(rawValue, rawValueArray, 0, (int)rawValueSize);
             try
@@ -672,7 +681,7 @@ namespace Tango
                                         key, rawValueSize));
                 return false;
             }
-            
+
             Marshal.Copy(rawValue, value, 0, expectedCount);
             return true;
         }
@@ -694,7 +703,7 @@ namespace Tango
                                         key, value));
                 return false;
             }
-            
+
             return true;
         }
 
@@ -719,7 +728,7 @@ namespace Tango
 
         /// <summary>
         /// Get the low level metadata pointer for an area description.
-        /// 
+        ///
         /// Make sure to free this with <c>_FreeMetadataPtr</c> when you are done with it.
         /// </summary>
         /// <returns>A metadata pointer or <c>IntPtr.Zero</c> if it could not be loaded.</returns>
@@ -733,16 +742,16 @@ namespace Tango
                                         m_uuid));
                 return IntPtr.Zero;
             }
-            
+
             return value;
         }
 
         /// <summary>
         /// Easy access to the metadata fields for an Area Description.
-        /// 
+        ///
         /// If you want to look at a specific Area Description's metadata, get it with
         /// <c>AreaDescription.GetMetadata</c> and save it with <c>AreaDescription.SaveMetadata</c>.
-        /// 
+        ///
         /// If you want to create a metadata for a not yet saved Area Description, use the default constructor to construct
         /// an empty metadata and save it after saving the Area Description.
         /// </summary>
@@ -750,28 +759,28 @@ namespace Tango
         {
             /// <summary>
             /// The human-readable name for this Area Description.
-            /// 
+            ///
             /// Corresponds to the "name" metadata.
             /// </summary>
             public string m_name;
 
             /// <summary>
             /// The creation date of this Area Description.
-            /// 
+            ///
             /// Corresponds to the "date_ms_since_epoch" metadata.
             /// </summary>
             public DateTime m_dateTime;
 
             /// <summary>
             /// The global coordinate system position of this Area Description.
-            /// 
+            ///
             /// Corresponds to the X, Y, Z part of the "transformation" metadata.
             /// </summary>
             public double[] m_transformationPosition;
 
             /// <summary>
             /// The global coordinate system rotation of this Area Description.
-            /// 
+            ///
             /// Corresponds to the QX, QY, QZ, QW part of the "transformation" metadata.
             /// </summary>
             public double[] m_transformationRotation;
@@ -791,7 +800,7 @@ namespace Tango
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_saveAreaDescription(byte[] rawUUID);
-            
+
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoService_saveAreaDescriptionMetadata(
                 [MarshalAs(UnmanagedType.LPStr)] string uuid, IntPtr metadata);
@@ -804,7 +813,7 @@ namespace Tango
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
             public static extern int TangoAreaDescriptionMetadata_get(IntPtr metadata,
-                                                                      [MarshalAs(UnmanagedType.LPStr)] string key, 
+                                                                      [MarshalAs(UnmanagedType.LPStr)] string key,
                                                                       ref UInt32 value_size, ref IntPtr value);
 
             [DllImport(Common.TANGO_CLIENT_API_DLL)]
@@ -864,13 +873,13 @@ namespace Tango
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
-            
+
             public static int TangoAreaDescriptionMetadata_set(IntPtr metadata, string key, UInt32 value_size,
                                                                     ref Int64 value)
             {
                 return Common.ErrorType.TANGO_SUCCESS;
             }
-            
+
             public static int TangoAreaDescriptionMetadata_set(IntPtr metadata, string key, UInt32 value_size,
                                                                double[] value)
             {

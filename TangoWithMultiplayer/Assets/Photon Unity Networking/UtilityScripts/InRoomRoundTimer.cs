@@ -1,3 +1,9 @@
+// --------------------------------------------------------------------------------------------------------------------
+// <copyright file="InRoomRoundTimer.cs" company="Exit Games GmbH">
+//   Part of: Photon Unity Networking
+// </copyright>
+// --------------------------------------------------------------------------------------------------------------------
+
 using ExitGames.Client.Photon;
 using UnityEngine;
 
@@ -6,13 +12,13 @@ using UnityEngine;
 /// Simple script that uses a property to sync a start time for a multiplayer game.
 /// </summary>
 /// <remarks>
-/// When entering a room, the first player will store the synchronized timestamp. 
+/// When entering a room, the first player will store the synchronized timestamp.
 /// You can't set the room's synchronized time in CreateRoom, because the clock on the Master Server
 /// and those on the Game Servers are not in sync. We use many servers and each has it's own timer.
-/// 
+///
 /// Everyone else will join the room and check the property to calculate how much time passed since start.
 /// You can start a new round whenever you like.
-/// 
+///
 /// Based on this, you should be able to implement a synchronized timer for turns between players.
 /// </remarks>
 public class InRoomRoundTimer : MonoBehaviour
@@ -37,14 +43,14 @@ public class InRoomRoundTimer : MonoBehaviour
         }
         startRoundWhenTimeIsSynced = false;
 
-        
+
 
         ExitGames.Client.Photon.Hashtable startTimeProp = new Hashtable();  // only use ExitGames.Client.Photon.Hashtable for Photon
         startTimeProp[StartTimeKey] = PhotonNetwork.time;
         PhotonNetwork.room.SetCustomProperties(startTimeProp);              // implement OnPhotonCustomRoomPropertiesChanged(Hashtable propertiesThatChanged) to get this change everywhere
     }
 
-    
+
     /// <summary>Called by PUN when this client entered a room (no matter if joined or created).</summary>
     public void OnJoinedRoom()
     {
@@ -55,7 +61,7 @@ public class InRoomRoundTimer : MonoBehaviour
         else
         {
             // as the creator of the room sets the start time after entering the room, we may enter a room that has no timer started yet
-            Debug.Log("StartTime already set: " + PhotonNetwork.room.customProperties.ContainsKey(StartTimeKey));
+            Debug.Log("StartTime already set: " + PhotonNetwork.room.CustomProperties.ContainsKey(StartTimeKey));
         }
     }
 
@@ -75,7 +81,7 @@ public class InRoomRoundTimer : MonoBehaviour
     /// </remarks>
     public void OnMasterClientSwitched(PhotonPlayer newMasterClient)
     {
-        if (!PhotonNetwork.room.customProperties.ContainsKey(StartTimeKey))
+        if (!PhotonNetwork.room.CustomProperties.ContainsKey(StartTimeKey))
         {
             Debug.Log("The new master starts a new round, cause we didn't start yet.");
             this.StartRoundNow();

@@ -136,7 +136,7 @@ public class GUICustomAuth : MonoBehaviour
                 GUILayout.Space(10);
                 if (GUILayout.Button("Configure Authentication (Dashboard)"))
                 {
-                    Application.OpenURL("https://www.exitgames.com/dashboard");
+                    Application.OpenURL("https://www.photonengine.com/dashboard");
                 }
                 if (GUILayout.Button("Authentication Docs"))
                 {

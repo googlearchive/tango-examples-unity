@@ -8,6 +8,11 @@
 // <author>developer@exitgames.com</author>
 // ----------------------------------------------------------------------------
 
+#if UNITY_5 && !UNITY_5_0 && !UNITY_5_1 && !UNITY_5_2
+#define UNITY_MIN_5_3
+#endif
+
+
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEditor;
@@ -385,6 +390,8 @@ public class PhotonConverter : Photon.MonoBehaviour
         {
             NetworkView netView = netViews[i];
             PhotonView view = netView.gameObject.AddComponent<PhotonView>();
+            Undo.RecordObject(view, null);
+
             if (isScene)
             {
                 //Get scene ID
@@ -394,10 +401,16 @@ public class PhotonConverter : Photon.MonoBehaviour
                 int oldViewID = int.Parse(str);
 
                 view.viewID = oldViewID;
+
+                #if !UNITY_MIN_5_3
                 EditorUtility.SetDirty(view);
                 EditorUtility.SetDirty(view.gameObject);
+                #endif
             }
-            view.observed = netView.observed;
+
+            view.ObservedComponents = new List<Component>();
+            view.ObservedComponents.Add(netView.observed);
+
             if (netView.stateSynchronization == NetworkStateSynchronization.Unreliable)
             {
                 view.synchronization = ViewSynchronization.Unreliable;

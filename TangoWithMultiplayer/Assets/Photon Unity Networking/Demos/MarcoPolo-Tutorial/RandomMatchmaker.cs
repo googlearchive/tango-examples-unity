@@ -38,7 +38,7 @@ public class RandomMatchmaker : Photon.PunBehaviour
     {
         GUILayout.Label(PhotonNetwork.connectionStateDetailed.ToString());
 
-        if (PhotonNetwork.connectionStateDetailed == PeerState.Joined)
+        if (PhotonNetwork.inRoom)
         {
             bool shoutMarco = GameLogic.playerWhoIsIt == PhotonNetwork.player.ID;
 

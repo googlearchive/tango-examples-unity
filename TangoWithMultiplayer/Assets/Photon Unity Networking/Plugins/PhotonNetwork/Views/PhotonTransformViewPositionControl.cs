@@ -1,4 +1,14 @@
-﻿using UnityEngine;
+﻿// ----------------------------------------------------------------------------
+// <copyright file="PhotonTransformViewPositionControl.cs" company="Exit Games GmbH">
+//   PhotonNetwork Framework for Unity - Copyright (C) 2016 Exit Games GmbH
+// </copyright>
+// <summary>
+//   Component to synchronize position via PUN PhotonView.
+// </summary>
+// <author>developer@exitgames.com</author>
+// ----------------------------------------------------------------------------
+
+using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 

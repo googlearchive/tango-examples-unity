@@ -6,6 +6,7 @@ public class GUIFriendFinding : MonoBehaviour
     private string[] friendListOfSomeCommunity;
     public Rect GuiRect;
 
+	private string ExpectedUsers;
 
     void Start()
     {
@@ -55,7 +56,7 @@ public class GUIFriendFinding : MonoBehaviour
         {
             // this feature is only available on the Master Client. Check either: insideLobby or 
             // PhotonNetwork.connectionStateDetailed == PeerState.Authenticated or 
-            // PhotonNetwork.connectionStateDetailed == PeerState.JoinedLobby
+            // PhotonNetwork.inRoomLobby
 
             // for simplicity (and cause we know we WILL join the lobby, we can just check that)
             return;
@@ -75,8 +76,11 @@ public class GUIFriendFinding : MonoBehaviour
         }
         if (GUILayout.Button("Create Room"))
         {
-            PhotonNetwork.CreateRoom(null); // just a random room
+				PhotonNetwork.CreateRoom(null); // just a random room
         }
+
+		ExpectedUsers = GUILayout.TextField("Expected Users",ExpectedUsers);
+
         GUILayout.EndHorizontal();
 
 

@@ -37,9 +37,6 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
---- !u!127 &3
-LevelGameManager:
-  m_ObjectHideFlags: 0
 --- !u!157 &4
 LightmapSettings:
   m_ObjectHideFlags: 0
@@ -68,6 +65,7 @@ LightmapSettings:
     m_TextureCompression: 0
     m_FinalGather: 0
     m_FinalGatherRayCount: 1024
+    m_ReflectionCompression: 2
   m_LightmapSnapshot: {fileID: 0}
   m_RuntimeCPUUsage: 25
 --- !u!196 &5
@@ -1358,6 +1356,7 @@ Camera:
   m_RenderingPath: 2
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
+  m_TargetEye: 3
   m_HDR: 0
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
@@ -1419,6 +1418,7 @@ GameObject:
   - 114: {fileID: 1342840822}
   - 114: {fileID: 1342840823}
   - 114: {fileID: 1342840825}
+  - 114: {fileID: 1342840824}
   m_Layer: 0
   m_Name: Scripts
   m_TagString: Untagged
@@ -1464,6 +1464,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   HideUI: 0
   GuiTextForTips: {fileID: 533225270}
+--- !u!114 &1342840824
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1342840820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5a097d1ab84b464395a16e9a7bb35b1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &1342840825
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,12 +1,29 @@
-﻿using UnityEditor;
+﻿// ----------------------------------------------------------------------------
+// <copyright file="PhotonAnimatorViewEditor.cs" company="Exit Games GmbH">
+//   PhotonNetwork Framework for Unity - Copyright (C) 2016 Exit Games GmbH
+// </copyright>
+// <summary>
+//   This is a custom editor for the AnimatorView component.
+// </summary>
+// <author>developer@exitgames.com</author>
+// ----------------------------------------------------------------------------
+
+
+#if UNITY_5 && !UNITY_5_0 && !UNITY_5_1 && !UNITY_5_2
+#define UNITY_MIN_5_3
+#endif
+
+
+using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 
-#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6
+#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7
 using UnityEditorInternal;
 #elif UNITY_5 || UNITY_5_0
 using UnityEditor.Animations;
 #endif
+
 
 [CustomEditor(typeof (PhotonAnimatorView))]
 public class PhotonAnimatorViewEditor : Editor
@@ -14,9 +31,11 @@ public class PhotonAnimatorViewEditor : Editor
     private Animator m_Animator;
     private PhotonAnimatorView m_Target;
 
-#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_5 || UNITY_5_0
+#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7 || UNITY_5 || UNITY_5_0
     private AnimatorController m_Controller;
 #endif
+
+	private const string TRIGGER_HELP_URL = "https://doc.photonengine.com/en/pun/current/reference/animatorviewtriggerhelp";
 
     public override void OnInspectorGUI()
     {
@@ -31,8 +50,8 @@ public class PhotonAnimatorViewEditor : Editor
         }
 
         DrawWeightInspector();
-        //TODO: in Unity 5, it seems the layerCount is empty unless we use the controller?!
-        if (GetLayerCount() == 0)
+       
+		if (GetLayerCount() == 0)
         {
             GUILayout.BeginVertical(GUI.skin.box);
             GUILayout.Label("Animator doesn't have any layers setup to synchronize");
@@ -54,13 +73,14 @@ public class PhotonAnimatorViewEditor : Editor
         //GUILayout.Label( "m_SynchronizeParameters " + serializedObject.FindProperty( "m_SynchronizeParameters" ).arraySize );
     }
 
+	 
     private int GetLayerCount()
     {
-#if UNITY_5 || UNITY_5_0
-        return (this.m_Controller == null) ? 0 : this.m_Controller.layers.Length;
-#else
-        return this.m_Animator.layerCount;
-#endif
+		#if UNITY_5 || UNITY_5_0
+		return (this.m_Controller == null) ? 0 : this.m_Controller.layers.Length;
+		#else
+		return (this.m_Controller == null) ? 0 : this.m_Controller.layerCount;
+		#endif
     }
 
 
@@ -86,7 +106,7 @@ public class PhotonAnimatorViewEditor : Editor
         this.m_Target = (PhotonAnimatorView) target;
         this.m_Animator = this.m_Target.GetComponent<Animator>();
 
-#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6
+#if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7
         this.m_Controller = AnimatorController.GetEffectiveAnimatorController(this.m_Animator);
 #elif UNITY_5 || UNITY_5_0
         this.m_Controller = this.GetEffectiveController(this.m_Animator) as AnimatorController;
@@ -113,7 +133,10 @@ public class PhotonAnimatorViewEditor : Editor
             if (this.m_Target.DoesLayerSynchronizeTypeExist(i) == false)
             {
                 this.m_Target.SetLayerSynchronized(i, PhotonAnimatorView.SynchronizeType.Disabled);
+
+                #if !UNITY_MIN_5_3
                 EditorUtility.SetDirty(this.m_Target);
+                #endif
             }
 
             PhotonAnimatorView.SynchronizeType syncType = this.m_Target.GetLayerSynchronizeType(i);
@@ -137,14 +160,16 @@ public class PhotonAnimatorViewEditor : Editor
                 Undo.RecordObject(target, "Modify Synchronize Layer Weights");
                 this.m_Target.SetLayerSynchronized(i, syncType);
 
+                #if !UNITY_MIN_5_3
                 EditorUtility.SetDirty(this.m_Target);
+                #endif
             }
         }
     }
 
     private int GetParameterCount()
     {
-        #if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6
+        #if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7
         return (this.m_Controller == null) ? 0 : this.m_Controller.parameterCount;
         #elif UNITY_5 || UNITY_5_0
         return (this.m_Controller == null) ? 0 : this.m_Controller.parameters.Length;
@@ -155,7 +180,7 @@ public class PhotonAnimatorViewEditor : Editor
 
     private AnimatorControllerParameter GetAnimatorControllerParameter(int i)
     {
-        #if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6
+        #if UNITY_4_0 || UNITY_4_0_1 || UNITY_4_1 || UNITY_4_2 || UNITY_4_3 || UNITY_4_5 || UNITY_4_6 || UNITY_4_7
         return this.m_Controller.GetParameter(i);
         #elif UNITY_5 || UNITY_5_0
         return this.m_Controller.parameters[i];
@@ -197,12 +222,19 @@ public class PhotonAnimatorViewEditor : Editor
             {
                 this.m_Target.GetSynchronizedParameters().RemoveAll(item => item.Name == param);
             }
+
+            #if !UNITY_MIN_5_3
             EditorUtility.SetDirty(this.m_Target);
+            #endif
         }
     }
+	
 
     private void DrawParameterInspector()
     {
+		// flag to expose a note in Interface if one or more trigger(s) are synchronized
+		bool isUsingTriggers = false;
+
         SerializedProperty foldoutProperty = serializedObject.FindProperty("ShowParameterInspector");
         foldoutProperty.boolValue = PhotonGUI.ContainerHeaderFoldout("Synchronize Parameters", foldoutProperty.boolValue);
 
@@ -223,24 +255,57 @@ public class PhotonAnimatorViewEditor : Editor
 
             if (parameter.type == AnimatorControllerParameterType.Bool)
             {
-                defaultValue += parameter.defaultBool.ToString();
+				if (Application.isPlaying && m_Animator.gameObject.activeInHierarchy)
+				{
+					defaultValue += m_Animator.GetBool(parameter.name);
+				}else{
+                	defaultValue += parameter.defaultBool.ToString();
+				}
             }
             else if (parameter.type == AnimatorControllerParameterType.Float)
             {
-                defaultValue += parameter.defaultFloat.ToString();
+				if (Application.isPlaying && m_Animator.gameObject.activeInHierarchy)
+				{
+					defaultValue += m_Animator.GetFloat(parameter.name).ToString("0.00");
+				}else{
+               	 defaultValue += parameter.defaultFloat.ToString();
+				}
             }
             else if (parameter.type == AnimatorControllerParameterType.Int)
             {
-                defaultValue += parameter.defaultInt.ToString();
+				if (Application.isPlaying && m_Animator.gameObject.activeInHierarchy)
+				{
+					defaultValue += m_Animator.GetInteger(parameter.name);
+				}else{
+                	defaultValue += parameter.defaultInt.ToString();
+				}
             }
+			else if (parameter.type == AnimatorControllerParameterType.Trigger)
+			{
+				if (Application.isPlaying && m_Animator.gameObject.activeInHierarchy)
+				{
+					defaultValue += m_Animator.GetBool(parameter.name);
+				}else{
+					defaultValue += parameter.defaultBool.ToString();
+				}
+			}
 
             if (this.m_Target.DoesParameterSynchronizeTypeExist(parameter.name) == false)
             {
                 this.m_Target.SetParameterSynchronized(parameter.name, (PhotonAnimatorView.ParameterType) parameter.type, PhotonAnimatorView.SynchronizeType.Disabled);
+
+                #if !UNITY_MIN_5_3
                 EditorUtility.SetDirty(this.m_Target);
+                #endif
             }
 
             PhotonAnimatorView.SynchronizeType value = this.m_Target.GetParameterSynchronizeType(parameter.name);
+
+			// check if using trigger and actually synchronizing it
+			if (value!=PhotonAnimatorView.SynchronizeType.Disabled &&parameter.type == AnimatorControllerParameterType.Trigger)
+			{
+				isUsingTriggers = true;
+			}
 
             Rect elementRect = new Rect(containerRect.xMin, containerRect.yMin + i*lineHeight, containerRect.width, lineHeight);
 
@@ -256,13 +321,30 @@ public class PhotonAnimatorViewEditor : Editor
                 PhotonGUI.DrawSplitter(splitterRect);
             }
 
+
+
             if (value != this.m_Target.GetParameterSynchronizeType(parameter.name))
             {
                 Undo.RecordObject(target, "Modify Synchronize Parameter " + parameter.name);
                 this.m_Target.SetParameterSynchronized(parameter.name, (PhotonAnimatorView.ParameterType) parameter.type, value);
 
+                #if !UNITY_MIN_5_3
                 EditorUtility.SetDirty(this.m_Target);
+                #endif
             }
         }
+
+		// display note when synchronized triggers are detected.
+		if (isUsingTriggers)
+		{
+			GUILayout.BeginHorizontal(GUI.skin.box);
+			GUILayout.Label("When using triggers, make sure this component is last in the stack");
+			if (GUILayout.Button(PhotonGUI.HelpIcon,GUIStyle.none,GUILayout.Width(16)) )
+			{
+				Application.OpenURL(TRIGGER_HELP_URL);
+			}
+			GUILayout.EndHorizontal();
+		}
+
     }
 }

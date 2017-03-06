@@ -16,7 +16,7 @@ using UnityEngine;
 
 
 [RequireComponent(typeof (PhotonView))]
-public class CubeExtra : Photon.MonoBehaviour
+public class CubeExtra : Photon.MonoBehaviour, IPunObservable
 {
     [Range(0.9f, 1.1f)]
     public float Factor = 0.98f;    // this factor makes the extrapolated movement a bit slower. the idea is to compensate some of the lag-dependent variance.

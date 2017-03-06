@@ -48,11 +48,13 @@ namespace Tango
         private static TangoPoseData m_motionTrackingData = new TangoPoseData();
         private static TangoPoseData m_areaLearningData = new TangoPoseData();
         private static TangoPoseData m_relocalizationData = new TangoPoseData();
+        private static TangoPoseData m_cloudPoseData = new TangoPoseData();
         private static OnTangoPoseAvailableEventHandler m_onTangoPoseAvailable;
 
         private static bool m_isMotionTrackingPoseAvailable = false;
         private static bool m_isAreaLearningPoseAvailable = false;
-        private static bool m_isRelocalizaitonPoseAvailable = false;
+        private static bool m_isRelocalizationPoseAvailable = false;
+        private static bool m_isCloudPoseAvailable = false;
 
 #if UNITY_EDITOR
         private static double m_mostRecentEmulatedRelocalizationTimestamp;
@@ -81,10 +83,12 @@ namespace Tango
             m_motionTrackingData = new TangoPoseData();
             m_areaLearningData = new TangoPoseData();
             m_relocalizationData = new TangoPoseData();
+            m_cloudPoseData = new TangoPoseData();
             m_onTangoPoseAvailable = null;
             m_isMotionTrackingPoseAvailable = false;
             m_isAreaLearningPoseAvailable = false;
-            m_isRelocalizaitonPoseAvailable = false;
+            m_isRelocalizationPoseAvailable = false;
+            m_isCloudPoseAvailable = false;
 
 #if UNITY_EDITOR
             m_mostRecentEmulatedRelocalizationTimestamp = -1;
@@ -155,7 +159,7 @@ namespace Tango
                                 && m_relocalizationData.timestamp != m_mostRecentEmulatedRelocalizationTimestamp)
                             {
                                 m_mostRecentEmulatedRelocalizationTimestamp = m_relocalizationData.timestamp;
-                                m_isRelocalizaitonPoseAvailable = true;
+                                m_isRelocalizationPoseAvailable = true;
                             }
                         }
                     }
@@ -181,10 +185,16 @@ namespace Tango
                         m_isAreaLearningPoseAvailable = false;
                     }
 
-                    if (m_isRelocalizaitonPoseAvailable)
+                    if (m_isRelocalizationPoseAvailable)
                     {
                         m_onTangoPoseAvailable(m_relocalizationData);
-                        m_isRelocalizaitonPoseAvailable = false;
+                        m_isRelocalizationPoseAvailable = false;
+                    }
+
+                    if (m_isCloudPoseAvailable)
+                    {
+                        m_onTangoPoseAvailable(m_cloudPoseData);
+                        m_isCloudPoseAvailable = false;
                     }
                 }
             }
@@ -249,7 +259,17 @@ namespace Tango
                 lock (m_lockObject)
                 {
                     m_relocalizationData.DeepCopy(pose);
-                    m_isRelocalizaitonPoseAvailable = true;
+                    m_isRelocalizationPoseAvailable = true;
+                }
+            }
+            else if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_GLOBAL_WGS84 &&
+                     pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+            {
+                // Cloud ADF localized
+                lock (m_lockObject)
+                {
+                    m_cloudPoseData.DeepCopy(pose);
+                    m_isCloudPoseAvailable = true;
                 }
             }
         }

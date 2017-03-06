@@ -32,7 +32,7 @@ public class BuildTools
     public static void BuildTangoDat()
     {
         // Write out a version file.
-        string filePath = Application.dataPath + TangoSDKAbout.TANGO_VERSION_DATA_PATH;
+        string filePath = Application.dataPath + "/TangoSDK/Core/Tango.dat";
         using (BinaryWriter binaryWriter = new BinaryWriter(File.Open(filePath, FileMode.Create)))
         {
             binaryWriter.Write(GitHelpers.GetTagInfo());
