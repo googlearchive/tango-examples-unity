@@ -122,7 +122,7 @@ namespace Tango
             
             return hasPermissions == tangoApplication.m_enableAreaDescriptions;
         }
-        
+
         /// <summary>
         /// Checks whether depth permissions are selected and draws a warning if they are not.
         /// </summary>

@@ -33,6 +33,30 @@ namespace Tango
     public static class TangoSupport
     {
         /// <summary>
+        /// Matrix that transforms from Start of Service to the Unity World.
+        /// </summary>
+        public static readonly Matrix4x4 UNITY_WORLD_T_START_SERVICE = new Matrix4x4
+        {
+            m00 = 1.0f, m01 = 0.0f, m02 = 0.0f, m03 = 0.0f,
+            m10 = 0.0f, m11 = 0.0f, m12 = 1.0f, m13 = 0.0f,
+            m20 = 0.0f, m21 = 1.0f, m22 = 0.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 = 0.0f, m32 = 0.0f, m33 = 1.0f
+        };
+
+        /// <summary>
+        /// Matrix that transforms from the Unity Camera to Device.
+        /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
+                                                         Justification = "Matrix visibility is more important.")]
+        public static readonly Matrix4x4 DEVICE_T_UNITY_CAMERA = new Matrix4x4
+        {
+            m00 = 1.0f, m01 = 0.0f, m02 =  0.0f, m03 = 0.0f,
+            m10 = 0.0f, m11 = 1.0f, m12 =  0.0f, m13 = 0.0f,
+            m20 = 0.0f, m21 = 0.0f, m22 = -1.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 = 0.0f, m32 =  0.0f, m33 = 1.0f
+        };
+
+        /// <summary>
         /// The rotation matrix need to be applied when using color camera's pose.
         /// </summary>
         public static Matrix4x4 m_colorCameraPoseRotation = Matrix4x4.identity;
@@ -51,30 +75,6 @@ namespace Tango
         /// Class name for debug logging.
         /// </summary>
         private const string CLASS_NAME = "TangoSupport";
-
-        /// <summary>
-        /// Matrix that transforms from Start of Service to the Unity World.
-        /// </summary>
-        private static readonly Matrix4x4 UNITY_WORLD_T_START_SERVICE = new Matrix4x4
-        {
-            m00 = 1.0f, m01 = 0.0f, m02 = 0.0f, m03 = 0.0f,
-            m10 = 0.0f, m11 = 0.0f, m12 = 1.0f, m13 = 0.0f,
-            m20 = 0.0f, m21 = 1.0f, m22 = 0.0f, m23 = 0.0f,
-            m30 = 0.0f, m31 = 0.0f, m32 = 0.0f, m33 = 1.0f
-        };
-
-        /// <summary>
-        /// Matrix that transforms from the Unity Camera to Device.
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
-                                                         Justification = "Matrix visibility is more important.")]
-        private static readonly Matrix4x4 DEVICE_T_UNITY_CAMERA = new Matrix4x4
-        {
-            m00 = 1.0f, m01 = 0.0f, m02 =  0.0f, m03 = 0.0f,
-            m10 = 0.0f, m11 = 1.0f, m12 =  0.0f, m13 = 0.0f,
-            m20 = 0.0f, m21 = 0.0f, m22 = -1.0f, m23 = 0.0f,
-            m30 = 0.0f, m31 = 0.0f, m32 =  0.0f, m33 = 1.0f
-        };
 
         /// <summary>
         /// Matrix that transforms for device screen rotation of 270 degrees.

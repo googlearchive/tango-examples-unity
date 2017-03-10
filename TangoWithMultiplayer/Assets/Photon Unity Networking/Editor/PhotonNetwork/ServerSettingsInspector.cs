@@ -1,3 +1,15 @@
+// ----------------------------------------------------------------------------
+// <copyright file="ServerSettingsInspector.cs" company="Exit Games GmbH">
+//   PhotonNetwork Framework for Unity - Copyright (C) 2016 Exit Games GmbH
+// </copyright>
+// <summary>
+//   This is a custom editor for the ServerSettings scriptable object.
+// </summary>
+// <author>developer@exitgames.com</author>
+// ----------------------------------------------------------------------------
+
+//#define PHOTON_VOICE
+
 using System;
 using ExitGames.Client.Photon;
 using UnityEditor;
@@ -13,13 +25,22 @@ public class ServerSettingsInspector : Editor
     } // has to be extended when rHTTP becomes available
 
     private bool showMustHaveRegion;
-    private bool showAppIdHint;
+
+    private bool hasVoice = false;
+    private bool hasChat = false;
+
+    [ExecuteInEditMode]
+    public void OnEnable()
+    {
+        this.hasVoice = Type.GetType("ExitGames.Client.Photon.Voice.VoiceClient, Assembly-CSharp") != null || Type.GetType("ExitGames.Client.Photon.Voice.VoiceClient, Assembly-CSharp-firstpass") != null;
+        this.hasChat = Type.GetType("ExitGames.Client.Photon.Chat.ChatClient, Assembly-CSharp") != null || Type.GetType("ExitGames.Client.Photon.Chat.ChatClient, Assembly-CSharp-firstpass") != null;
+    }
 
 
     public override void OnInspectorGUI()
     {
         ServerSettings settings = (ServerSettings) target;
-
+        Undo.RecordObject(settings, "Edit PhotonServerSettings");
 
         settings.HostType = (ServerSettings.HostingOption) EditorGUILayout.EnumPopup("Hosting", settings.HostType);
         EditorGUI.indentLevel = 1;
@@ -52,12 +73,11 @@ public class ServerSettingsInspector : Editor
                 string valAppId = EditorGUILayout.TextField("AppId", settings.AppID);
                 if (valAppId != settings.AppID)
                 {
-                    settings.AppID = valAppId;
-                    this.showAppIdHint = !IsAppId(settings.AppID);
+                    settings.AppID = valAppId.Trim();
                 }
-                if (this.showAppIdHint)
+                if (!ServerSettings.IsAppId(settings.AppID))
                 {
-                    EditorGUILayout.HelpBox("The Photon Cloud needs an AppId (GUID) set.\nYou can find it online in your Dashboard.", MessageType.Warning);
+                    EditorGUILayout.HelpBox("PUN needs an AppId (GUID).\nFind it online in the Dashboard.", MessageType.Warning);
                 }
 
                 // protocol
@@ -93,7 +113,6 @@ public class ServerSettingsInspector : Editor
                 {
                     settings.ServerPort = EditorGUILayout.IntField("Server Port", settings.ServerPort);
                 }
-
                 // protocol
                 valProtocol = settings.Protocol == ConnectionProtocol.Tcp ? ProtocolChoices.Tcp : ProtocolChoices.Udp;
                 valProtocol = (ProtocolChoices) EditorGUILayout.EnumPopup("Protocol", valProtocol);
@@ -104,6 +123,7 @@ public class ServerSettingsInspector : Editor
 
                 // appid
                 settings.AppID = EditorGUILayout.TextField("AppId", settings.AppID);
+                settings.AppID = settings.AppID.Trim();
                 break;
 
             case ServerSettings.HostingOption.OfflineMode:
@@ -121,15 +141,87 @@ public class ServerSettingsInspector : Editor
                 break;
         }
 
+        if (PhotonEditor.CheckPunPlus())
+        {
+            settings.Protocol = ConnectionProtocol.Udp;
+            EditorGUILayout.HelpBox("You seem to use PUN+.\nPUN+ only supports reliable UDP so the protocol is locked.", MessageType.Info);
+        }
+
+
+
+        // CHAT SETTINGS
+        if (this.hasChat)
+        {
+            GUILayout.Space(5);
+            EditorGUI.indentLevel = 0;
+            EditorGUILayout.LabelField("Photon Chat Settings");
+            EditorGUI.indentLevel = 1;
+            string valChatAppid = EditorGUILayout.TextField("Chat AppId", settings.ChatAppID);
+            if (valChatAppid != settings.ChatAppID)
+            {
+                settings.ChatAppID = valChatAppid.Trim();
+            }
+            if (!ServerSettings.IsAppId(settings.ChatAppID))
+            {
+                EditorGUILayout.HelpBox("Photon Chat needs an AppId (GUID).\nFind it online in the Dashboard.", MessageType.Warning);
+            }
+
+            EditorGUI.indentLevel = 0;
+        }
+
+
+
+        // VOICE SETTINGS
+        if (this.hasVoice)
+        {
+            GUILayout.Space(5);
+            EditorGUI.indentLevel = 0;
+            EditorGUILayout.LabelField("Photon Voice Settings");
+            EditorGUI.indentLevel = 1;
+            switch (settings.HostType)
+            {
+                case ServerSettings.HostingOption.BestRegion:
+                case ServerSettings.HostingOption.PhotonCloud:
+                    // voice appid
+                    string valVoiceAppId = EditorGUILayout.TextField("Voice AppId", settings.VoiceAppID);
+                    if (valVoiceAppId != settings.VoiceAppID)
+                    {
+                        settings.VoiceAppID = valVoiceAppId.Trim();
+                    }
+                    if (!ServerSettings.IsAppId(settings.VoiceAppID))
+                    {
+                        EditorGUILayout.HelpBox("Photon Voice needs an AppId (GUID).\nFind it online in the Dashboard.", MessageType.Warning);
+                    }
+                    break;
+                case ServerSettings.HostingOption.SelfHosted:
+                    if (settings.VoiceServerPort == 0)
+                    {
+                        settings.VoiceServerPort = 5055;
+                    }
+                    settings.VoiceServerPort = EditorGUILayout.IntField("Server Port UDP", settings.VoiceServerPort);
+                    break;
+                case ServerSettings.HostingOption.OfflineMode:
+                case ServerSettings.HostingOption.NotSet:
+                    break;
+            }
+            EditorGUI.indentLevel = 0;
+        }
+
+
+
+        // PUN Client Settings
+        GUILayout.Space(5);
         EditorGUI.indentLevel = 0;
         EditorGUILayout.LabelField("Client Settings");
         EditorGUI.indentLevel = 1;
         //EditorGUILayout.LabelField("game version");
         settings.JoinLobby = EditorGUILayout.Toggle("Auto-Join Lobby", settings.JoinLobby);
         settings.EnableLobbyStatistics = EditorGUILayout.Toggle("Enable Lobby Stats", settings.EnableLobbyStatistics);
+
+        settings.PunLogging = (PhotonLogLevel)EditorGUILayout.EnumPopup("Pun Logging", settings.PunLogging);            // TODO: update at runtime
+        settings.NetworkLogging = (DebugLevel)EditorGUILayout.EnumPopup("Network Logging", settings.NetworkLogging);    // TODO: update at runtime
         //EditorGUILayout.LabelField("automaticallySyncScene");
         //EditorGUILayout.LabelField("autoCleanUpPlayerObjects");
-        //EditorGUILayout.LabelField("log level");
         //EditorGUILayout.LabelField("lobby stats");
         //EditorGUILayout.LabelField("sendrate / serialize rate");
         //EditorGUILayout.LabelField("quick resends");
@@ -137,16 +229,17 @@ public class ServerSettingsInspector : Editor
         //EditorGUILayout.LabelField("enable crc checking");
 
 
-        if (PhotonEditor.CheckPunPlus())
-        {
-            settings.Protocol = ConnectionProtocol.Udp;
-            EditorGUILayout.HelpBox("You seem to use PUN+.\nPUN+ only supports reliable UDP so the protocol is locked.", MessageType.Info);
-        }
+		// Application settings
+		GUILayout.Space(5);
+		EditorGUI.indentLevel = 0;
+		EditorGUILayout.LabelField("Build Settings");
+		EditorGUI.indentLevel = 1;
 
-        settings.AppID = settings.AppID.Trim();
+		settings.RunInBackground = EditorGUILayout.Toggle("Run In Background", settings.RunInBackground);
 
 
         // RPC-shortcut list
+        GUILayout.Space(5);
         EditorGUI.indentLevel = 0;
         SerializedObject sObj = new SerializedObject(target);
         SerializedProperty sRpcs = sObj.FindProperty("RpcList");
@@ -171,12 +264,13 @@ public class ServerSettingsInspector : Editor
         GUILayout.Space(20);
         GUILayout.EndHorizontal();
 
+
         //SerializedProperty sp = serializedObject.FindProperty("RpcList");
         //EditorGUILayout.PropertyField(sp, true);
 
         if (GUI.changed)
         {
-            EditorUtility.SetDirty(target);
+            EditorUtility.SetDirty(target);     // even in Unity 5.3+ it's OK to SetDirty() for non-scene objects.
         }
     }
 
@@ -191,21 +285,5 @@ public class ServerSettingsInspector : Editor
         }
 
         return hashCode;
-    }
-
-    /// <summary>Checks if a string is a Guid by attempting to create one.</summary>
-    /// <param name="val">The potential guid to check.</param>
-    /// <returns>True if new Guid(val) did not fail.</returns>
-    public static bool IsAppId(string val)
-    {
-        try
-        {
-            new Guid(val);
-        }
-        catch
-        {
-            return false;
-        }
-        return true;
     }
 }

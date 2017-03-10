@@ -1,4 +1,4 @@
-﻿#if UNITY_WEBGL
+﻿#if UNITY_WEBGL || UNITY_XBOXONE
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -74,14 +74,14 @@ public class WebSocket
 		return buffer;
 	}
 
-	public IEnumerator Connect()
+	public void Connect()
 	{
 		m_NativeRef = SocketCreate (mUrl.ToString());
 
-		while (SocketState(m_NativeRef) == 0)
-			yield return 0;
+        //while (SocketState(m_NativeRef) == 0)
+        //    yield return 0;
 	}
- 
+
 	public void Close()
 	{
 		SocketClose(m_NativeRef);
@@ -102,7 +102,7 @@ public class WebSocket
 			if (result == 0)
 				return null;
 
-			return Encoding.UTF8.GetString (buffer);				
+			return Encoding.UTF8.GetString (buffer);
 		}
 	}
 #else
@@ -111,7 +111,7 @@ public class WebSocket
 	bool m_IsConnected = false;
 	string m_Error = null;
 
-	public IEnumerator Connect()
+	public void Connect()
 	{
         m_Socket = new WebSocketSharp.WebSocket(mUrl.ToString(), new string[] { "GpBinaryV16" });// modified by TS
 
@@ -119,8 +119,8 @@ public class WebSocket
 		m_Socket.OnOpen += (sender, e) => m_IsConnected = true;
 		m_Socket.OnError += (sender, e) => m_Error = e.Message + (e.Exception == null ? "" : " / "+ e.Exception);
 		m_Socket.ConnectAsync();
-		while (!m_IsConnected && m_Error == null)
-			yield return 0;
+        //while (!m_IsConnected && m_Error == null)
+        //    yield return 0;
 	}
 
     public bool Connected { get { return m_IsConnected; } }// added by TS
@@ -145,10 +145,11 @@ public class WebSocket
 
 	public string Error
 	{
-		get {
+        get
+        {
 			return m_Error;
 		}
 	}
-#endif 
+#endif
 }
 #endif

@@ -38,14 +38,14 @@ public class DemoOwnershipGui : MonoBehaviour
         if (PhotonNetwork.inRoom)
         {
             int playerNr = PhotonNetwork.player.ID;
-            string playerIsMaster = PhotonNetwork.player.isMasterClient ? "(master) " : "";
+            string playerIsMaster = PhotonNetwork.player.IsMasterClient ? "(master) " : "";
             string playerColor = PlayerVariables.GetColorName(PhotonNetwork.player.ID);
             GUILayout.Label(string.Format("player {0}, {1} {2}(you)", playerNr, playerColor, playerIsMaster));
 
             foreach (PhotonPlayer otherPlayer in PhotonNetwork.otherPlayers)
             {
                 playerNr = otherPlayer.ID;
-                playerIsMaster = otherPlayer.isMasterClient ? "(master)" : "";
+                playerIsMaster = otherPlayer.IsMasterClient ? "(master)" : "";
                 playerColor = PlayerVariables.GetColorName(otherPlayer.ID);
                 GUILayout.Label(string.Format("player {0}, {1} {2}", playerNr, playerColor, playerIsMaster));
             }

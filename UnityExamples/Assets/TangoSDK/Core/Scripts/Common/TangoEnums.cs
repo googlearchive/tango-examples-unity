@@ -302,5 +302,26 @@ namespace Tango
             /// </summary>
             MAXIMUM,
         }
+            
+        /// <summary>
+        /// Type of Tango pose.
+        /// </summary>
+        public enum TangoPoseType
+        {
+            /// <summary>
+            /// The pose based solely on motion tracking.
+            /// </summary>
+            MOTION_TRACKING_POSE,
+
+            /// <summary>
+            /// The pose based on a local area description file.
+            /// </summary>
+            LOCAL_AREA_DESCRIPTION_POSE,
+
+            /// <summary>
+            /// The pose based on cloud-based area description.
+            /// </summary>
+            CLOUD_AREA_DESCRIPTION_POSE
+        }
     }
 }

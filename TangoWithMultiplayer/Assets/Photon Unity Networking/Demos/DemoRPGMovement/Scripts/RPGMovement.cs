@@ -2,7 +2,7 @@
 using System.Collections;
 
 [RequireComponent( typeof( CharacterController ) )]
-public class RPGMovement : MonoBehaviour 
+public class RPGMovement : MonoBehaviour
 {
     public float ForwardSpeed;
     public float BackwardSpeed;
@@ -19,7 +19,7 @@ public class RPGMovement : MonoBehaviour
     Vector3 m_CurrentMovement;
     float m_CurrentTurnSpeed;
 
-    void Start() 
+    void Start()
     {
         m_CharacterController = GetComponent<CharacterController>();
         m_Animator = GetComponent<Animator>();
@@ -27,7 +27,7 @@ public class RPGMovement : MonoBehaviour
         m_TransformView = GetComponent<PhotonTransformView>();
     }
 
-    void Update() 
+    void Update()
     {
         if( m_PhotonView.isMine == true )
         {
@@ -105,7 +105,7 @@ public class RPGMovement : MonoBehaviour
 
     void UpdateForwardMovement()
     {
-        if( Input.GetKey( KeyCode.W ) == true )
+        if( Input.GetKey( KeyCode.W ) || Input.GetAxisRaw("Vertical") > 0.1f )
         {
             m_CurrentMovement = transform.forward * ForwardSpeed;
         }
@@ -113,7 +113,7 @@ public class RPGMovement : MonoBehaviour
 
     void UpdateBackwardMovement()
     {
-        if( Input.GetKey( KeyCode.S ) == true )
+        if( Input.GetKey( KeyCode.S ) || Input.GetAxisRaw("Vertical") < -0.1f )
         {
             m_CurrentMovement = -transform.forward * BackwardSpeed;
         }
@@ -123,7 +123,7 @@ public class RPGMovement : MonoBehaviour
     {
         if( Input.GetKey( KeyCode.Q ) == true )
         {
-            m_CurrentMovement = -transform.right * StrafeSpeed;            
+            m_CurrentMovement = -transform.right * StrafeSpeed;
         }
 
         if( Input.GetKey( KeyCode.E ) == true )
@@ -134,16 +134,16 @@ public class RPGMovement : MonoBehaviour
 
     void UpdateRotateMovement()
     {
-        if( Input.GetKey( KeyCode.A ) == true )
+        if( Input.GetKey( KeyCode.A ) || Input.GetAxisRaw("Horizontal") < -0.1f )
         {
             m_CurrentTurnSpeed = -RotateSpeed;
-            transform.Rotate( 0, -RotateSpeed * Time.deltaTime, 0 );
+            transform.Rotate(0.0f, -RotateSpeed * Time.deltaTime, 0.0f);
         }
 
-        if( Input.GetKey( KeyCode.D ) == true )
+        if( Input.GetKey( KeyCode.D ) || Input.GetAxisRaw("Horizontal") > 0.1f )
         {
             m_CurrentTurnSpeed = RotateSpeed;
-            transform.Rotate( 0, RotateSpeed * Time.deltaTime, 0 );
+            transform.Rotate(0.0f, RotateSpeed * Time.deltaTime, 0.0f);
         }
     }
 }

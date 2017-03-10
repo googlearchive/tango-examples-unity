@@ -103,55 +103,77 @@ public class TangoInspector : Editor
     /// <param name="tangoApplication">Tango application.</param>
     private void _DrawAreaDescriptionOptions(TangoApplication tangoApplication)
     {
-        tangoApplication.m_enableAreaDescriptions = EditorGUILayout.Toggle(
-            "Enable Area Descriptions", tangoApplication.m_enableAreaDescriptions);
-
-        if (tangoApplication.m_enableAreaDescriptions)
+        string[] options = new string[]
         {
-            ++EditorGUI.indentLevel;
-
-            string[] options = new string[]
+            "Motion Tracking",
+            "Motion Tracking (with Drift Correction)",
+            "Local Area Description (Load Existing)",
+            "Local Area Description (Learning)",
+            "Cloud Area Description"
+        };
+        int selectedOption = 0;
+        if (tangoApplication.m_enableDriftCorrection)
+        {
+            selectedOption = 1;
+        }
+        else if (tangoApplication.m_enableAreaDescriptions)
+        {
+            if (tangoApplication.m_areaDescriptionLearningMode)
             {
-                "Drift Correction",
-                "Learning",
-                "Load Existing",
-            };
-            int selectedOption;
-            if (tangoApplication.m_enableDriftCorrection)
-            {
-                selectedOption = 0;
+                selectedOption = 3;
             }
-            else if (tangoApplication.m_areaDescriptionLearningMode)
+            else if (tangoApplication.m_enableCloudADF)
             {
-                selectedOption = 1;
+                selectedOption = 4;
             }
             else
             {
                 selectedOption = 2;
             }
+        }
 
-            switch (EditorGUILayout.Popup("Mode", selectedOption, options))
-            {
-            case 0:
-                tangoApplication.m_enableDriftCorrection = true;
-                tangoApplication.m_areaDescriptionLearningMode = false;
-                break;
-            case 1:
-                tangoApplication.m_enableDriftCorrection = false;
-                tangoApplication.m_areaDescriptionLearningMode = true;
-                break;
-            default:
-                tangoApplication.m_enableDriftCorrection = false;
-                tangoApplication.m_areaDescriptionLearningMode = false;
-                break;
-            }
+        switch (EditorGUILayout.Popup("Pose Mode", selectedOption, options))
+        {
+        case 1: // motion tracking with drift correction
+            tangoApplication.m_enableDriftCorrection = true;
+            tangoApplication.m_enableAreaDescriptions = false;
+            tangoApplication.m_areaDescriptionLearningMode = false;
+            tangoApplication.m_enableCloudADF = false;
+            break;
+        case 2: // area learning, load existing local
+            tangoApplication.m_enableDriftCorrection = false;
+            tangoApplication.m_enableAreaDescriptions = true;
+            tangoApplication.m_areaDescriptionLearningMode = false;
+            tangoApplication.m_enableCloudADF = false;
+            break;
+        case 3: // area learning, local learning mode
+            tangoApplication.m_enableDriftCorrection = false;
+            tangoApplication.m_enableAreaDescriptions = true;
+            tangoApplication.m_areaDescriptionLearningMode = true;
+            tangoApplication.m_enableCloudADF = false;
+            break;
+        case 4: // area learning, cloud mode
+            tangoApplication.m_enableDriftCorrection = false;
+            tangoApplication.m_enableAreaDescriptions = true;
+            tangoApplication.m_areaDescriptionLearningMode = false;
+            tangoApplication.m_enableCloudADF = true;
+            break;
+        default: // case 0, motion tracking
+            tangoApplication.m_enableDriftCorrection = false;
+            tangoApplication.m_enableAreaDescriptions = false;
+            tangoApplication.m_areaDescriptionLearningMode = false;
+            tangoApplication.m_enableCloudADF = false;
+            break;
+        }
 
-            if (m_tangoApplication.m_enableDriftCorrection)
-            {
-                EditorGUILayout.HelpBox("Drift correction mode is experimental.", MessageType.Warning);
-            }
+        if (m_tangoApplication.m_enableDriftCorrection)
+        {
+            EditorGUILayout.HelpBox("Drift correction mode is experimental.", MessageType.Warning);
+        }
 
-            --EditorGUI.indentLevel;
+        if (m_tangoApplication.m_enableCloudADF)
+        {
+            EditorGUILayout.HelpBox("Cloud Area Descriptions is experimental.", MessageType.Warning);
         }
 
         EditorGUILayout.Space();
@@ -312,8 +334,9 @@ public class TangoInspector : Editor
             if (tangoApplication.m_3drGenerateColor
                 && (!tangoApplication.m_enableVideoOverlay || !tangoApplication.m_videoOverlayUseByteBufferMethod))
             {
-                EditorGUILayout.HelpBox("Video Overlay must be enabled and set to \"Raw Bytes\" or \"Both\""
-                                        + " in order to use 3D Reconstruction with color.", MessageType.Warning);
+                EditorGUILayout.HelpBox("To use 3D reconstruction with color, you must enable Video Overlay and"
+                                        + " set it to \"Raw Bytes\", \"Texture and Raw Bytes\", or "
+                                        + " \"YUV Texture and Raw Bytes\".", MessageType.Warning);
             }
 
             tangoApplication.m_3drGenerateNormal = EditorGUILayout.Toggle(
@@ -343,7 +366,7 @@ public class TangoInspector : Editor
             {
                 EditorGUILayout.HelpBox("Area Descriptions are enabled, but \"Use Area Description Pose\" is disabled "
                                         + "for 3D Reconstruction.\n\nIf left as-is, 3D Reconstruction will use the Start of "
-                                        + "Service pose, even if an area description is loaded and/or area learning is enabled.", 
+                                        + "Service pose, even if an area description is loaded and/or area learning is enabled.",
                                         MessageType.Warning);
             }
 

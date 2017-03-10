@@ -514,7 +514,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
                 pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
                 PoseProvider.GetPoseAtTime(relocalizedPose, tempMarker.m_timestamp, pair);
 
-                Matrix4x4 uwTDevice = m_poseController.m_uwTss
+                Matrix4x4 uwTDevice = TangoSupport.UNITY_WORLD_T_START_SERVICE
                                       * relocalizedPose.ToMatrix4x4()
                                       * m_poseController.m_dTuc;
 

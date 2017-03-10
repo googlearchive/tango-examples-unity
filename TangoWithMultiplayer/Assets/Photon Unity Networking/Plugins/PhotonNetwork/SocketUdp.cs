@@ -81,7 +81,7 @@ namespace ExitGames.Client.Photon
         {
             if (this.ReportDebugOfLevel(DebugLevel.INFO))
             {
-                this.EnqueueDebugReturn(DebugLevel.INFO, "Disconnect()");
+                this.EnqueueDebugReturn(DebugLevel.INFO, "CSharpSocket.Disconnect()");
             }
 
             this.State = PhotonSocketState.Disconnecting;
@@ -112,7 +112,7 @@ namespace ExitGames.Client.Photon
         {
             lock (this.syncer)
             {
-                if (!this.sock.Connected)
+                if (this.sock == null || !this.sock.Connected)
                 {
                     return PhotonSocketError.Skipped;
                 }
@@ -142,23 +142,35 @@ namespace ExitGames.Client.Photon
 
         internal void DnsAndConnect()
         {
+            IPAddress ipAddress = null;
             try
             {
                 lock (this.syncer)
                 {
-                    this.sock = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+                    ipAddress = IPhotonSocket.GetIpAddress(this.ServerAddress);
+                    if (ipAddress == null)
+                    {
+                        throw new ArgumentException("Invalid IPAddress. Address: " + this.ServerAddress);
+                    }
+                    if (ipAddress.AddressFamily != AddressFamily.InterNetwork && ipAddress.AddressFamily != AddressFamily.InterNetworkV6)
+                    {
+                        throw new ArgumentException("AddressFamily '" + ipAddress.AddressFamily + "' not supported. Address: " + this.ServerAddress);
+                    }
 
-                    IPAddress ep = IPhotonSocket.GetIpAddress(this.ServerAddress);
-                    this.sock.Connect(ep, this.ServerPort);
+                    this.sock = new Socket(ipAddress.AddressFamily, SocketType.Dgram, ProtocolType.Udp);
+                    this.sock.Connect(ipAddress, this.ServerPort);
 
+                    this.AddressResolvedAsIpv6 = (ipAddress.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6);
                     this.State = PhotonSocketState.Connected;
+                    
+                    this.peerBase.OnConnect();
                 }
             }
             catch (SecurityException se)
             {
                 if (this.ReportDebugOfLevel(DebugLevel.ERROR))
                 {
-                    this.Listener.DebugReturn(DebugLevel.ERROR, "Connect() to '" + this.ServerAddress + "' failed: " + se.ToString());
+                    this.Listener.DebugReturn(DebugLevel.ERROR, "Connect() to '" + this.ServerAddress + "' (" + ((ipAddress == null ) ? "": ipAddress.AddressFamily.ToString()) + ") failed: " + se.ToString());
                 }
 
                 this.HandleException(StatusCode.SecurityExceptionOnConnect);
@@ -168,7 +180,7 @@ namespace ExitGames.Client.Photon
             {
                 if (this.ReportDebugOfLevel(DebugLevel.ERROR))
                 {
-                    this.Listener.DebugReturn(DebugLevel.ERROR, "Connect() to '" + this.ServerAddress + "' failed: " + se.ToString());
+                    this.Listener.DebugReturn(DebugLevel.ERROR, "Connect() to '" + this.ServerAddress + "' (" + ((ipAddress == null) ? "" : ipAddress.AddressFamily.ToString()) + ") failed: " + se.ToString());
                 }
 
                 this.HandleException(StatusCode.ExceptionOnConnect);

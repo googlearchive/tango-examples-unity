@@ -14,7 +14,7 @@ public class GUIFriendsInRoom : MonoBehaviour
     
     public void OnGUI()
     {
-        if (PhotonNetwork.connectionStateDetailed != PeerState.Joined)
+        if (!PhotonNetwork.inRoom)
         {
             return;
         }

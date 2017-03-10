@@ -11,7 +11,7 @@ public class InstantiateCube : MonoBehaviour
 
     void OnClick()
     {
-        if (PhotonNetwork.connectionStateDetailed != PeerState.Joined)
+        if (PhotonNetwork.connectionStateDetailed != ClientState.Joined)
         {
             // only use PhotonNetwork.Instantiate while in a room.
             return;

@@ -26,6 +26,58 @@ using System;
 using System.Collections;
 using UnityEngine;
 
+[module: System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
+    "SA1649:FileHeaderFileNameDocumentationMustMatchTypeName",
+    Justification = "Files can start with an interface that has a different name.")]
+
+/// <summary>
+/// Instance wrapper interface for static functionality of AndroidHelper.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
+    "SA1600:ElementsMustBeDocumented", Justification = "Interface for testing; methods documented on implementation.")]
+internal interface IAndroidHelperWrapper
+{
+    bool CheckPermission(string permissionType);
+
+    bool ApplicationHasTangoPermissions(string permissionType);
+
+    void StartTangoPermissionsActivity(string permissionType);
+
+    void RequestPermission(string permissionType, int requestCode);
+
+    bool BindTangoService();
+
+    Tango.OrientationManager.Rotation GetDisplayRotation();
+
+    Tango.OrientationManager.Rotation GetColorCameraRotation();
+
+    int TangoSetBinder(AndroidJavaObject binder);
+
+    void RegisterPauseEvent(OnPauseEventHandler handler);
+
+    void RegisterResumeEvent(OnResumeEventHandler handler);
+
+    void RegisterOnActivityResultEvent(OnActivityResultEventHandler handler);
+
+    void RegisterOnDisplayChangedEvent(global::OnDisplayChangedEventHandler handler);
+
+    void RegisterOnTangoServiceConnected(AndroidHelper.OnTangoServiceConnected handler);
+
+    void RegisterOnTangoServiceDisconnected(AndroidHelper.OnTangoServiceDisconnected handler);
+
+    void RegisterOnRequestPermissionsResultEvent(OnRequestPermissionsResultHandler handler);
+
+    void UnregisterPauseEvent(OnPauseEventHandler handler);
+
+    void UnregisterResumeEvent(OnResumeEventHandler handler);
+
+    void UnregisterOnActivityResultEvent(OnActivityResultEventHandler handler);
+
+    void UnregisterOnDisplayChangedEvent(global::OnDisplayChangedEventHandler handler);
+
+    bool IsRunningOnAndroid();
+}
+
 /// <summary>
 /// Helper functions for common android functionality.
 /// </summary>
@@ -709,5 +761,123 @@ public partial class AndroidHelper : MonoBehaviour
             m_unityActivity.Call("attachLifecycleListener", m_callbacks);
         }
         #endif
+    }
+}
+
+/// <summary>
+/// Instance wrapper for static functionality of AndroidHelper.
+/// </summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules",
+    "SA1600:ElementsMustBeDocumented", Justification = "Interface for testing; methods documented on implementation.")]
+internal class AndroidHelperWrapper : IAndroidHelperWrapper
+{
+    private static AndroidHelperWrapper m_instance;
+
+    public static AndroidHelperWrapper Instance
+    {
+        get
+        {
+            return m_instance != null ? m_instance : m_instance = new AndroidHelperWrapper();
+        }
+    }
+
+    public bool CheckPermission(string permission)
+    {
+        return AndroidHelper.CheckPermission(permission);
+    }
+
+    public bool ApplicationHasTangoPermissions(string permissionType)
+    {
+        return AndroidHelper.ApplicationHasTangoPermissions(permissionType);
+    }
+
+    public void StartTangoPermissionsActivity(string permissionType)
+    {
+        AndroidHelper.StartTangoPermissionsActivity(permissionType);
+    }
+
+    public void RequestPermission(string permissionType, int requestCode)
+    {
+        AndroidHelper.RequestPermission(permissionType, requestCode);
+    }
+
+    public bool BindTangoService()
+    {
+        return AndroidHelper.BindTangoService();
+    }
+
+    public Tango.OrientationManager.Rotation GetDisplayRotation()
+    {
+        return AndroidHelper.GetDisplayRotation();
+    }
+
+    public Tango.OrientationManager.Rotation GetColorCameraRotation()
+    {
+        return AndroidHelper.GetColorCameraRotation();
+    }
+
+    public int TangoSetBinder(AndroidJavaObject binder)
+    {
+        return AndroidHelper.TangoSetBinder(binder);
+    }
+
+    public void RegisterPauseEvent(OnPauseEventHandler handler)
+    {
+        AndroidHelper.RegisterPauseEvent(handler);
+    }
+
+    public void RegisterResumeEvent(OnResumeEventHandler handler)
+    {
+        AndroidHelper.RegisterResumeEvent(handler);
+    }
+
+    public void RegisterOnActivityResultEvent(OnActivityResultEventHandler handler)
+    {
+        AndroidHelper.RegisterOnActivityResultEvent(handler);
+    }
+
+    public void RegisterOnDisplayChangedEvent(global::OnDisplayChangedEventHandler handler)
+    {
+        AndroidHelper.RegisterOnDisplayChangedEvent(handler);
+    }
+
+    public void RegisterOnTangoServiceConnected(AndroidHelper.OnTangoServiceConnected handler)
+    {
+        AndroidHelper.RegisterOnTangoServiceConnected(handler);
+    }
+
+    public void RegisterOnTangoServiceDisconnected(AndroidHelper.OnTangoServiceDisconnected handler)
+    {
+        AndroidHelper.RegisterOnTangoServiceDisconnected(handler);
+    }
+
+    public void RegisterOnRequestPermissionsResultEvent(OnRequestPermissionsResultHandler handler)
+    {
+        AndroidHelper.RegisterOnRequestPermissionsResultEvent(handler);
+    }
+
+    public void UnregisterPauseEvent(OnPauseEventHandler handler)
+    {
+        AndroidHelper.UnregisterPauseEvent(handler);
+    }
+
+    public void UnregisterResumeEvent(OnResumeEventHandler handler)
+    {
+        AndroidHelper.UnregisterResumeEvent(handler);
+    }
+
+    public void UnregisterOnActivityResultEvent(OnActivityResultEventHandler handler)
+    {
+        AndroidHelper.UnregisterOnActivityResultEvent(handler);
+    }
+
+    public void UnregisterOnDisplayChangedEvent(global::OnDisplayChangedEventHandler handler)
+    {
+        AndroidHelper.UnregisterOnDisplayChangedEvent(handler);
+    }
+
+    public bool IsRunningOnAndroid()
+    {
+        return Application.platform == RuntimePlatform.Android;
     }
 }

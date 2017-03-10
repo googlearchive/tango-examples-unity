@@ -56,6 +56,18 @@ public class HubGui : MonoBehaviour
             demoBtn = new DemoBtn() { Text = "Start", Link = "DemoSynchronization-Scene" };
         }
 
+
+		if (GUILayout.Button("Basic Tutorial", GUILayout.Width(280)))
+		{
+			demoDescription = "<color=orange>Basic tutorial</color>\n\n" +
+				"All custom code for connection, player and scene management.\n" +
+				"Auto synchronization of room levels.\n" +
+				"Uses PhotonAnimatoView for Animator synch.\n" +
+				"New Unity UI all around, for Menus and player health HUD.\n" +
+				"Full step by step tutorial available online.";
+			demoBtn = new DemoBtn() { Text = "Start", Link = "PunBasics-Launcher" };
+		}
+
         GUILayout.Label("Advanced", m_Headline);
         if (GUILayout.Button("Ownership Transfer", GUILayout.Width(280)))
         {
@@ -101,6 +113,14 @@ public class HubGui : MonoBehaviour
             this.demoBtn = new DemoBtn() { Text = "Start", Link = "DemoFriends-Scene" };
             this.webLink = new DemoBtn();
         }
+
+		if (GUILayout.Button("Turn Based Game", GUILayout.Width(280)))
+		{
+			demoDescription = "<color=orange>'Rock Paper Scissor' Turn Based Game</color>\n\nDemonstrate TurnBased Game Mechanics using PUN.\n\nIt makes use of the TurnBasedManager Utility Script";
+			this.demoBtn = new DemoBtn() { Text = "Start", Link = "DemoRPS-Scene" };
+			this.webLink = new DemoBtn();
+		}
+
 
         GUILayout.Label("Tutorial", m_Headline);
         if (GUILayout.Button("Marco Polo Tutorial", GUILayout.Width(280)))

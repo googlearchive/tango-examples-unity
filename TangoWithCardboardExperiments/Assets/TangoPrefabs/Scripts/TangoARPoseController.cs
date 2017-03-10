@@ -37,15 +37,15 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     public bool m_useAreaDescriptionPose = false;
 
     /// <summary>
-    /// When enabled (which is the default), pose positions are based on the 
+    /// When enabled (which is the default), pose positions are based on the
     /// timestamp of the most recent video camera update.
-    /// 
+    ///
     /// Can be disabled for whenever this behavior is not desired: For instance, in
     /// an application where only some segments of the experience display an
     /// active camera feed.
     /// </summary>
     [Tooltip("This should always be enabled when using AR. Can be disabled "
-             + "to get smoother motion in non-AR parts of an app.")]
+                 + "to get smoother motion in non-AR parts of an app.")]
     public bool m_syncToARScreen = true;
 
     /// <summary>
@@ -84,13 +84,13 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     // The full equation is:
     //     Matrix4x4 uwTuc = uwTss * ssTd * dTuc;
     //
-    // uwTuc: The Unity camera with respect to the Unity world coordinate frame; 
+    // uwTuc: The Unity camera with respect to the Unity world coordinate frame;
     //        this is the desired matrix.
-    // uwTss: A constant matrix converting the start of service coordinate frame 
+    // uwTss: A constant matrix converting the start of service coordinate frame
     //        to the Unity world coordinate frame.
-    // ssTd:  The device frame with respect to start of service frame; this 
+    // ssTd:  The device frame with respect to start of service frame; this
     //        matrix comes from the Tango pose data.
-    // dTuc:  A constant matrix converting the Unity world coordinate frame to 
+    // dTuc:  A constant matrix converting the Unity world coordinate frame to
     //        the device coordinate frame.
     //
     // For more information, see the Tango coordinate system documentation:
@@ -104,14 +104,6 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     public Matrix4x4 m_dTuc;
 
     /// <summary>
-    /// The transformation matrix that converts from the right-handed Start of
-    /// Service  coordinate frame to the left-handed Unity World coordinate
-    /// frame.
-    /// </summary>
-    [HideInInspector]
-    public Matrix4x4 m_uwTss;
-
-    /// <summary>
     /// The TangoARScreen that is being updated.
     /// </summary>
     private TangoARScreen m_tangoARScreen;
@@ -119,7 +111,7 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// <summary>
     /// Reference to TangoApplication object.
     /// </summary>
-    private TangoApplication m_tangoApplicaiton;
+    private TangoApplication m_tangoApplication;
 
     /// @cond
     /// <summary>
@@ -127,13 +119,6 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void Awake()
     {
-        // Constant matrix converting start of service frame to Unity world frame.
-        m_uwTss = new Matrix4x4();
-        m_uwTss.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
-        m_uwTss.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_uwTss.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-
         m_poseTimestamp = -1.0f;
         m_poseCount = -1;
         m_poseStatus = TangoEnums.TangoPoseStatusType.NA;
@@ -148,13 +133,13 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     {
         m_tangoARScreen = GetComponent<TangoARScreen>();
 
-        m_tangoApplicaiton = FindObjectOfType<TangoApplication>();
-        if (m_tangoApplicaiton != null)
+        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        if (m_tangoApplication != null)
         {
-            m_tangoApplicaiton.Register(this);
+            m_tangoApplication.Register(this);
 
             // If already connected to a service, then do initialization now.
-            if (m_tangoApplicaiton.IsServiceConnected)
+            if (m_tangoApplication.IsServiceConnected)
             {
                 OnTangoServiceConnected();
             }
@@ -199,9 +184,9 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     /// </summary>
     public void OnDestroy()
     {
-        if (m_tangoApplicaiton != null)
+        if (m_tangoApplication != null)
         {
-            m_tangoApplicaiton.Unregister(this);
+            m_tangoApplication.Unregister(this);
         }
     }
 
@@ -237,10 +222,20 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
     {
         TangoPoseData pose = new TangoPoseData();
         TangoCoordinateFramePair pair;
+
+        // Choose the proper pair according to the properties of this controller
         if (m_useAreaDescriptionPose)
         {
-            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
-            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+            if (m_tangoApplication.m_enableCloudADF)
+            {
+                pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_GLOBAL_WGS84;
+                pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+            }
+            else
+            {
+                pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+                pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+            }
         }
         else
         {
@@ -250,14 +245,22 @@ public class TangoARPoseController : MonoBehaviour, ITangoLifecycle
 
         PoseProvider.GetPoseAtTime(pose, timestamp, pair);
 
-        // The callback pose is for device with respect to start of service pose.
+        // Update properties from pose
         if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
-            // Construct matrix for the start of service with respect to device from the pose.
-            Matrix4x4 ssTd = pose.ToMatrix4x4();
-            
+            DMatrix4x4 globalTLocal;
+            bool success = m_tangoApplication.GetGlobalTLocal(out globalTLocal);
+            if (!success)
+            {
+                Debug.LogError("Unable to obtain GlobalTLocal from TangoApplication.");
+                return;
+            }
+
+            DMatrix4x4 uwTDevice = DMatrix4x4.FromMatrix4x4(TangoSupport.UNITY_WORLD_T_START_SERVICE) *
+                                   globalTLocal.Inverse * DMatrix4x4.TR(pose.translation, pose.orientation);
+
             // Calculate matrix for the camera in the Unity world, taking into account offsets.
-            Matrix4x4 uwTuc = m_uwTss * ssTd * m_dTuc * TangoSupport.m_colorCameraPoseRotation;
+            Matrix4x4 uwTuc = uwTDevice.ToMatrix4x4() * m_dTuc * TangoSupport.m_colorCameraPoseRotation;
             
             // Extract final position, rotation.
             m_tangoPosition = uwTuc.GetColumn(3);

@@ -12,7 +12,7 @@ public class PunStartup : MonoBehaviour
     private const string demoBasePath = "Assets/Photon Unity Networking/Demos/";
     private static string[] demoPaths =
         {
-            "DemoHub/DemoHub-Scene.unity",
+            "DemoHub/DemoHub-Scene-V2.unity",
             "DemoBoxes/DemoBoxes-Scene.unity",
             "DemoWorker/DemoWorker-Scene.unity",
             "DemoWorker/DemoWorkerGame-Scene.unity",
@@ -112,7 +112,8 @@ public class PunStartup : MonoBehaviour
                 continue;
             }
 
-            if (path.Contains("Hub"))
+			// edited to avoid old scene to be included.
+			if (path.Contains("DemoHub-Scene-V2"))
             {
                 sceneAr.Insert(0, new EditorBuildSettingsScene(path, true));
                 continue;

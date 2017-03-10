@@ -24,7 +24,7 @@ using UnityEngine;
 /// A generic FPS counter.
 /// </summary>
 public class FPSCounter : MonoBehaviour
-{   
+{
     /// <summary>
     /// Offset of FPS string in pixels on X axis of screen.
     /// </summary>
@@ -49,7 +49,7 @@ public class FPSCounter : MonoBehaviour
     /// <summary>
     /// Use this for initialization.
     /// </summary>
-    private void Start() 
+    private void Start()
     {
         m_currentFPS = 0;
         m_framesSinceUpdate = 0;
@@ -57,11 +57,11 @@ public class FPSCounter : MonoBehaviour
         m_fpsText = "FPS = Calculating";
         m_tangoApplication = FindObjectOfType<TangoApplication>();
     }
-    
+
     /// <summary>
     /// Update is called once per frame.
     /// </summary>
-    private void Update() 
+    private void Update()
     {
         m_currentTime += Time.deltaTime;
         ++m_framesSinceUpdate;
@@ -75,19 +75,19 @@ public class FPSCounter : MonoBehaviour
             m_fpsText = "FPS: " + m_currentFPS;
         }
     }
-    
+
     /// <summary>
     /// OnGUI displays simple 2D UI on top of the world.
     /// </summary>
     private void OnGUI()
     {
-        if (m_tangoApplication.HasRequestedPermissions())
+        if (m_tangoApplication.HasRequiredPermissions)
         {
             Color oldColor = GUI.color;
             GUI.color = Color.black;
-            
-            GUI.Label(new Rect(m_FPSLabelOffsetX, m_FPSLabelOffsetY, 
-                               UI_FPS_LABEL_SIZE_X, 
+
+            GUI.Label(new Rect(m_FPSLabelOffsetX, m_FPSLabelOffsetY,
+                               UI_FPS_LABEL_SIZE_X,
                                UI_FPS_LABEL_SIZE_Y), UI_FONT_SIZE + m_fpsText + "</size>");
             GUI.color = oldColor;
         }

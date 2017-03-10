@@ -6,6 +6,14 @@ public class ThirdPersonNetwork : Photon.MonoBehaviour
     ThirdPersonCamera cameraScript;
     ThirdPersonController controllerScript;
 
+
+	bool firstTake = false;
+
+	void OnEnable()
+	{
+	 	firstTake = true;	 
+	}
+
     void Awake()
     {
         cameraScript = GetComponent<ThirdPersonCamera>();
@@ -43,6 +51,15 @@ public class ThirdPersonNetwork : Photon.MonoBehaviour
             controllerScript._characterState = (CharacterState)(int)stream.ReceiveNext();
             correctPlayerPos = (Vector3)stream.ReceiveNext();
             correctPlayerRot = (Quaternion)stream.ReceiveNext();
+
+			// avoids lerping the character from "center" to the "current" position when this client joins
+			if (firstTake)
+			{
+				firstTake = false;
+				this.transform.position = correctPlayerPos;
+				transform.rotation = correctPlayerRot;
+			}
+
         }
     }
 
