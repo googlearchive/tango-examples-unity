@@ -1,3 +1,4 @@
+//-----------------------------------------------------------------------
 // <copyright file="TangoPoseController.cs" company="Google">
 //
 // Copyright 2016 Google Inc. All Rights Reserved.
@@ -16,187 +17,232 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System;
-using System.Collections;
 using Tango;
 using UnityEngine;
 
 /// <summary>
-/// This is a basic movement controller based on
-/// pose estimation returned from the Tango Service.
+/// A movement controller that updates the attached GameObject's transform to reflect
+/// poses from a Tango device.
 /// </summary>
-public class TangoPoseController : MonoBehaviour, ITangoPose
+public class TangoPoseController : MonoBehaviour
 {
-    // Tango pose data for debug logging and transform update.
-    [HideInInspector]
-    public string m_tangoServiceVersionName = string.Empty;
-    [HideInInspector]
-    public float m_frameDeltaTime;
-    [HideInInspector]
-    public int m_frameCount;
-    [HideInInspector]
-    public TangoEnums.TangoPoseStatusType m_status;
-
-    private float m_prevFrameTimestamp;
-
-    // Tango pose data.
-    private Quaternion m_tangoRotation;
-    private Vector3 m_tangoPosition;
-
-    // We use couple of matrix transformation to convert the pose from Tango coordinate
-    // frame to Unity coordinate frame.
-    // The full equation is:
-    //     Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc;
-    //
-    // matrixuwTuc: Unity camera with respect to Unity world, this is the desired matrix.
-    // m_matrixuwTss: Constant matrix converting start of service frame to Unity world frame.
-    // matrixssTd: Device frame with repect to start of service frame, this matrix denotes the 
-    //       pose transform we get from pose callback.
-    // m_matrixdTuc: Constant matrix converting Unity world frame frame to device frame.
-    //
-    // Please see the coordinate system section online for more information:
-    //     https://developers.google.com/project-tango/overview/coordinate-systems
-    private Matrix4x4 m_matrixuwTss;
-    private Matrix4x4 m_matrixdTuc;
-
-    /// @cond
     /// <summary>
-    /// Initialize the controller.
+    /// When enabled, TangoPoseController will limit transform updates to rotational pitch and
+    /// roll.  External transform updates will be preserved (as always) when the clutch is subsequently
+    /// disabled.  This is useful for allowing the device to move in physical space without updating
+    /// the controller's position and yaw.
     /// </summary>
-    public void Awake()
+    public bool m_clutchEnabled;
+
+    /// <summary>
+    /// The modes for selecting the relative base frame from which TangoPoseController will calculate transform
+    /// updates.  If set to AUTO_DETECT, the controller will match the settings of TangoApplication
+    /// which is correct for most use cases.  Alternatively, the base frame can be statically set.
+    /// </summary>
+    public BaseFrameSelectionModeEnum m_baseFrameMode;
+
+    /// <summary>
+    /// Holds reference to any TangoARScreen component attached to the same GameObject. TangoPoseController will syncronize pose
+    /// updates every frame with the most recent timestamp used by 'm_tangoARScreen' to render a frame.
+    /// This can be useful to correct for color camera latency; thus preventing a mismatch between the newer
+    /// controller position (virtual-reality render) and the older camera frame (reality-reality render).
+    /// </summary>
+    private TangoARScreen m_tangoARScreen;
+
+    /// <summary>
+    /// If supplied, positional updates from TangoPoseController will be sent to the sent
+    /// to the Move method of 'm_characterController' rather applied directly to the
+    /// transform.
+    /// </summary>
+    private CharacterController m_characterController;
+
+    /// <summary>
+    /// A tranformation matrix representing the postion and rotation of the last camera pose
+    /// relative to the unity world.  This does not factor in external offsets applied to
+    /// the transform.
+    /// </summary>
+    private Matrix4x4 m_unityWorld_T_unityCamera = Matrix4x4.identity;
+
+    /// <summary>
+    /// A tranformation matrix representing the translation and rotational yaw externally
+    /// applied to the PoseController's transform relative to the unity world.
+    /// </summary>
+    private Matrix4x4 m_unityWorldTransformOffset_T_unityWorld = Matrix4x4.identity;
+
+    /// <summary>
+    /// Reference to TangoApplication object.
+    /// </summary>
+    private TangoApplication m_tangoApplication;
+
+    /// <summary>
+    /// An enumeration of selection modes for the base frame from which TangoPoseController
+    /// will calculate tango pose => transform updates.
+    /// </summary>
+    public enum BaseFrameSelectionModeEnum
     {
-        // Constant matrix converting start of service frame to Unity world frame.
-        m_matrixuwTss = new Matrix4x4();
-        m_matrixuwTss.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_matrixuwTss.SetColumn(1, new Vector4(0.0f, 0.0f, 1.0f, 0.0f));
-        m_matrixuwTss.SetColumn(2, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_matrixuwTss.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-
-        // Constant matrix converting Unity world frame frame to device frame.
-        m_matrixdTuc = new Matrix4x4();
-        m_matrixdTuc.SetColumn(0, new Vector4(1.0f, 0.0f, 0.0f, 0.0f));
-        m_matrixdTuc.SetColumn(1, new Vector4(0.0f, 1.0f, 0.0f, 0.0f));
-        m_matrixdTuc.SetColumn(2, new Vector4(0.0f, 0.0f, -1.0f, 0.0f));
-        m_matrixdTuc.SetColumn(3, new Vector4(0.0f, 0.0f, 0.0f, 1.0f));
-
-        m_frameDeltaTime = -1.0f;
-        m_prevFrameTimestamp = -1.0f;
-        m_frameCount = -1;
-        m_status = TangoEnums.TangoPoseStatusType.NA;
-        m_tangoRotation = Quaternion.identity;
-        m_tangoPosition = Vector3.zero;
+        AUTO_DETECT,
+        USE_START_OF_SERVICE,
+        USE_AREA_DESCRIPTION,
     }
 
     /// <summary>
-    /// Start this instance.
+    /// Gets the timestamp of the last pose.
+    /// </summary>
+    /// <value>The timestamp of the last pose.</value>
+    public double LastPoseTimestamp { get; private set; }
+
+    /// <summary>
+    /// Gets a value indicating whether the target frame is the color camera, otherwise presumed to be device.
+    /// </summary>
+    private bool IsTargetingColorCamera
+    {
+        get
+        {
+            return m_tangoARScreen != null;
+        }
+    }
+
+    /// <summary>
+    /// Start is called on the frame when a script is enabled.
     /// </summary>
     public void Start()
     {
-        m_tangoServiceVersionName = TangoApplication.GetTangoServiceVersion();
+        m_tangoApplication = FindObjectOfType<TangoApplication>();
+        if (m_tangoApplication == null)
+        {
+            Debug.LogError("An instance of TangoApplication was not found in the scene.");
+        }
 
-        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
-        if (tangoApplication != null)
-        {
-            tangoApplication.Register(this);
-        }
-        else
-        {
-            Debug.Log("No Tango Manager found in scene.");
-        }
+        m_tangoARScreen = GetComponent<TangoARScreen>();
+        m_characterController = GetComponent<CharacterController>();
     }
 
     /// <summary>
-    /// Unity callback when application is paused.
+    /// Update is called every frame.
     /// </summary>
-    /// <param name="pauseStatus">The pauseStatus as reported by Unity.</param>
-    public void OnApplicationPause(bool pauseStatus)
+    public void Update()
     {
-        m_frameDeltaTime = -1.0f;
-        m_prevFrameTimestamp = -1.0f;
-        m_frameCount = -1;
-        m_status = TangoEnums.TangoPoseStatusType.NA;
-        m_tangoRotation = Quaternion.identity;
-        m_tangoPosition = Vector3.zero;
+        _UpdateTransformOffset();
+        _UpdatePose();
     }
 
     /// <summary>
-    /// Unity callback when the component gets destroyed.
+    /// Updates the offset matrix that tracks external changes to the transform of attached GameObject.
     /// </summary>
-    public void OnDestroy()
+    private void _UpdateTransformOffset()
     {
-        TangoApplication tangoApplication = FindObjectOfType<TangoApplication>();
-        if (tangoApplication != null)
-        {
-            tangoApplication.Unregister(this);
-        }
+        Quaternion deviceRotation =
+            Quaternion.LookRotation(m_unityWorld_T_unityCamera.GetColumn(2), m_unityWorld_T_unityCamera.GetColumn(1));
+
+        Quaternion deviceRotationWithTransformYaw =
+            Quaternion.Euler(deviceRotation.eulerAngles.x, transform.eulerAngles.y, deviceRotation.eulerAngles.z);
+
+        // Calculate offset based on the difference between the last pose and the transform, filtering out pitch and roll.
+        m_unityWorldTransformOffset_T_unityWorld = Matrix4x4.TRS(transform.position, deviceRotationWithTransformYaw, Vector3.one) *
+            m_unityWorld_T_unityCamera.inverse;
     }
 
     /// <summary>
-    /// Handle the callback sent by the Tango Service
-    /// when a new pose is sampled.
+    /// Updates the transformation to the latest pose.
     /// </summary>
-    /// <param name="pose">Pose from Tango.</param>
-    public void OnTangoPoseAvailable(Tango.TangoPoseData pose)
+    private void _UpdatePose()
     {
-        // Get out of here if the pose is null
-        if (pose == null)
+        // Query a new pose.
+        TangoPoseData pose = new TangoPoseData();
+        PoseProvider.GetPoseAtTime(pose, m_tangoARScreen != null ? m_tangoARScreen.m_screenUpdateTime : 0.0f, _GetFramePair());
+
+        // Do not update with invalide poses.
+        if (pose.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
         {
-            Debug.Log("TangoPoseDate is null.");
             return;
         }
 
-        // The callback pose is for device with respect to start of service pose.
-        if (pose.framePair.baseFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE &&
-            pose.framePair.targetFrame == TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE)
+        // Do not update if the last update was for the same timestamp.
+        if (pose.timestamp == LastPoseTimestamp)
         {
-            // Update the stats for the pose for the debug text
-            if (pose.status_code == TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)
-            {
-                // Create new Quaternion and Vec3 from the pose data received in the event.
-                m_tangoPosition = new Vector3((float)pose.translation[0],
-                                              (float)pose.translation[1],
-                                              (float)pose.translation[2]);
-
-                m_tangoRotation = new Quaternion((float)pose.orientation[0],
-                                                 (float)pose.orientation[1],
-                                                 (float)pose.orientation[2],
-                                                 (float)pose.orientation[3]);
-                
-                // Reset the current status frame count if the status code changed.
-                if (pose.status_code != m_status)
-                {
-                    m_frameCount = 0;
-                }
-
-                m_frameCount++;
-
-                // Compute delta frame timestamp.
-                m_frameDeltaTime = (float)pose.timestamp - m_prevFrameTimestamp;
-                m_prevFrameTimestamp = (float)pose.timestamp;
-
-                // Construct the start of service with respect to device matrix from the pose.
-                Matrix4x4 matrixssTd = Matrix4x4.TRS(m_tangoPosition, m_tangoRotation, Vector3.one);
-
-                // Converting from Tango coordinate frame to Unity coodinate frame.
-                Matrix4x4 matrixuwTuc = m_matrixuwTss * matrixssTd * m_matrixdTuc * TangoSupport.m_devicePoseRotation;
-
-                // Extract new local position
-                transform.position = matrixuwTuc.GetColumn(3);
-
-                // Extract new local rotation
-                transform.rotation = Quaternion.LookRotation(matrixuwTuc.GetColumn(2), matrixuwTuc.GetColumn(1));
-            }
-            else
-            {
-                // if the current pose is not valid we set the pose to identity
-                m_tangoPosition = Vector3.zero;
-                m_tangoRotation = Quaternion.identity;
-            }
-            
-            // Finally, apply the new pose status
-            m_status = pose.status_code;
+            return;
         }
+
+        LastPoseTimestamp = pose.timestamp;
+
+        DMatrix4x4 globalTLocal;
+        if (!m_tangoApplication.GetGlobalTLocal(out globalTLocal))
+        {
+            Debug.LogError("Unable to obtain GlobalTLocal from TangoApplication.");
+            return;
+        }
+
+        DMatrix4x4 unityWorld_T_device =
+            DMatrix4x4.FromMatrix4x4(TangoSupport.UNITY_WORLD_T_START_SERVICE) * globalTLocal.Inverse * DMatrix4x4.TR(pose.translation, pose.orientation);
+
+        // Calculate matrix for the camera in the Unity world
+        if (IsTargetingColorCamera)
+        {
+            m_unityWorld_T_unityCamera =
+                unityWorld_T_device.ToMatrix4x4() * TangoSupport.COLOR_CAMERA_T_UNITY_CAMERA * TangoSupport.m_colorCameraPoseRotation;
+        }
+        else
+        {
+            m_unityWorld_T_unityCamera =
+                unityWorld_T_device.ToMatrix4x4() * TangoSupport.DEVICE_T_UNITY_CAMERA * TangoSupport.m_devicePoseRotation;
+        }
+
+        // Extract final position and rotation from matrix.
+        Matrix4x4 unityWorldOffset_T_unityCamera = m_unityWorldTransformOffset_T_unityWorld * m_unityWorld_T_unityCamera;
+        Vector3 finalPosition = unityWorldOffset_T_unityCamera.GetColumn(3);
+        Quaternion finalRotation = Quaternion.LookRotation(unityWorldOffset_T_unityCamera.GetColumn(2), unityWorldOffset_T_unityCamera.GetColumn(1));
+
+        // Filter out yaw if the clutch is enabled.
+        if (m_clutchEnabled)
+        {
+            finalPosition = transform.position;
+            finalRotation = Quaternion.Euler(finalRotation.eulerAngles.x, transform.eulerAngles.y, finalRotation.eulerAngles.z);
+        }
+
+        // Apply the final position.
+        if (m_characterController)
+        {
+            m_characterController.Move(finalPosition - transform.position);
+        }
+        else
+        {
+            transform.position = finalPosition;
+        }
+
+        transform.rotation = finalRotation;
     }
 
-    /// @endcond
+    /// <summary>
+    /// Gets the current tango coordinate frame pair used for pose queries based on controller options.
+    /// </summary>
+    /// <returns>The current tango coordinate frame pair.</returns>
+    private Tango.TangoCoordinateFramePair _GetFramePair()
+    {
+        Tango.TangoCoordinateFramePair framePair;
+
+        if (m_baseFrameMode == BaseFrameSelectionModeEnum.AUTO_DETECT && m_tangoApplication.m_enableCloudADF)
+        {
+            framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_GLOBAL_WGS84;
+        }
+        else if ((m_baseFrameMode == BaseFrameSelectionModeEnum.AUTO_DETECT && m_tangoApplication.m_enableAreaDescriptions) ||
+                (m_baseFrameMode == BaseFrameSelectionModeEnum.USE_AREA_DESCRIPTION))
+        {
+            framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION;
+        }
+        else
+        {
+            framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+        }
+
+        if (IsTargetingColorCamera)
+        {
+            framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
+        }
+        else
+        {
+            framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
+        }
+
+        return framePair;
+    }
 }

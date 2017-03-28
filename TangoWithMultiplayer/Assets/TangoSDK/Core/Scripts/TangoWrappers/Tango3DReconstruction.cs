@@ -146,9 +146,25 @@ namespace Tango
         /// </summary>
         public enum Status
         {
+            /// <summary>
+            /// An error occured.
+            /// </summary>
             ERROR = -3,
+
+            /// <summary>
+            /// Extraction was only partially successful. The data filled out
+            /// is valid, but there is more data available.
+            /// </summary>
             INSUFFICIENT_SPACE = -2,
+
+            /// <summary>
+            /// Invalid parameters were passed in.
+            /// </summary>
             INVALID = -1,
+
+            /// <summary>
+            /// The operation was successful.
+            /// </summary>
             SUCCESS = 0
         }
 
@@ -755,12 +771,21 @@ namespace Tango
         [StructLayout(LayoutKind.Sequential)]
         public struct GridIndex
         {
+            /// <summary>
+            /// Index in 3D reconstrction's X direction.
+            /// </summary>
             [MarshalAs(UnmanagedType.I4)]
             public Int32 x;
 
+            /// <summary>
+            /// Index in 3D reconstruction's Y direction.
+            /// </summary>
             [MarshalAs(UnmanagedType.I4)]
             public Int32 y;
 
+            /// <summary>
+            /// Index in 3D reconstruction's Z direction.
+            /// </summary>
             [MarshalAs(UnmanagedType.I4)]
             public Int32 z;
         }

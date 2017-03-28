@@ -167,7 +167,7 @@ GameObject:
   - 4: {fileID: 96460178}
   - 114: {fileID: 96460177}
   m_Layer: 0
-  m_Name: GUIController
+  m_Name: UI Controller
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -242,7 +242,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: 1
 --- !u!1 &546924578
 GameObject:
   m_ObjectHideFlags: 0
@@ -697,7 +697,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 0
 --- !u!1 &1142884077
 GameObject:
   m_ObjectHideFlags: 0

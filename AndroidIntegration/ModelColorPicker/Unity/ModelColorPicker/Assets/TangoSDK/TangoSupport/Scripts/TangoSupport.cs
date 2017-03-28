@@ -56,11 +56,19 @@ namespace Tango
             m30 = 0.0f, m31 = 0.0f, m32 =  0.0f, m33 = 1.0f
         };
 
+        public static readonly Matrix4x4 COLOR_CAMERA_T_UNITY_CAMERA = new Matrix4x4
+        {
+            m00 = 1.0f, m01 = 0.0f, m02 = 0.0f, m03 = 0.0f,
+            m10 = 0.0f, m11 = -1.0f, m12 = 0.0f, m13 = 0.0f,
+            m20 = 0.0f, m21 = 0.0f, m22 = 1.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 = 0.0f, m32 = 0.0f, m33 = 1.0f
+        };
+
         /// <summary>
         /// The rotation matrix need to be applied when using color camera's pose.
         /// </summary>
         public static Matrix4x4 m_colorCameraPoseRotation = Matrix4x4.identity;
-        
+
         /// <summary>
         /// The rotation matrix need to be applied when using device pose.
         /// </summary>
@@ -135,7 +143,7 @@ namespace Tango
 
         /// <summary>
         /// Update current additional rotation matrix based on the display orientation and color camera orientation.
-        /// 
+        ///
         /// Not that m_colorCameraPoseRotation will need to compensate the rotation with physical color camera.
         /// </summary>
         /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
