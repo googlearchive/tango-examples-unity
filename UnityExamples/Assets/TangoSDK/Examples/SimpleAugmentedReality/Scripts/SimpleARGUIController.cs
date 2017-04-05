@@ -25,11 +25,18 @@ using UnityEngine;
 /// </summary>
 public class SimpleARGUIController : MonoBehaviour
 {
+    public TangoPoseController m_poseController;
+
     /// <summary>
     /// Update this instance.
     /// </summary>
     public void Update()
     {
+        if (m_poseController != null)
+        {
+            m_poseController.m_clutchEnabled = Input.GetMouseButton(0);
+        }
+
         if (Input.GetKey(KeyCode.Escape))
         {
             // This is a fix for a lifecycle issue where calling

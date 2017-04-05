@@ -46,6 +46,14 @@ public class SceneSwitcher : MonoBehaviour
     };
 
     /// <summary>
+    /// Unity start method.
+    /// </summary>
+    public void Start()
+    {
+        DontDestroyOnLoad(this);
+    }
+
+    /// <summary>
     /// Scene switching GUI.
     /// </summary>
     private void OnGUI()

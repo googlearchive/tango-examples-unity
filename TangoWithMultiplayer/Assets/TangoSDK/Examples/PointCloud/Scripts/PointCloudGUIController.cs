@@ -52,9 +52,9 @@ public class PointCloudGUIController : MonoBehaviour
     public const string UX_TANGO_SERVICE_VERSION = "Tango service version: {0}";
     public const string UX_TANGO_SYSTEM_EVENT = "Tango system event: {0}";
     public const string UX_TARGET_TO_BASE_FRAME = "Target->{0}, Base->{1}:";
-    public const string UX_STATUS = "\tstatus: {0}, count: {1}, position (m): [{2}], orientation: [{3}]";
+    public const string UX_STATUS = "Position(m): [{0}], orientation: [{1}]";
     public const float SECOND_TO_MILLISECOND = 1000.0f;
-    public TangoDeltaPoseController m_tangoPoseController;
+    public TangoPoseController m_tangoPoseController;
     public TangoPointCloud m_pointcloud;
 
     private const float UPDATE_FREQUENCY = 1.0f;
@@ -124,11 +124,10 @@ public class PointCloudGUIController : MonoBehaviour
             GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y - UI_LABEL_OFFSET, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + String.Format(UX_TARGET_TO_BASE_FRAME, "Device", "Start") + "</size>");
 
-            string logString = String.Format(UX_STATUS,
-                                             _GetLoggingStringFromPoseStatus(m_tangoPoseController.m_poseStatus),
-                                             _GetLoggingStringFromFrameCount(m_tangoPoseController.m_poseCount),
-                                             _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
-                                             _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation));
+            string logString = String.Format(UX_STATUS, 
+                _GetLoggingStringFromVec3(m_tangoPoseController.transform.position),
+                _GetLoggingStringFromQuaternion(m_tangoPoseController.transform.rotation));
+
             GUI.Label(new Rect(UI_LABEL_START_X, UI_POSE_LABEL_START_Y, UI_LABEL_SIZE_X, UI_LABEL_SIZE_Y),
                       UI_FONT_SIZE + logString + "</size>");
 
