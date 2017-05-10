@@ -69,7 +69,7 @@ namespace Tango
     /// <summary>
     /// Variant of <c>TangoPointCloudData</c> that has no extra processing done on it.  Instead of having arrays, it has
     /// raw <c>IntPtr</c> fields.
-    /// 
+    ///
     /// This is the exact struct that the C Tango API provides.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
@@ -91,133 +91,222 @@ namespace Tango
         public Int32 m_numPoints;
 
         /// <summary>
-        /// An array of XYZ,C float values.  XYZ is a coordinate in meters.  C is a confidence value in the range 
+        /// An array of XYZ,C float values.  XYZ is a coordinate in meters.  C is a confidence value in the range
         /// [0, 1], where 1 corresponds to full confidence.
         /// </summary>
         public IntPtr m_points;
     }
-    
-     /// <summary>
-    /// Three element vector with doubles - used only to pass data between native and managed without allocations.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public struct TangoTranslation
-    {
-        [MarshalAs(UnmanagedType.R8)]
-        public double x;
-        [MarshalAs(UnmanagedType.R8)]
-        public double y;
-        [MarshalAs(UnmanagedType.R8)]
-        public double z;
 
-        /// <summary>
-        /// Get or set x,y,z components (double) as 0,1,2 - other values throw an IndexOutOfRange exception.
-        /// </summary>
-        /// <param name="index">Set a component of the vector by int index.</param>
-        /// <returns>
-        /// Get a <see cref="System.Double"/> in the vector.
-        /// </returns>
-        public double this[int index]
-        {
-            get
-            {
-                switch (index)
-                {
-                    case 0:
-                        return x;
-                    case 1:
-                        return y;
-                    case 2:
-                        return z;
-                    default:
-                        throw new System.IndexOutOfRangeException();
-                }
-            }
-          
-            set
-            {
-                switch (index)
-                {
-                    case 0:
-                        x = value;
-                        return;
-                    case 1:
-                        y = value;
-                        return;
-                    case 2:
-                        z = value;
-                        return;
-                    default:
-                        throw new System.IndexOutOfRangeException();
-                }
-            }
-        }
-    }
-  
     /// <summary>
-    /// Four element vector with doubles - used only to pass data between native and managed without allocations.
+    /// The TangoImage contains information about a byte buffer holding image data.
+    ///
+    /// This data is populated by the service when it returns an image. This version supplies
+    /// a pointer to the start of each image plane, as there may be padding between the planes.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
-    public struct TangoOrientation
+    public struct TangoImage
     {
-        [MarshalAs(UnmanagedType.R8)]
-        public double x;
-        [MarshalAs(UnmanagedType.R8)]
-        public double y;
-        [MarshalAs(UnmanagedType.R8)]
-        public double z;
-        [MarshalAs(UnmanagedType.R8)]
-        public double w;
+        /// <summary>
+        /// The width of the image data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 m_width;
 
         /// <summary>
-        /// Get or set x,y,z,w components (double) as 0,1,2,3 - other values throw an IndexOutOfRange exception.
+        /// The height of the image data.
         /// </summary>
-        /// <param name="index">Set a component of the quaternion by int index.</param>
-        /// <returns>
-        /// A <see cref="System.Double"/> in the quaternion.
-        /// </returns>
-        public double this[int index]
-        {
-            get
-            {
-                switch (index)
-                {
-                    case 0:
-                        return x;
-                    case 1:
-                        return y;
-                    case 2:
-                        return z;
-                    case 3:
-                        return w;
-                    default:
-                        throw new System.IndexOutOfRangeException();
-                }
-            }
-          
-            set
-            {
-                switch (index)
-                {
-                    case 0:
-                        x = value;
-                        return;
-                    case 1:
-                        y = value;
-                        return;
-                    case 2:
-                        z = value;
-                        return;
-                    case 3:
-                        w = value;
-                        return;
-                    default:
-                        throw new System.IndexOutOfRangeException();
-                }
-            }
-        }
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 m_height;
+
+        /// <summary>
+        /// The pixel format of the data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoEnums.TangoImageFormatType m_format;
+
+        /// <summary>
+        /// The timestamp of this image in nanoseconds.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I8)]
+        public Int64 m_timestampNs;
+
+        /// <summary>
+        /// Number of planes for the image format of this buffer.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 m_numPlanes;
+
+        /// <summary>
+        /// Pixels in the first image plane.
+        /// </summary>
+        public IntPtr m_planeData0;
+
+        /// <summary>
+        /// Pixels in the second image plane.
+        /// </summary>
+        public IntPtr m_planeData1;
+
+        /// <summary>
+        /// Pixels in the third image plane.
+        /// </summary>
+        public IntPtr m_planeData2;
+
+        /// <summary>
+        /// Pixels in the fourth image plane.
+        /// </summary>
+        public IntPtr m_planeData3;
+
+        /// <summary>
+        /// Size of the first image plane for this buffer.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeSize0;
+
+        /// <summary>
+        /// Size of the second image plane for this buffer.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeSize1;
+
+        /// <summary>
+        /// Size of the third image plane for this buffer.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeSize2;
+
+        /// <summary>
+        /// Size of the fourth image plane for this buffer.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeSize3;
+
+        /// <summary>
+        /// Row strides for the first image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeRowStride0;
+
+        /// <summary>
+        /// Row strides for the second image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeRowStride1;
+
+        /// <summary>
+        /// Row strides for the third image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeRowStride2;
+
+        /// <summary>
+        /// Row strides for the fourth image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planeRowStride3;
+
+        /// <summary>
+        /// Pixel strides for the first image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planePpixelStride0;
+
+        /// <summary>
+        /// Pixel strides for the second image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planePixelStride1;
+
+        /// <summary>
+        /// Pixel strides for the third image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planePixelStride2;
+
+        /// <summary>
+        /// Pixel strides for the fourth image plane.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public int m_planePixelStride3;
     }
-  
+
+    /// <summary>
+    /// TangoCameraMetadata contains information about the image specific to the camera
+    /// frame capture that produced it.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TangoCameraMetadata
+    {
+        /// <summary>
+        /// Camera timestamp in nanoseconds.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I8)]
+        public Int64 m_timestampNs;
+
+        /// <summary>
+        /// Camera frame number.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I8)]
+        public Int64 m_frameNumber;
+
+        /// <summary>
+        /// Camer exposure time in nanoseconds.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I8)]
+        public Int64 m_exposureDurationNs;
+    }
+
+    /// <summary>
+    /// DEPRECATED - Please use TangoImage instead.
+    ///
+    /// The TangoImageBuffer contains information about a byte buffer holding image data.
+    ///
+    /// This data is populated by the service when it returns an image.
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct TangoImageBuffer
+    {
+        /// <summary>
+        /// The width of the image data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 width;
+
+        /// <summary>
+        /// The height of the image data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 height;
+
+        /// <summary>
+        /// The number of pixels per scanline of the image data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public UInt32 stride;
+
+        /// <summary>
+        /// The timestamp of this image.
+        /// </summary>
+        [MarshalAs(UnmanagedType.R8)]
+        public double timestamp;
+
+        /// <summary>
+        /// The frame number of this image.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I8)]
+        public Int64 frame_number;
+
+        /// <summary>
+        /// The pixel format of the data.
+        /// </summary>
+        [MarshalAs(UnmanagedType.I4)]
+        public TangoEnums.TangoImageFormatType format;
+
+        /// <summary>
+        /// Pixels in the format of this image buffer.
+        /// </summary>
+        public IntPtr data;
+    }
+
     /// <summary>
     /// DEPRECATED: A <c>TangoXYZij</c> object contains information returned from the depth sensor.
     /// </summary>
@@ -247,7 +336,7 @@ namespace Tango
 
         /// <summary>
         /// An array of packed coordinate triplets, x,y,z as floating point values.
-        /// 
+        ///
         /// With the unit in landscape orientation, screen facing the user: +Z points in the direction of the
         /// camera's optical axis, and is measured perpendicular to the plane of the camera. +X points toward the
         /// user's right, and +Y points toward the bottom of the screen. The origin is the focal centre of the color
@@ -269,12 +358,12 @@ namespace Tango
         public int ij_cols;
 
         /// <summary>
-        /// A 2D buffer, of size <c>ij_rows</c> x <c>ij_cols</c> in raster ordering that contains the index of 
+        /// A 2D buffer, of size <c>ij_rows</c> x <c>ij_cols</c> in raster ordering that contains the index of
         /// a point in the <c>xyz</c> array that was generated at this <c>ij</c> location.
-        /// 
+        ///
         /// A value of -1 denotes there was no corresponding point generated at that position. This buffer can be used
         /// to find neighboring points in the point cloud.
-        /// 
+        ///
         /// For more information, see our developer overview on depth perception .
         /// </summary>
         public IntPtr ij;
@@ -283,7 +372,7 @@ namespace Tango
         /// TangoImageBuffer is reserved for future use.
         /// </summary>
         public IntPtr color_image;
-        
+
         /// <summary>
         /// Returns a <see cref="System.String"/> that represents the current <see cref="Tango.TangoXYZij"/>.
         /// </summary>
@@ -299,7 +388,7 @@ namespace Tango
 
     /// <summary>
     /// The TangoEvent structure signals important sensor and tracking events.
-    /// 
+    ///
     /// Each event comes with a timestamp, a type, and a key-value pair describing
     /// the event.  The type is an enumeration which generally classifies the event
     /// type. The key is a text string describing the event.  The description holds
@@ -346,56 +435,6 @@ namespace Tango
         /// </summary>
         [MarshalAs(UnmanagedType.LPStr)]
         public string event_value;
-    }
-
-    /// <summary>
-    /// The TangoImageBuffer contains information about a byte buffer holding image data.
-    /// 
-    /// This data is populated by the service when it returns an image.
-    /// </summary>
-    [StructLayout(LayoutKind.Sequential)]
-    public class TangoImageBuffer
-    {
-        /// <summary>
-        /// The width of the image data.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public UInt32 width;
-
-        /// <summary>
-        /// The height of the image data.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public UInt32 height;
-
-        /// <summary>
-        /// The number of pixels per scanline of the image data.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public UInt32 stride;
-
-        /// <summary>
-        /// The timestamp of this image.
-        /// </summary>
-        [MarshalAs(UnmanagedType.R8)]
-        public double timestamp;
-
-        /// <summary>
-        /// The frame number of this image.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I8)]
-        public Int64 frame_number;
-
-        /// <summary>
-        /// The pixel format of the data.
-        /// </summary>
-        [MarshalAs(UnmanagedType.I4)]
-        public TangoEnums.TangoImageFormatType format;
-
-        /// <summary>
-        /// Pixels in the format of this image buffer.
-        /// </summary>
-        public IntPtr data;
     }
 
     /// <summary>
@@ -521,10 +560,10 @@ namespace Tango
         [MarshalAs(UnmanagedType.R8)]
         public double distortion4;
     }
-    
+
     /// <summary>
     /// The TangoPoseData struct contains 6DOF pose information.
-    /// 
+    ///
     /// The device pose is given using Android conventions.  See the Android
     /// <a href ="http://developer.android.com/guide/topics/sensors/sensors_overview.html#sensors-coords">Sensor
     /// Overview</a> page for more information.
@@ -555,13 +594,13 @@ namespace Tango
         ///   w = cos(RotationAngle / 2)
         /// </code>
         /// </summary>
-        public TangoOrientation orientation;
+        public DVector4 orientation;
 
         /// <summary>
         /// Translation, ordered x, y, z, of the pose of the target frame
         /// with reference to the base frame.
         /// </summary>
-        public TangoTranslation translation;
+        public DVector3 translation;
 
         /// <summary>
         /// The status of the pose, according to the pose lifecycle.
@@ -571,7 +610,7 @@ namespace Tango
 
         /// <summary>
         /// The pair of coordinate frames for this pose.
-        /// 
+        ///
         /// We retrieve a pose for a target coordinate frame (such as the Tango device) against a base
         /// coordinate frame (such as a learned area).
         /// </summary>
@@ -589,7 +628,7 @@ namespace Tango
         /// </summary>
         [MarshalAs(UnmanagedType.R4)]
         public float accuracy;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Tango.TangoPoseData"/> class.
         /// </summary>
@@ -597,8 +636,8 @@ namespace Tango
         {
             version = 0;
             timestamp = 0.0;
-            orientation = new TangoOrientation();
-            translation = new TangoTranslation();
+            orientation = new DVector4();
+            translation = new DVector3();
             status_code = TangoEnums.TangoPoseStatusType.TANGO_POSE_UNKNOWN;
             framePair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
             framePair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_DEVICE;
@@ -646,7 +685,7 @@ namespace Tango
         /// <returns>Formatted string.</returns>
         public override string ToString()
         {
-            return string.Format("Translation: {0}, {1}, {2}; Orientation: {0}, {1}, {2}, {3}", 
+            return string.Format("Translation: {0}, {1}, {2}; Orientation: {0}, {1}, {2}, {3}",
                                  translation[0].ToString("F3"),
                                  translation[1].ToString("F3"),
                                  translation[2].ToString("F3"),
@@ -666,32 +705,32 @@ namespace Tango
         /// The width of the image data.
         /// </summary>
         public UInt32 width;
-        
+
         /// <summary>
         /// The height of the image data.
         /// </summary>
         public UInt32 height;
-        
+
         /// <summary>
         /// The number of pixels per scanline of the image data.
         /// </summary>
         public UInt32 stride;
-        
+
         /// <summary>
         /// The timestamp of this image.
         /// </summary>
         public double timestamp;
-        
+
         /// <summary>
         /// The frame number of this image.
         /// </summary>
         public Int64 frame_number;
-        
+
         /// <summary>
         /// Pixel format of the data.
         /// </summary>
         public TangoEnums.TangoImageFormatType format;
-        
+
         /// <summary>
         /// Pixels in the format of this image buffer.
         /// </summary>
@@ -716,7 +755,7 @@ namespace Tango
 
         /// <summary>
         /// An array of XYZ,C values.  If you want individual Vector3 objects, use the indexer.
-        /// 
+        ///
         /// XYZ is a coordinate in meters.  C is a confidence value in the range [0, 1],
         /// where 1 corresponds to full confidence.
         /// </summary>
@@ -751,7 +790,7 @@ namespace Tango
         /// x/y/z components.
         /// </summary>
         public static readonly int MAX_POINTS_ARRAY_SIZE = Common.MAX_NUM_POINTS * 3;
-        
+
         /// <summary>
         /// Max IJ array size is currently defined by the largest single mesh
         /// supported by Unity. This number is multiplied by 2 to account for the
@@ -760,14 +799,14 @@ namespace Tango
         public static readonly int MAX_IJ_ARRAY_SIZE = Common.MAX_NUM_POINTS * 2;
 
         /// <summary>
-        /// 
+        ///
         /// An integer denoting the version of the structure.
         /// </summary>
         public int m_version;
 
         /// <summary>
         /// The number of points in the m_points array.
-        /// 
+        ///
         /// Because the points array always contains 3D points, this is m_points.Count / 3.
         /// </summary>
         public int m_pointCount;
@@ -796,10 +835,10 @@ namespace Tango
         /// A 2D buffer, of size <c>ij_rows</c> x <c>ij_cols</c> in raster ordering that contains
         /// the index of a point in the <c>xyz</c> array that was generated at this <c>ij</c>
         /// location.
-        /// 
+        ///
         /// A value of -1 denotes there was no corresponding point generated at that position. This buffer can be used
         /// to find neighboring points in the point cloud.
-        /// 
+        ///
         /// For more information, see our
         /// <a href ="/project-tango/overview/depth-perception#xyzij">developer
         /// overview on depth perception</a>.

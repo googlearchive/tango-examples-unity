@@ -184,47 +184,13 @@ Prefab:
       propertyPath: m_RootOrder
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 11410340, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_tangoARScreen
-      value: 
-      objectReference: {fileID: 518165976}
-    - target: {fileID: 0}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2034540, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_CullingMask.m_Bits
-      value: 4294967295
-      objectReference: {fileID: 0}
     - target: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
       propertyPath: m_Name
       value: Tango Camera
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 0}
+    m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: b65144e12d543401285d34c736b7ec92, type: 2}
   m_IsPrefabParent: 0
---- !u!1 &518165975 stripped
-GameObject:
-  m_PrefabParentObject: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-  m_PrefabInternal: {fileID: 518165974}
---- !u!114 &518165976
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 518165975}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d2fb8dda2d8e7445a90ba8bcf89f17d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_enableOcclusion: 0
-  m_occlusionShader: {fileID: 4800000, guid: f196a49a50fca482db453a9646bc81f1, type: 3}
 --- !u!114 &518165977 stripped
 MonoBehaviour:
   m_PrefabParentObject: {fileID: 11410340, guid: b65144e12d543401285d34c736b7ec92,

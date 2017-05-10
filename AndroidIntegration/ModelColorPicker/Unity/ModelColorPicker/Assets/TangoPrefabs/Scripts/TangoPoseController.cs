@@ -98,7 +98,7 @@ public class TangoPoseController : MonoBehaviour
     {
         get
         {
-            return m_tangoARScreen != null;
+            return m_tangoARScreen != null && m_tangoARScreen.IsRendering;
         }
     }
 
@@ -149,7 +149,8 @@ public class TangoPoseController : MonoBehaviour
     {
         // Query a new pose.
         TangoPoseData pose = new TangoPoseData();
-        PoseProvider.GetPoseAtTime(pose, m_tangoARScreen != null ? m_tangoARScreen.m_screenUpdateTime : 0.0f, _GetFramePair());
+        double queryTimestamp = IsTargetingColorCamera ? m_tangoARScreen.m_screenUpdateTime : 0.0f;
+        PoseProvider.GetPoseAtTime(pose, queryTimestamp, _GetFramePair());
 
         // Do not update with invalide poses.
         if (pose.status_code != TangoEnums.TangoPoseStatusType.TANGO_POSE_VALID)

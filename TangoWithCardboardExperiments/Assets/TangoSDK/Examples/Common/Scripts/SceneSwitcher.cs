@@ -26,6 +26,10 @@ using UnityEngine;
 /// </summary>
 public class SceneSwitcher : MonoBehaviour
 {
+    /// <summary>
+    /// A delegate callback fired before a scene is loaded by SceneSwitcher.
+    /// </summary>
+    public System.Action<string> m_onBeforeLoadScene;
     private const int SCENE_BUTTON_SIZE_X = 300;
     private const int SCENE_BUTTON_SIZE_Y = 65;
     private const int SCENE_BUTTON_GAP_X = 5;
@@ -44,6 +48,18 @@ public class SceneSwitcher : MonoBehaviour
         "SimpleAugmentedReality",
         "PointToPoint"
     };
+
+    /// <summary>
+    /// The Unity awake method.
+    /// </summary>
+    public void Awake()
+    {
+        // Assure there is only ever one active scene switcher.
+        if (FindObjectsOfType<SceneSwitcher>().Length > 1)
+        {
+            Destroy(gameObject);
+        }
+    }
 
     /// <summary>
     /// Unity start method.
@@ -68,6 +84,11 @@ public class SceneSwitcher : MonoBehaviour
             if (GUI.Button(buttonRect, "<size=20>" + m_sceneNames[it] + "</size>")
                 && Application.loadedLevelName != m_sceneNames[it])
             {
+                if (m_onBeforeLoadScene != null)
+                {
+                    m_onBeforeLoadScene(m_sceneNames[it]);
+                }
+
                 Application.LoadLevel(m_sceneNames[it]);
             }
             #pragma warning restore 618

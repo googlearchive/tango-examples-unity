@@ -23,6 +23,7 @@ This project contains examples for Unity 5 and above.  Each example is in its ow
 * **AreaLearning** - How to use the Area Description motion APIs and place objects at specific spots in the area description. 
 * **AreaDescriptionManagement** - How to use the Area Description management APIs and create a new area description.
 * **AugmentedReality** - How to create an augmented reality experience using the video camera overlay APIs and motion tracking APIs.
+* **MarkerDetection(Experimental)** - How to use marker detection library combined with Tango motion tracking.
 * **MeshBuilder(Experimental)** - How to build a mesh using the motion tracking APIs and depth APIs.
 
 

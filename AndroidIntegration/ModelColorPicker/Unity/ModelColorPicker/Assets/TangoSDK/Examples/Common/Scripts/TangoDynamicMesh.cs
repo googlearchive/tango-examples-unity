@@ -45,6 +45,17 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     public bool m_enableSelectiveMeshing = false;
 
     /// <summary>
+    /// Notifies about newly allocated Mesh Segments. The update delegate is not called for the same Mesh Segment.
+    /// The created Mesh Segment and its index are passed to the hander.
+    /// </summary>
+    public MeshSegmentDelegate m_meshSegmentCreated;
+
+    /// <summary>
+    /// Notifies when a Mesh Segment is updated. The updated Mesh Segment and its index are passed to the hander.
+    /// </summary>
+    public MeshSegmentDelegate m_meshSegmentUpdated;
+
+    /// <summary>
     /// How much the dynamic mesh should grow its internal arrays.
     /// </summary>
     private const float GROWTH_FACTOR = 1.5f;
@@ -93,7 +104,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     /// <summary>
     /// The TangoApplication for the scene.
     /// </summary>
-    private TangoApplication m_tangoApplication;
+    private ITangoApplication m_tangoApplication;
 
     /// <summary>
     /// The mesh renderer on this object.  This mesh renderer will get used on all the DynamicMesh objects created.
@@ -152,6 +163,25 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     private Bounds m_bounds;
 
     /// <summary>
+    /// Constructor of TangoDynamicMesh.
+    /// </summary>
+    public TangoDynamicMesh()
+    {
+        m_meshes = new Dictionary<Tango3DReconstruction.GridIndex, TangoSingleDynamicMesh>(100);
+        m_gridIndexToUpdate = new List<Tango3DReconstruction.GridIndex>(100);
+        m_gridUpdateBacklog = new HashSet<Tango3DReconstruction.GridIndex>();
+    }
+
+    /// <summary>
+    /// Delegate for a method that processes a single Mesh Segment. Mesh Segments are spacially disjoint Game Objects 
+    /// that contain meshes, renderes and colliders. TangoDynamicMesh generates and manages multiple Mesh Segments as 
+    /// children. See <url>https://developers.google.com/tango/apis/unity/unity-howto-mesh-color#mesh_segments</url>.
+    /// </summary>
+    /// <param name="meshSegment">Game Object that contains a part of Tango Dynamic Mesh.</param>
+    /// <param name="index">3D integer index of the Mesh Segment.</param>
+    public delegate void MeshSegmentDelegate(GameObject meshSegment, Tango3DReconstruction.GridIndex index);
+
+    /// <summary>
     /// Gets the number of queued mesh updates still waiting for processing.
     /// 
     /// May be slightly overestimated if there have been too many updates to process and some
@@ -176,10 +206,6 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         {
             m_tangoApplication.Register(this);
         }
-
-        m_meshes = new Dictionary<Tango3DReconstruction.GridIndex, TangoSingleDynamicMesh>(100);
-        m_gridIndexToUpdate = new List<Tango3DReconstruction.GridIndex>(100);
-        m_gridUpdateBacklog = new HashSet<Tango3DReconstruction.GridIndex>();
 
         // Cache the renderer and collider on this object.
         m_meshRenderer = GetComponent<MeshRenderer>();
@@ -455,7 +481,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         Ray ray = new Ray(position + (Vector3.up * (maxDistance / 2)), Vector3.down);
 
         // Find the starting grid index X and Y components.
-        float gridIndexSize = m_tangoApplication.m_3drResolutionMeters * 16;
+        float gridIndexSize = m_tangoApplication.ReconstructionMeshResolution * 16;
         int gridIndexX = Mathf.FloorToInt(position.x / gridIndexSize);
         int gridIndexY = Mathf.FloorToInt(position.z / gridIndexSize);
 
@@ -502,6 +528,43 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     }
 
     /// <summary>
+    /// Calls a provided function once for each currently existing Mesh Segment.
+    /// </summary>
+    /// <param name="callback">The method to be called for each Mesh Segment.</param>
+    public void ForEachMeshSegment(MeshSegmentDelegate callback)
+    {
+        foreach (var mesh in m_meshes)
+        {
+            callback(mesh.Value.gameObject, mesh.Key);
+        }
+    }
+
+    /// <summary>
+    /// Set concrete instance of ITangoApplication. Unregisters from the current ITangoApplication if such exists.
+    /// </summary>
+    /// <param name="tangoApplication">The instance of ITangoApplication to use.</param>
+    internal void SetTangoApplication(ITangoApplication tangoApplication)
+    {
+        if (tangoApplication == null)
+        {
+            Debug.LogError("[TangoDynamicMesh] Cannot set Aango application to null.");
+            return;
+        }
+
+        if (m_tangoApplication != null)
+        {
+            m_tangoApplication.Unregister(this);
+        }
+
+        m_tangoApplication = tangoApplication;
+
+        if (m_tangoApplication != null)
+        {
+            m_tangoApplication.Register(this);
+        }
+    }
+
+    /// <summary>
     /// Given a time value indicating when meshing started this frame,
     /// returns a value indicating whether this frame's time budget for meshing has been exceeded.
     /// </summary>
@@ -520,7 +583,8 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     private void _UpdateMeshAtGridIndex(Tango3DReconstruction.GridIndex gridIndex, List<Tango3DReconstruction.GridIndex> needsResize)
     {
         TangoSingleDynamicMesh dynamicMesh;
-        if (!m_meshes.TryGetValue(gridIndex, out dynamicMesh))
+        bool createNewMeshSegment = !m_meshes.TryGetValue(gridIndex, out dynamicMesh);
+        if (createNewMeshSegment)
         {
             // build a dynamic mesh as a child of this game object.
             GameObject newObj = new GameObject();
@@ -529,12 +593,12 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             newObj.layer = gameObject.layer;
             dynamicMesh = newObj.AddComponent<TangoSingleDynamicMesh>();
             dynamicMesh.m_vertices = new Vector3[INITIAL_VERTEX_COUNT];
-            if (m_tangoApplication.m_3drGenerateTexCoord)
+            if (m_tangoApplication.Enable3DReconstructionTexCoords)
             {
                 dynamicMesh.m_uv = new Vector2[INITIAL_VERTEX_COUNT];
             }
             
-            if (m_tangoApplication.m_3drGenerateColor)
+            if (m_tangoApplication.Enable3DReconstructionColors)
             {
                 dynamicMesh.m_colors = new Color32[INITIAL_VERTEX_COUNT];
             }
@@ -547,8 +611,17 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             
             // Add the other necessary objects
             MeshFilter meshFilter = newObj.AddComponent<MeshFilter>();
-            dynamicMesh.m_mesh = meshFilter.mesh;
-            
+            if (Application.isPlaying)
+            {
+                dynamicMesh.m_mesh = meshFilter.mesh;
+            }
+            else
+            {
+                // When running tests in Unity Editor, instantiate meshes explicitly to avoid Unity errors.
+                dynamicMesh.m_mesh = new Mesh();
+                meshFilter.mesh = dynamicMesh.m_mesh;
+            }
+
             if (m_meshRenderer != null)
             {
                 MeshRenderer meshRenderer = newObj.AddComponent<MeshRenderer>();
@@ -605,12 +678,12 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             m_debugTotalTriangles += newTriangleSize - dynamicMesh.m_triangles.Length;
             
             dynamicMesh.m_vertices = new Vector3[newVertexSize];
-            if (m_tangoApplication.m_3drGenerateTexCoord)
+            if (m_tangoApplication.Enable3DReconstructionTexCoords)
             {
                 dynamicMesh.m_uv = new Vector2[newVertexSize];
             }
             
-            if (m_tangoApplication.m_3drGenerateColor)
+            if (m_tangoApplication.Enable3DReconstructionColors)
             {
                 dynamicMesh.m_colors = new Color32[newVertexSize];
             }
@@ -663,7 +736,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
         dynamicMesh.m_mesh.uv = dynamicMesh.m_uv;
         dynamicMesh.m_mesh.colors32 = dynamicMesh.m_colors;
         dynamicMesh.m_mesh.triangles = dynamicMesh.m_triangles;
-        if (m_tangoApplication.m_3drGenerateNormal)
+        if (m_tangoApplication.Enable3DReconstructionNormals)
         {
             dynamicMesh.m_mesh.RecalculateNormals();
         }
@@ -673,6 +746,21 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
             // Force the mesh collider to update too.
             dynamicMesh.m_meshCollider.sharedMesh = null;
             dynamicMesh.m_meshCollider.sharedMesh = dynamicMesh.m_mesh;
+        }
+
+        if (createNewMeshSegment)
+        {
+            if (m_meshSegmentCreated != null)
+            {
+                m_meshSegmentCreated(dynamicMesh.gameObject, gridIndex);
+            }
+        }
+        else
+        {
+            if (m_meshSegmentUpdated != null)
+            {
+                m_meshSegmentUpdated(dynamicMesh.gameObject, gridIndex);
+            }
         }
     }
 
@@ -911,7 +999,7 @@ public class TangoDynamicMesh : MonoBehaviour, ITango3DReconstruction
     /// <param name="gridIndex">Grid index to include in bounds.</param>
     private void _UpdateBounds(Tango3DReconstruction.GridIndex gridIndex)
     {
-        float gridIndexSize = m_tangoApplication.m_3drResolutionMeters * 16;
+        float gridIndexSize = m_tangoApplication.ReconstructionMeshResolution * 16;
         Vector3 pointToCompare = gridIndexSize * new Vector3(gridIndex.x, gridIndex.y, gridIndex.z);
 
         Vector3 min = m_bounds.min;

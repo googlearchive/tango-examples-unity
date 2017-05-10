@@ -54,6 +54,11 @@ namespace Tango
         internal const string ANDROID_CAMERA_PERMISSION = "android.permission.CAMERA";
 
         /// <summary>
+        /// The android permission for accessing fine location.
+        /// </summary>
+        internal const string ANDROID_ACCESS_FINE_LOCATION_PERMISSION = "android.permission.ACCESS_FINE_LOCATION";
+
+        /// <summary>
         /// Code used to identify the result came from the ADF Load/Save permission request.
         /// </summary>
         internal const int TANGO_ADF_LOAD_SAVE_PERMISSIONS_REQUEST_CODE = 43;
@@ -82,6 +87,11 @@ namespace Tango
         /// The length of an area description ID string.
         /// </summary>
         internal const int UUID_LENGTH = 37;
+
+        /// <summary>
+        /// Number of seconds per nanoseconds.
+        /// </summary>
+        internal const double SECS_PER_NANOSECS = 1E-9;
 
         /// <summary>
         /// Return values from Android activities.

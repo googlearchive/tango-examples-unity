@@ -59,6 +59,12 @@ namespace Tango
 
         bool Enable3DReconstruction { get; set; }
 
+        bool Enable3DReconstructionColors { get; set; }
+
+        bool Enable3DReconstructionTexCoords { get; set; }
+
+        bool Enable3DReconstructionNormals { get; set; }
+
         bool EnableAreaDescriptions { get; set; }
 
         bool EnableCloudADF { get; set; }
@@ -79,6 +85,8 @@ namespace Tango
 
         bool VideoOverlayUseYUVTextureIdMethod { get; set; }
 
+        float ReconstructionMeshResolution { get; set; }
+
 #if UNITY_EDITOR
         Vector3 EmulatedAreaDescriptionStartOffset { get; set; }
 #endif
@@ -97,7 +105,7 @@ namespace Tango
     /// Note: To connect to the Tango Service, you should call <c>Startup</c> after properly registering
     /// everything.
     /// </summary>
-    public partial class TangoApplication : MonoBehaviour, ITangoApplicationSettings, ITangoUX
+    public partial class TangoApplication : MonoBehaviour, ITangoApplication
     {
 #region PublicFields
         public bool m_autoConnectToService = false;
@@ -325,6 +333,15 @@ namespace Tango
 
 #region Properties
         /// <summary>
+        /// Gets or sets resolution of the reconstructed mesh if Tango 3D Reconstruction is enabled. In meters.
+        /// </summary>
+        public float ReconstructionMeshResolution
+        {
+            get { return m_3drResolutionMeters; }
+            set { m_3drResolutionMeters = value; }
+        }
+
+        /// <summary>
         /// Gets or sets a value indicating whether TangoApplication should run if the Tango software is out of date.
         /// </summary>
         public bool AllowOutOfDateTangoAPI
@@ -334,7 +351,7 @@ namespace Tango
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whether tango area description learning mode is enabled.
+        /// Gets or sets a value indicating whether Tango area description learning mode is enabled.
         /// </summary>
         public bool AreaDescriptionLearningMode
         {
@@ -343,12 +360,39 @@ namespace Tango
         }
 
         /// <summary>
-        /// Gets or sets a value indicating whetherango 3D reconstruction is enabled.
+        /// Gets or sets a value indicating whether Tango 3D Reconstruction is enabled.
         /// </summary>
         public bool Enable3DReconstruction
         {
             get { return m_enable3DReconstruction; }
             set { m_enable3DReconstruction = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether Tango 3D Reconstruction generates vertex colors.
+        /// </summary>
+        public bool Enable3DReconstructionColors
+        {
+            get { return m_3drGenerateColor; }
+            set { m_3drGenerateColor = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether Tango 3D Reconstruction generates texture coordinates (UVs).
+        /// </summary>
+        public bool Enable3DReconstructionTexCoords
+        {
+            get { return m_3drGenerateTexCoord; }
+            set { m_3drGenerateTexCoord = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets a value indicating whether Tango 3D Reconstruction generates vertex normals.
+        /// </summary>
+        public bool Enable3DReconstructionNormals
+        {
+            get { return m_3drGenerateNormal; }
+            set { m_3drGenerateNormal = value; }
         }
 
         /// <summary>
@@ -510,8 +554,13 @@ namespace Tango
                 return;
             }
 
+            // Generate new application state.
             m_applicationState = new TangoApplicationState();
+
+            // Initialize the registration manager.
             m_eventRegistrationManager = new TangoEventRegistrationManager(this);
+
+            // Initializae the permissions manager.
             m_permissionsManager =
                 new TangoPermissionsManager(this,
                     AndroidHelperWrapper.Instance,
@@ -531,48 +580,11 @@ namespace Tango
                             m_tangoBindEvent(granted);
                         }
                     });
+
+            // Initialize the depth camera manager.
             m_tangoDepthCameraManager = new TangoDepthCameraManager(m_applicationState, new DepthListenerWrapper());
-            m_setupTeardownManager =
-                new TangoSetupTeardownManager(
-                    this,
-                    m_applicationState,
-                    GetComponent<TangoUx>(),
-                    delegate()
-                    {
-                        // Cannot pass event directly due to delegate instance immutability.
-                        if (m_tangoConnectEvent != null)
-                        {
-                            m_tangoConnectEvent();
-                        }
-                    },
-                    delegate()
-                    {
-                        // Cannot pass event directly due to delegate instance immutability.
-                        if (m_tangoDisconnectEvent != null)
-                        {
-                            m_tangoDisconnectEvent();
-                        }
-                    },
-                    m_yuvTexture);
 
-            m_androidMessageManager =
-                new TangoAndroidMessageManager(m_applicationState,
-                    m_permissionsManager,
-                    m_tangoDepthCameraManager,
-                    m_setupTeardownManager.OnAndroidPauseResumeAsync,
-                    delegate(OrientationManager.Rotation displayRotation, OrientationManager.Rotation colorCameraRotation)
-                    {
-                         // Cannot pass event directly due to delegate instance immutability.
-                         OnDisplayChanged(displayRotation, colorCameraRotation);
-                    },
-                    AndroidHelperWrapper.Instance);
-
-            m_androidMessageManager.RegisterHandlers();
-            if (m_enableDepth)
-            {
-                DepthListener.SetPointCloudLimit(m_initialPointCloudMaxPoints);
-            }
-
+            // Generate m_yuvTexture if needed.
             if (m_enableVideoOverlay)
             {
                 int yTextureWidth = 0;
@@ -580,7 +592,51 @@ namespace Tango
                 int uvTextureWidth = 0;
                 int uvTextureHeight = 0;
 
-                m_yuvTexture = new YUVTexture(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight, TextureFormat.RGBA32, false);
+                m_yuvTexture = new YUVTexture(yTextureWidth, yTextureHeight, uvTextureWidth, uvTextureHeight,
+                    TextureFormat.RGBA32, false);
+            }
+            else
+            {
+                m_yuvTexture = null;
+            }
+
+            // Initialize the setup and teardown manager.
+            m_setupTeardownManager =
+                new TangoSetupTeardownManager(this, m_applicationState, GetComponent<TangoUx>(),
+                delegate()
+                {
+                    // Cannot pass event directly due to delegate instance immutability.
+                    if (m_tangoConnectEvent != null)
+                    {
+                        m_tangoConnectEvent();
+                    }
+                },
+                delegate()
+                {
+                    // Cannot pass event directly due to delegate instance immutability.
+                    if (m_tangoDisconnectEvent != null)
+                    {
+                        m_tangoDisconnectEvent();
+                    }
+                },
+                m_yuvTexture);
+
+            // Initialize the android message manager.
+            m_androidMessageManager =
+                new TangoAndroidMessageManager(m_applicationState, m_permissionsManager, m_tangoDepthCameraManager,
+                    m_setupTeardownManager.OnAndroidPauseResumeAsync, delegate(
+                    OrientationManager.Rotation displayRotation,
+                    OrientationManager.Rotation colorCameraRotation)
+                    {
+                        // Cannot pass event directly due to delegate instance immutability.
+                        OnDisplayChanged(displayRotation, colorCameraRotation);
+                    },
+                    AndroidHelperWrapper.Instance);
+
+            m_androidMessageManager.RegisterHandlers();
+            if (m_enableDepth)
+            {
+                DepthListener.SetPointCloudLimit(m_initialPointCloudMaxPoints);
             }
 
             if (m_enable3DReconstruction)
@@ -1556,7 +1612,7 @@ namespace Tango
                         }
                         else
                         {
-                            VideoOverlayListener.RegisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
+                            VideoOverlayListener.UnregisterOnTangoImageMultithreadedAvailable(multithreadedHandler.OnTangoImageMultithreadedAvailable);
                         }
                     });
                 }
@@ -2016,8 +2072,9 @@ namespace Tango
         {
             NONE = 0,
             AREA_LEARNING = 0x1,
-            ANDROID_CAMERA = 0x2,
-            SERVICE_BOUND = 0x4,
+            SERVICE_BOUND = 0x2,
+            ANDROID_CAMERA = 0x4,
+            ANDROID_ACCESS_FINE_LOCATION = 0x8,
         }
 
         /// <summary>
@@ -2127,6 +2184,12 @@ namespace Tango
                         PendingRequiredPermissions.Add(PermissionsTypes.AREA_LEARNING);
                     }
 
+                    if (m_tangoApplicationSettings.EnableCloudADF
+                        && !m_androidHelper.CheckPermission(Common.ANDROID_ACCESS_FINE_LOCATION_PERMISSION))
+                    {
+                        PendingRequiredPermissions.Add(PermissionsTypes.ANDROID_ACCESS_FINE_LOCATION);
+                    }
+
                     PendingRequiredPermissions.Add(PermissionsTypes.SERVICE_BOUND);
                 }
 
@@ -2184,6 +2247,12 @@ namespace Tango
                             Common.ANDROID_PERMISSION_REQUEST_CODE);
                         return;
                     }
+                    else if (PendingRequiredPermissions.Contains(PermissionsTypes.ANDROID_ACCESS_FINE_LOCATION))
+                    {
+                        m_androidHelper.RequestPermission(Common.ANDROID_ACCESS_FINE_LOCATION_PERMISSION,
+                            Common.ANDROID_PERMISSION_REQUEST_CODE);
+                        return;
+                    }
                     else
                     {
                         if (m_onAndroidPermissionsResolved != null)
@@ -2197,7 +2266,7 @@ namespace Tango
 
                 if (PermissionRequestState == PermissionRequestState.BIND_TO_SERVICE)
                 {
-                    if (PendingRequiredPermissions.Contains(PermissionsTypes.SERVICE_BOUND)
+                     if (PendingRequiredPermissions.Contains(PermissionsTypes.SERVICE_BOUND)
                         && !m_androidHelper.BindTangoService())
                     {
                         _PermissionWasDenied(PermissionsTypes.SERVICE_BOUND);
@@ -2428,12 +2497,19 @@ namespace Tango
                         break;
                     }
 
-                    int index = Array.IndexOf(permissions, Common.ANDROID_CAMERA_PERMISSION);
-                    if (index > -1)
+                    for (int i = 0; i < permissions.Length; i++)
                     {
-                        AndroidPermissionGrantResult grantResult = grantResults[index];
-                        m_permissionsManager.OnPermissionResult(PermissionsTypes.ANDROID_CAMERA,
-                            grantResult == AndroidPermissionGrantResult.GRANTED);
+                        string permission = permissions[i];
+                        if (permission == Common.ANDROID_CAMERA_PERMISSION)
+                        {
+                            m_permissionsManager.OnPermissionResult(PermissionsTypes.ANDROID_CAMERA,
+                                grantResults[i] == AndroidPermissionGrantResult.GRANTED);
+                        }
+                        else if (permission == Common.ANDROID_ACCESS_FINE_LOCATION_PERMISSION)
+                        {
+                            m_permissionsManager.OnPermissionResult(PermissionsTypes.ANDROID_ACCESS_FINE_LOCATION,
+                                grantResults[i] == AndroidPermissionGrantResult.GRANTED);
+                        }
                     }
 
                     break;
@@ -2442,6 +2518,11 @@ namespace Tango
 
                     // By keeping this logic in C#, the client app can respond if this call fails.
                     int result = m_androidHelper.TangoSetBinder(binder);
+
+                    // Tango Support initialize has to be called after service binder is set because
+                    // it invokes TangoService functions under the hood.
+                    TangoSupport.Initialize();
+
                     m_permissionsManager.OnPermissionResult(PermissionsTypes.SERVICE_BOUND,
                         result == Common.ErrorType.TANGO_SUCCESS);
                     break;

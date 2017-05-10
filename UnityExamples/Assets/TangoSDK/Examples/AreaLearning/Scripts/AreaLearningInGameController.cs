@@ -389,7 +389,7 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
         // When learning mode is off, and an Area Description is loaded, this callback indicates a
         // relocalization event. Relocalization is when the device finds out where it is with respect to the loaded
         // Area Description. In our case, when the device is relocalized, the markers will be loaded because we
-        // know the relatvie device location to the markers.
+        // know the relative device location to the markers.
         if (poseData.framePair.baseFrame == 
             TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_AREA_DESCRIPTION &&
             poseData.framePair.targetFrame ==
@@ -466,16 +466,20 @@ public class AreaLearningInGameController : MonoBehaviour, ITangoPose, ITangoEve
             m_savingText.gameObject.SetActive(true);
             if (m_tangoApplication.m_areaDescriptionLearningMode)
             {
+                // The keyboard is not readable if you are not in the Unity main thread. Cache the value here.
+                string name;
+#if UNITY_EDITOR
+                name = m_guiTextInputContents;
+#else
+                name = kb.text;
+#endif
+
                 m_saveThread = new Thread(delegate()
                 {
                     // Start saving process in another thread.
                     m_curAreaDescription = AreaDescription.SaveCurrent();
                     AreaDescription.Metadata metadata = m_curAreaDescription.GetMetadata();
-#if UNITY_EDITOR
-                    metadata.m_name = m_guiTextInputContents;
-#else
-                    metadata.m_name = kb.text;
-#endif
+                    metadata.m_name = name;
                     m_curAreaDescription.SaveMetadata(metadata);
                 });
                 m_saveThread.Start();
