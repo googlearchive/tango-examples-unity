@@ -20,9 +20,6 @@
 
 namespace Tango
 {
-    using System.Collections;
-    using UnityEngine;
-
     /// <summary>
     /// Enumerations used by the Tango Service.
     /// </summary>

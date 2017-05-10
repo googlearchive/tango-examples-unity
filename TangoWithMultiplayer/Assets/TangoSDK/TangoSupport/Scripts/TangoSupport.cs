@@ -21,6 +21,7 @@
 namespace Tango
 {
     using System;
+    using System.Collections.Generic;
     using System.Runtime.InteropServices;
     using UnityEngine;
 
@@ -32,6 +33,7 @@ namespace Tango
     /// </summary>
     public static class TangoSupport
     {
+#region MEMBER_FIELDS
         /// <summary>
         /// Matrix that transforms from Start of Service to the Unity World.
         /// </summary>
@@ -56,12 +58,14 @@ namespace Tango
             m30 = 0.0f, m31 = 0.0f, m32 =  0.0f, m33 = 1.0f
         };
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.SpacingRules", "*",
+                                                         Justification = "Matrix visibility is more important.")]
         public static readonly Matrix4x4 COLOR_CAMERA_T_UNITY_CAMERA = new Matrix4x4
         {
-            m00 = 1.0f, m01 = 0.0f, m02 = 0.0f, m03 = 0.0f,
+            m00 = 1.0f, m01 =  0.0f, m02 = 0.0f, m03 = 0.0f,
             m10 = 0.0f, m11 = -1.0f, m12 = 0.0f, m13 = 0.0f,
-            m20 = 0.0f, m21 = 0.0f, m22 = 1.0f, m23 = 0.0f,
-            m30 = 0.0f, m31 = 0.0f, m32 = 0.0f, m33 = 1.0f
+            m20 = 0.0f, m21 =  0.0f, m22 = 1.0f, m23 = 0.0f,
+            m30 = 0.0f, m31 =  0.0f, m32 = 0.0f, m33 = 1.0f
         };
 
         /// <summary>
@@ -124,6 +128,33 @@ namespace Tango
         };
 
         /// <summary>
+        /// A type to define all combinations of markers supported.
+        /// </summary>
+        public enum MarkerType
+        {
+            ARTAG = 0x01,
+            QRCODE = 0x02,
+        }
+#endregion
+
+#region INITIALIZATION_FUNCTIONS
+        /// <summary>
+        /// Initialize the support library with function pointers required by
+        /// the library. Either this version or @c TangoSupport_initializeLibrary
+        /// should be called during application initialization, but not both. This
+        /// version requires each of the initialization parameters and should only be
+        /// used if specialized parameters are necessary.
+        /// NOTE: This function must be called after the Android service has been
+        /// bound.
+        /// </summary>
+        public static void Initialize()
+        {
+            TangoSupportAPI.TangoUnity_initializeTangoSupportLibrary();
+        }
+#endregion
+
+#region TRANSFORMATION_FUNCTIONS
+        /// <summary>
         /// Compute a rotation from rotation a to rotation b, in form of the OrientationManager.Rotation enum.
         /// </summary>
         /// <param name="b">Target rotation frame.</param>
@@ -139,347 +170,6 @@ namespace Tango
             }
 
             return (Tango.OrientationManager.Rotation)(ret % 4);
-        }
-
-        /// <summary>
-        /// Update current additional rotation matrix based on the display orientation and color camera orientation.
-        ///
-        /// Not that m_colorCameraPoseRotation will need to compensate the rotation with physical color camera.
-        /// </summary>
-        /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
-        /// orientation standard.</param>
-        /// <param name="colorCameraRotation">Orientation of current color camera sensor. Index enum is same as Android
-        /// camera orientation standard.</param>
-        public static void UpdatePoseMatrixFromDeviceRotation(OrientationManager.Rotation displayRotation,
-                                                              OrientationManager.Rotation colorCameraRotation)
-        {
-            Tango.OrientationManager.Rotation r = RotateFromAToB(displayRotation, colorCameraRotation);
-
-            switch (r)
-            {
-            case Tango.OrientationManager.Rotation.ROTATION_90:
-                m_colorCameraPoseRotation = ROTATION90_T_DEFAULT;
-                break;
-            case Tango.OrientationManager.Rotation.ROTATION_180:
-                m_colorCameraPoseRotation = ROTATION180_T_DEFAULT;
-                break;
-            case Tango.OrientationManager.Rotation.ROTATION_270:
-                m_colorCameraPoseRotation = ROTATION270_T_DEFAULT;
-                break;
-            default:
-                m_colorCameraPoseRotation = Matrix4x4.identity;
-                break;
-            }
-
-            switch (displayRotation)
-            {
-            case Tango.OrientationManager.Rotation.ROTATION_90:
-                m_devicePoseRotation = ROTATION90_T_DEFAULT;
-                break;
-            case Tango.OrientationManager.Rotation.ROTATION_180:
-                m_devicePoseRotation = ROTATION180_T_DEFAULT;
-                break;
-            case Tango.OrientationManager.Rotation.ROTATION_270:
-                m_devicePoseRotation = ROTATION270_T_DEFAULT;
-                break;
-            default:
-                m_devicePoseRotation = Matrix4x4.identity;
-                break;
-            }
-        }
-
-        /// <summary>
-        /// Fits a plane to a point cloud near a user-specified location. This
-        /// occurs in two passes. First, all points in cloud within
-        /// <c>maxPixelDistance</c> to <c>uvCoordinates</c> after projection are kept. Then a
-        /// plane is fit to the subset cloud using RANSAC. After the initial fit
-        /// all inliers from the original cloud are used to refine the plane
-        /// model.
-        /// </summary>
-        /// <returns>
-        /// Common.ErrorType.TANGO_SUCCESS on success,
-        /// Common.ErrorType.TANGO_INVALID on invalid input, and
-        /// Common.ErrorType.TANGO_ERROR on failure.
-        /// </returns>
-        /// <param name="pointCloud">
-        /// The point cloud. Cannot be null and must have at least three points.
-        /// </param>
-        /// <param name="pointCount">
-        /// The number of points to read from the point cloud.
-        /// </param>
-        /// <param name="timestamp">The timestamp of the point cloud.</param>
-        /// <param name="cameraIntrinsics">
-        /// The camera intrinsics for the color camera. Cannot be null.
-        /// </param>
-        /// <param name="matrix">
-        /// Transformation matrix of the color camera with respect to the Unity
-        /// World frame.
-        /// </param>
-        /// <param name="uvCoordinates">
-        /// The UV coordinates for the user selection. This is expected to be
-        /// between (0.0, 0.0) and (1.0, 1.0).
-        /// </param>
-        /// <param name="intersectionPoint">
-        /// The output point in depth camera coordinates that the user selected.
-        /// </param>
-        /// <param name="plane">The plane fit.</param>
-        public static int FitPlaneModelNearClick(
-            Vector3[] pointCloud, int pointCount, double timestamp,
-            TangoCameraIntrinsics cameraIntrinsics, ref Matrix4x4 matrix,
-            Vector2 uvCoordinates, out Vector3 intersectionPoint,
-            out Plane plane)
-        {
-            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud,
-                                                       GCHandleType.Pinned);
-
-            TangoXYZij pointCloudXyzIj = new TangoXYZij();
-            pointCloudXyzIj.timestamp = timestamp;
-            pointCloudXyzIj.xyz_count = pointCount;
-            pointCloudXyzIj.xyz = pointCloudHandle.AddrOfPinnedObject();
-
-            DMatrix4x4 doubleMatrix = new DMatrix4x4(matrix);
-
-            // Unity has Y pointing screen up; Tango camera has Y pointing
-            // screen down.
-            Vector2 uvCoordinatesTango = new Vector2(uvCoordinates.x,
-                                                     1.0f - uvCoordinates.y);
-
-            DVector3 doubleIntersectionPoint = new DVector3();
-            double[] planeArray = new double[4];
-
-            int returnValue = TangoSupportAPI.TangoSupport_fitPlaneModelNearPointMatrixTransform(
-                pointCloudXyzIj, cameraIntrinsics, ref doubleMatrix,
-                ref uvCoordinatesTango,
-                out doubleIntersectionPoint, planeArray);
-
-            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
-            {
-                intersectionPoint = new Vector3(0.0f, 0.0f, 0.0f);
-                plane = new Plane(new Vector3(0.0f, 0.0f, 0.0f), 0.0f);
-            }
-            else
-            {
-                intersectionPoint = doubleIntersectionPoint.ToVector3();
-                Vector3 normal = new Vector3((float)planeArray[0],
-                                             (float)planeArray[1],
-                                             (float)planeArray[2]);
-                float distance = (float)planeArray[3] / normal.magnitude;
-
-                plane = new Plane(normal, distance);
-            }
-
-            pointCloudHandle.Free();
-
-            return returnValue;
-        }
-
-        /// <summary>
-        /// DEPRECATED. Use ScreenCoordinateToWorldNearestNeighbor instead.
-        ///
-        /// Calculates the depth in the color camera space at a user-specified
-        /// location using nearest-neighbor interpolation.
-        /// </summary>
-        /// <returns>
-        /// Common.ErrorType.TANGO_SUCCESS on success and
-        /// Common.ErrorType.TANGO_INVALID on invalid input.
-        /// </returns>
-        /// <param name="pointCloud">
-        /// The point cloud. Cannot be null and must have at least one point.
-        /// </param>
-        /// <param name="pointCount">
-        /// The number of points to read from the point cloud.
-        /// </param>
-        /// <param name="timestamp">The timestamp of the depth points.</param>
-        /// <param name="cameraIntrinsics">
-        /// The camera intrinsics for the color camera. Cannot be null.
-        /// </param>
-        /// <param name="matrix">
-        /// Transformation matrix of the color camera with respect to the Unity
-        /// World frame.
-        /// </param>
-        /// <param name="uvCoordinates">
-        /// The UV coordinates for the user selection. This is expected to be
-        /// between (0.0, 0.0) and (1.0, 1.0).
-        /// </param>
-        /// <param name="colorCameraPoint">
-        /// The point (x, y, z), where (x, y) is the back-projection of the UV
-        /// coordinates to the color camera space and z is the z coordinate of
-        /// the point in the point cloud nearest to the user selection after
-        /// projection onto the image plane. If there is not a point cloud point
-        /// close to the user selection after projection onto the image plane,
-        /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
-        /// be set to false.
-        /// </param>
-        /// <param name="isValidPoint">
-        /// A flag valued true if there is a point cloud point close to the user
-        /// selection after projection onto the image plane and valued false
-        /// otherwise.
-        /// </param>
-        [Obsolete("Use ScreenCoordinateToWorldNearestNeighbor instead.")]
-        public static int GetDepthAtPointNearestNeighbor(
-            Vector3[] pointCloud, int pointCount, double timestamp,
-            TangoCameraIntrinsics cameraIntrinsics, ref Matrix4x4 matrix,
-            Vector2 uvCoordinates, out Vector3 colorCameraPoint,
-            out bool isValidPoint)
-        {
-            return ScreenCoordinateToWorldNearestNeighbor(pointCloud,
-                pointCount, timestamp, cameraIntrinsics, ref matrix,
-                uvCoordinates, out colorCameraPoint, out isValidPoint);
-        }
-
-        /// <summary>
-        /// Calculates the depth in the color camera space at a user-specified
-        /// location using nearest-neighbor interpolation.
-        /// </summary>
-        /// <returns>
-        /// Common.ErrorType.TANGO_SUCCESS on success and
-        /// Common.ErrorType.TANGO_INVALID on invalid input.
-        /// </returns>
-        /// <param name="pointCloud">
-        /// The point cloud. Cannot be null and must have at least one point.
-        /// </param>
-        /// <param name="pointCount">
-        /// The number of points to read from the point cloud.
-        /// </param>
-        /// <param name="timestamp">The timestamp of the depth points.</param>
-        /// <param name="cameraIntrinsics">
-        /// The camera intrinsics for the color camera. Cannot be null.
-        /// </param>
-        /// <param name="matrix">
-        /// Transformation matrix of the color camera with respect to the Unity
-        /// World frame.
-        /// </param>
-        /// <param name="uvCoordinates">
-        /// The UV coordinates for the user selection. This is expected to be
-        /// between (0.0, 0.0) and (1.0, 1.0).
-        /// </param>
-        /// <param name="colorCameraPoint">
-        /// The point (x, y, z), where (x, y) is the back-projection of the UV
-        /// coordinates to the color camera space and z is the z coordinate of
-        /// the point in the point cloud nearest to the user selection after
-        /// projection onto the image plane. If there is not a point cloud point
-        /// close to the user selection after projection onto the image plane,
-        /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
-        /// be set to false.
-        /// </param>
-        /// <param name="isValidPoint">
-        /// A flag valued true if there is a point cloud point close to the user
-        /// selection after projection onto the image plane and valued false
-        /// otherwise.
-        /// </param>
-        public static int ScreenCoordinateToWorldNearestNeighbor(
-            Vector3[] pointCloud, int pointCount, double timestamp,
-            TangoCameraIntrinsics cameraIntrinsics, ref Matrix4x4 matrix,
-            Vector2 uvCoordinates, out Vector3 colorCameraPoint,
-            out bool isValidPoint)
-        {
-            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud,
-                                                       GCHandleType.Pinned);
-
-            TangoXYZij pointCloudXyzIj = new TangoXYZij();
-            pointCloudXyzIj.timestamp = timestamp;
-            pointCloudXyzIj.xyz_count = pointCount;
-            pointCloudXyzIj.xyz = pointCloudHandle.AddrOfPinnedObject();
-
-            DMatrix4x4 doubleMatrix = new DMatrix4x4(matrix);
-
-            // Unity has Y pointing screen up; Tango camera has Y pointing
-            // screen down.
-            Vector2 uvCoordinatesTango = new Vector2(uvCoordinates.x,
-                                                     1.0f - uvCoordinates.y);
-
-            int isValidPointInteger;
-
-            int returnValue = TangoSupportAPI.TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
-                pointCloudXyzIj, cameraIntrinsics, ref doubleMatrix,
-                ref uvCoordinatesTango, out colorCameraPoint,
-                out isValidPointInteger);
-
-            isValidPoint = isValidPointInteger != 0;
-
-            pointCloudHandle.Free();
-
-            return returnValue;
-        }
-
-        /// <summary>
-        /// Calculates the depth in the color camera space at a user-specified
-        /// location using bilateral filtering weighted by both spatial distance
-        /// from the user coordinate and by intensity similarity.
-        /// </summary>
-        /// <returns>
-        /// Common.ErrorType.TANGO_SUCCESS on success,
-        /// Common.ErrorType.TANGO_INVALID on invalid input, and
-        /// Common.ErrorType.TANGO_ERROR on failure.
-        /// </returns>
-        /// <param name="pointCloud">
-        /// The point cloud. Cannot be null and must have at least one point.
-        /// </param>
-        /// <param name="pointCount">
-        /// The number of points to read from the point cloud.
-        /// </param>
-        /// <param name="timestamp">The timestamp of the depth points.</param>
-        /// <param name="cameraIntrinsics">
-        /// The camera intrinsics for the color camera. Cannot be null.
-        /// </param>
-        /// <param name="colorImage">
-        /// The color image buffer. Cannot be null.
-        /// </param>
-        /// <param name="matrix">
-        /// Transformation matrix of the color camera with respect to the Unity
-        /// World frame.
-        /// </param>
-        /// <param name="uvCoordinates">
-        /// The UV coordinates for the user selection. This is expected to be
-        /// between (0.0, 0.0) and (1.0, 1.0).
-        /// </param>
-        /// <param name="colorCameraPoint">
-        /// The point (x, y, z), where (x, y) is the back-projection of the UV
-        /// coordinates to the color camera space and z is the z coordinate of
-        /// the point in the point cloud nearest to the user selection after
-        /// projection onto the image plane. If there is not a point cloud point
-        /// close to the user selection after projection onto the image plane,
-        /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
-        /// be set to false.
-        /// </param>
-        /// <param name="isValidPoint">
-        /// A flag valued true if there is a point cloud point close to the user
-        /// selection after projection onto the image plane and valued false
-        /// otherwise.
-        /// </param>
-        public static int ScreenCoordinateToWorldBilateral(
-            Vector3[] pointCloud, int pointCount, double timestamp,
-            TangoCameraIntrinsics cameraIntrinsics, TangoImageBuffer colorImage,
-            ref Matrix4x4 matrix, Vector2 uvCoordinates,
-            out Vector3 colorCameraPoint, out bool isValidPoint)
-        {
-            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud,
-                                                       GCHandleType.Pinned);
-
-            TangoXYZij pointCloudXyzIj = new TangoXYZij();
-            pointCloudXyzIj.timestamp = timestamp;
-            pointCloudXyzIj.xyz_count = pointCount;
-            pointCloudXyzIj.xyz = pointCloudHandle.AddrOfPinnedObject();
-
-            DMatrix4x4 doubleMatrix = new DMatrix4x4(matrix);
-
-            // Unity has Y pointing screen up; Tango camera has Y pointing
-            // screen down.
-            Vector2 uvCoordinatesTango = new Vector2(uvCoordinates.x,
-                                                     1.0f - uvCoordinates.y);
-
-            int isValidPointInteger;
-
-            int returnValue = TangoSupportAPI.TangoSupport_getDepthAtPointBilateralCameraIntrinsicsMatrixTransform(
-                pointCloudXyzIj, cameraIntrinsics, colorImage, ref doubleMatrix,
-                ref uvCoordinatesTango, out colorCameraPoint,
-                out isValidPointInteger);
-
-            isValidPoint = isValidPointInteger != 0;
-
-            pointCloudHandle.Free();
-
-            return returnValue;
         }
 
         /// <summary>
@@ -540,221 +230,627 @@ namespace Tango
         }
 
         /// <summary>
-        /// A double-precision 4x4 transformation matrix.
+        /// Update current additional rotation matrix based on the display orientation and color camera orientation.
+        ///
+        /// Not that m_colorCameraPoseRotation will need to compensate the rotation with physical color camera.
         /// </summary>
-        [StructLayout(LayoutKind.Sequential)]
-        private struct DMatrix4x4
+        /// <param name="displayRotation">Orientation of current activity. Index enum is same same as Android screen
+        /// orientation standard.</param>
+        /// <param name="colorCameraRotation">Orientation of current color camera sensor. Index enum is same as Android
+        /// camera orientation standard.</param>
+        public static void UpdatePoseMatrixFromDeviceRotation(OrientationManager.Rotation displayRotation,
+                                                              OrientationManager.Rotation colorCameraRotation)
+        {
+            Tango.OrientationManager.Rotation r = RotateFromAToB(displayRotation, colorCameraRotation);
+
+            switch (r)
+            {
+            case Tango.OrientationManager.Rotation.ROTATION_90:
+                m_colorCameraPoseRotation = ROTATION90_T_DEFAULT;
+                break;
+            case Tango.OrientationManager.Rotation.ROTATION_180:
+                m_colorCameraPoseRotation = ROTATION180_T_DEFAULT;
+                break;
+            case Tango.OrientationManager.Rotation.ROTATION_270:
+                m_colorCameraPoseRotation = ROTATION270_T_DEFAULT;
+                break;
+            default:
+                m_colorCameraPoseRotation = Matrix4x4.identity;
+                break;
+            }
+
+            switch (displayRotation)
+            {
+            case Tango.OrientationManager.Rotation.ROTATION_90:
+                m_devicePoseRotation = ROTATION90_T_DEFAULT;
+                break;
+            case Tango.OrientationManager.Rotation.ROTATION_180:
+                m_devicePoseRotation = ROTATION180_T_DEFAULT;
+                break;
+            case Tango.OrientationManager.Rotation.ROTATION_270:
+                m_devicePoseRotation = ROTATION270_T_DEFAULT;
+                break;
+            default:
+                m_devicePoseRotation = Matrix4x4.identity;
+                break;
+            }
+        }
+#endregion
+
+#region DEPTH_FUNCTIONS
+        /// <summary>
+        /// Fits a plane to a point cloud near a user-specified location. This
+        /// occurs in two passes. First, all points in cloud within
+        /// certain pixel distance to <c>uvCoordinates</c> after projection are kept. Then a
+        /// plane is fit to the subset cloud using RANSAC. After the initial fit
+        /// all inliers from the original cloud are used to refine the plane
+        /// model.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c>, if plane is found successfully, <c>false</c> otherwise.
+        /// </returns>
+        /// <param name="pointCloud">
+        /// The point cloud. Cannot be null and must have at least three points.
+        /// </param>
+        /// <param name="colorCameraTimestamp">
+        /// Color camera's timestamp when UV is captured.
+        /// </param>
+        /// <param name="uvCoordinates">
+        /// The UV coordinates for the user selection. This is expected to be
+        /// in Unity viewport space. The bottom-left of the camera is (0,0);
+        /// the top-right is (1,1).
+        /// </param>
+        /// <param name="intersectionPoint">
+        /// The output point in depth camera coordinates that the user selected.
+        /// </param>
+        /// <param name="planeModel">
+        /// The four parameters a, b, c, d for the general plane
+        /// equation ax + by + cz + d = 0 of the plane fit. The first three
+        /// components are a unit vector. The output is in the coordinate system of
+        /// the requested output frame. Cannot be NULL.
+        /// </param>
+        public static bool FitPlaneModelNearClick(
+            TangoPointCloudData pointCloud,
+            double colorCameraTimestamp,
+            Vector2 uvCoordinates,
+            out Vector3 intersectionPoint,
+            out DVector4 planeModel)
+        {
+            TangoPoseData depth_T_colorCameraPose = new TangoPoseData();
+
+            int returnValue = TangoSupportAPI.TangoSupport_calculateRelativePose(
+                pointCloud.m_timestamp,
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH,
+                colorCameraTimestamp,
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR,
+                depth_T_colorCameraPose);
+
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.LogError("TangoSupport_calculateRelativePose error. " + Environment.StackTrace);
+                intersectionPoint = new Vector3(0.0f, 0.0f, 0.0f);
+                planeModel = new DVector4();
+                return false;
+            }
+
+            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud.m_points,
+                                                       GCHandleType.Pinned);
+            TangoPointCloudIntPtr tangoPointCloudIntPtr = new TangoPointCloudIntPtr();
+            tangoPointCloudIntPtr.m_points = pointCloudHandle.AddrOfPinnedObject();
+            tangoPointCloudIntPtr.m_timestamp = pointCloud.m_timestamp;
+            tangoPointCloudIntPtr.m_numPoints = pointCloud.m_numPoints;
+
+            // Unity viewport space is: the bottom-left of the camera is (0,0);
+            // the top-right is (1,1).
+            // Tango (Android) defined UV space is: the top-left of the camera is (0,0);
+            // the bottom-right is (1,1).
+            Vector2 uvCoordinatesTango = new Vector2(uvCoordinates.x, 1.0f - uvCoordinates.y);
+            DVector3 doubleIntersectionPoint = new DVector3();
+
+            DVector4 pointCloudRotation = DVector4.IdentityQuaternion;
+            DVector3 pointCloudTranslation = DVector3.Zero;
+
+            returnValue = TangoSupportAPI.TangoSupport_fitPlaneModelNearPoint(
+                ref tangoPointCloudIntPtr,
+                ref pointCloudTranslation,
+                ref pointCloudRotation,
+                ref uvCoordinatesTango,
+                AndroidHelper.GetDisplayRotation(),
+                ref depth_T_colorCameraPose.translation,
+                ref depth_T_colorCameraPose.orientation,
+                out doubleIntersectionPoint,
+                out planeModel);
+
+            pointCloudHandle.Free();
+
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.LogError("TangoSupport_fitPlaneModelNearPoint error. " + Environment.StackTrace);
+                intersectionPoint = new Vector3(0.0f, 0.0f, 0.0f);
+                planeModel = new DVector4();
+                return false;
+            }
+            else
+            {
+                intersectionPoint = doubleIntersectionPoint.ToVector3();
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Calculates the depth in the color camera space at a user-specified
+        /// location using nearest-neighbor interpolation.
+        /// </summary>
+        /// <returns>
+        /// <c>true</c>, if a point is found is found successfully, <c>false</c> otherwise.
+        /// </returns>
+        /// <param name="pointCloud">
+        /// The point cloud. Cannot be null and must have at least three points.
+        /// </param>
+        /// <param name="colorCameraTimestamp">
+        /// Color camera's timestamp when UV is captured.
+        /// </param>
+        /// <param name="uvCoordinates">
+        /// The UV coordinates for the user selection. This is expected to be
+        /// in Unity viewport space. The bottom-left of the camera is (0,0);
+        /// the top-right is (1,1).
+        /// </param>
+        /// <param name="colorCameraPoint">
+        /// The point (x, y, z), where (x, y) is the back-projection of the UV
+        /// coordinates to the color camera space and z is the z coordinate of
+        /// the point in the point cloud nearest to the user selection after
+        /// projection onto the image plane. If there is not a point cloud point
+        /// close to the user selection after projection onto the image plane,
+        /// then the point will be set to (0.0, 0.0, 0.0) and isValidPoint will
+        /// be set to false.
+        /// </param>
+        public static bool ScreenCoordinateToWorldNearestNeighbor(
+            TangoPointCloudData pointCloud,
+            double colorCameraTimestamp,
+            Vector2 uvCoordinates,
+            out Vector3 colorCameraPoint)
+        {
+            TangoPoseData depth_T_colorCameraPose = new TangoPoseData();
+
+            int returnValue = TangoSupportAPI.TangoSupport_calculateRelativePose(
+                pointCloud.m_timestamp,
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_DEPTH,
+                colorCameraTimestamp,
+                TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR,
+                depth_T_colorCameraPose);
+
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.LogError("TangoSupport_calculateRelativePose error. " + Environment.StackTrace);
+                colorCameraPoint = Vector3.zero;
+                return false;
+            }
+
+            GCHandle pointCloudHandle = GCHandle.Alloc(pointCloud.m_points,
+                                                       GCHandleType.Pinned);
+            TangoPointCloudIntPtr tangoPointCloudIntPtr = new TangoPointCloudIntPtr();
+            tangoPointCloudIntPtr.m_points = pointCloudHandle.AddrOfPinnedObject();
+            tangoPointCloudIntPtr.m_timestamp = pointCloud.m_timestamp;
+            tangoPointCloudIntPtr.m_numPoints = pointCloud.m_numPoints;
+
+            // Unity viewport space is: the bottom-left of the camera is (0,0);
+            // the top-right is (1,1).
+            // Tango (Android) defined UV space is: the top-left of the camera is (0,0);
+            // the bottom-right is (1,1).
+            Vector2 uvCoordinatesTango = new Vector2(uvCoordinates.x, 1.0f - uvCoordinates.y);
+
+            DVector4 pointCloudRotation = DVector4.IdentityQuaternion;
+            DVector3 pointCloudTranslation = DVector3.Zero;
+
+            returnValue = TangoSupportAPI.TangoSupport_getDepthAtPointNearestNeighbor(
+                ref tangoPointCloudIntPtr, 
+                ref pointCloudTranslation,
+                ref pointCloudRotation,
+                ref uvCoordinatesTango,
+                AndroidHelper.GetDisplayRotation(),
+                ref depth_T_colorCameraPose.translation,
+                ref depth_T_colorCameraPose.orientation,
+                out colorCameraPoint);
+
+            pointCloudHandle.Free();
+
+            if (returnValue != Common.ErrorType.TANGO_SUCCESS)
+            {
+                Debug.LogError("TangoSupport_getDepthAtPointNearestNeighbor error. " + Environment.StackTrace);
+                colorCameraPoint = Vector3.zero;
+                return false;
+            }
+
+            return true;
+        }
+#endregion
+
+#region MARKER_DETECTION_FUNCTIONS
+        /// <summary>
+        /// Detect one or more markers in the input image.
+        /// </summary>
+        /// <param name="imageBuffer">
+        /// The input image buffer.
+        /// </param>
+        /// <param name="cameraId">
+        /// Camera that is used for detecting markers, can be TangoEnums.TangoCameraId.TANGO_CAMERA_FISHEYE or
+        /// TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR.
+        /// </param>
+        /// <param name="markerType">
+        /// Target marker's type. Current support marker types are QR marker and Alvar marker.
+        /// </param>
+        /// <param name="markerSize">
+        /// Physical size of marker's length.
+        /// </param>
+        /// <param name="markers">
+        /// The returned marker list.
+        /// </param>
+        /// <returns>
+        /// Common.ErrorType.TANGO_SUCCESS on success, Common.ErrorType.TANGO_INVALID on invalid input, and
+        /// Common.ErrorType.TANGO_ERROR on failure.
+        /// </returns>
+        public static bool DetectMarkers(TangoUnityImageData imageBuffer,
+            TangoEnums.TangoCameraId cameraId,
+            MarkerType markerType,
+            double markerSize,
+            List<Marker> markers)
+        {
+            if (markers == null)
+            {
+                Debug.Log("markers is null. " + Environment.StackTrace);
+                return false;
+            }
+            
+            // Clear any existing marker
+            markers.Clear();
+
+            // Detect marker.
+            TangoImageBuffer buffer = new TangoImageBuffer();
+            GCHandle gchandle = GCHandle.Alloc(imageBuffer.data, GCHandleType.Pinned);
+            IntPtr ptr = gchandle.AddrOfPinnedObject();
+            buffer.data = ptr;
+
+            buffer.format = imageBuffer.format;
+            buffer.frame_number = imageBuffer.frame_number;
+            buffer.height = imageBuffer.height;
+            buffer.stride = imageBuffer.stride;
+            buffer.timestamp = imageBuffer.timestamp;
+            buffer.width = imageBuffer.width;
+
+            // Get Pose.
+            TangoPoseData poseData = new TangoPoseData();
+            TangoCoordinateFramePair pair;
+            pair.baseFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_START_OF_SERVICE;
+            pair.targetFrame = TangoEnums.TangoCoordinateFrameType.TANGO_COORDINATE_FRAME_CAMERA_COLOR;
+            PoseProvider.GetPoseAtTime(poseData, buffer.timestamp, pair);
+
+            APIMarkerList rawAPIMarkerList = new APIMarkerList();
+            APIMarkerParam rawMarkerParam = new APIMarkerParam(markerType, markerSize);
+
+            int ret = TangoSupportAPI.TangoSupport_detectMarkers(ref buffer, cameraId,
+                                                                 ref poseData.translation,
+                                                                 ref poseData.orientation,
+                                                                 ref rawMarkerParam,
+                                                                 ref rawAPIMarkerList);
+
+            gchandle.Free();
+
+            if (ret != Common.ErrorType.TANGO_SUCCESS)
+            {
+                return false;
+            }
+
+            if (rawAPIMarkerList.markerCount != 0)
+            {
+                List<APIMarker> apiMarkers = new List<APIMarker>();
+
+                MarshallingHelper.MarshalUnmanagedStructArrayToList<TangoSupport.APIMarker>(
+                    rawAPIMarkerList.markers,
+                    rawAPIMarkerList.markerCount,
+                    apiMarkers);
+
+                for (int i = 0; i < apiMarkers.Count; ++i)
+                {
+                    APIMarker apiMarker = apiMarkers[i];
+                    Marker marker = new Marker();
+                    marker.m_type = apiMarker.m_type;
+                    marker.m_timestamp = apiMarker.m_timestamp;
+                    marker.m_content = apiMarker.m_content;
+
+                    // Covert 2D corner points from pixel space to UV space.
+                    marker.m_corner2DP0.x = apiMarker.m_corner2DP0.x / buffer.width;
+                    marker.m_corner2DP0.y = apiMarker.m_corner2DP0.y / buffer.height;
+                    marker.m_corner2DP1.x = apiMarker.m_corner2DP1.x / buffer.width;
+                    marker.m_corner2DP1.y = apiMarker.m_corner2DP1.y / buffer.height;
+                    marker.m_corner2DP2.x = apiMarker.m_corner2DP2.x / buffer.width;
+                    marker.m_corner2DP2.y = apiMarker.m_corner2DP2.y / buffer.height;
+                    marker.m_corner2DP3.x = apiMarker.m_corner2DP3.x / buffer.width;
+                    marker.m_corner2DP3.y = apiMarker.m_corner2DP3.y / buffer.height;
+
+                    // Convert 3D corner points from Start of Service space to Unity World space.
+                    marker.m_corner3DP0 = GetMarkerInUnitySpace(apiMarker.m_corner3DP0);
+                    marker.m_corner3DP1 = GetMarkerInUnitySpace(apiMarker.m_corner3DP1);
+                    marker.m_corner3DP2 = GetMarkerInUnitySpace(apiMarker.m_corner3DP2);
+                    marker.m_corner3DP3 = GetMarkerInUnitySpace(apiMarker.m_corner3DP3);
+
+                    // Convert pose from Start of Service to Unity World space.
+                    Vector3 translation = new Vector3(
+                        (float)apiMarker.m_translation.x, 
+                        (float)apiMarker.m_translation.y, 
+                        (float)apiMarker.m_translation.z);
+                    Quaternion orientation = new Quaternion(
+                        (float)apiMarker.m_rotation.x,
+                        (float)apiMarker.m_rotation.y,
+                        (float)apiMarker.m_rotation.z,
+                        (float)apiMarker.m_rotation.w);
+
+                    Matrix4x4 ss_T_marker = Matrix4x4.TRS(translation, orientation, Vector3.one);
+
+                    // Note that UNITY_WORLD_T_START_SERVICE is involutory matrix. The actually transform
+                    // we wanted to multiply on the right hand side is START_SERVICE_T_UNITY_WORLD.
+                    Matrix4x4 uw_T_u_marker = TangoSupport.UNITY_WORLD_T_START_SERVICE * 
+                        ss_T_marker * TangoSupport.UNITY_WORLD_T_START_SERVICE;
+                    marker.m_translation = uw_T_u_marker.GetColumn(3);
+                    marker.m_orientation = Quaternion.LookRotation(uw_T_u_marker.GetColumn(2),
+                        uw_T_u_marker.GetColumn(1));
+
+                    // Add the marker to the output list
+                    markers.Add(marker);
+                }
+            }
+
+            TangoSupportAPI.TangoSupport_freeMarkerList(ref rawAPIMarkerList);
+
+            return false;
+        }
+
+        /// <summary>
+        /// Convert input marker position from Start Of Service frame to Unity frame.
+        /// </summary>
+        /// <param name="input">
+        /// Marker's position in Start Of Service frame.
+        /// </param>
+        /// <returns>
+        /// Marker's position in Unity frame.
+        /// </returns>
+        private static Vector3 GetMarkerInUnitySpace(Vector3 input)
+        {
+            // The actual math is:
+            //     Matrix4x4 ss_T_marker = Matrix4x4.TRS(input, Quaternion.identity, Vector3.one);
+            //     Matrix4x4 uw_T_u_marker = TangoSupport.UNITY_WORLD_T_START_SERVICE * ss_T_marker;
+            //     input = uw_T_u_marker * input;
+            // To minimize computation, we hard coded the math to an axis swap.
+           return new Vector3(input.x, input.z, input.y);
+        }
+#endregion
+
+#region DATA_TYPES
+        /// <summary>
+        /// A structure to define contents of a marker, which can be any of the
+        /// marker types supported.
+        /// </summary>
+        public struct Marker
         {
             /// <summary>
-            /// 0,0-th element of this matrix.
+            /// The type of the marker.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_00;
+            public MarkerType m_type;
 
             /// <summary>
-            /// 1,0-th element of this matrix.
+            /// The timestamp of the image from which the marker was detected.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_10;
+            public double m_timestamp;
 
             /// <summary>
-            /// 2,0-th element of this matrix.
+            /// The content of the marker. For AR tags, this is the string format of the
+            /// tag id. For QR codes, this is the string content of the code.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_20;
+            public string m_content;
 
             /// <summary>
-            /// 3,0-th element of this matrix.
+            /// Marker corners in input image uv coordinates, with coordinate values in range of [0..1].
+            /// For all marker types, the first corner is the lower left corner, the
+            /// second corner is the lower right corner, the third corner is the upper
+            /// right corner, and the last corner is the upper left corner.
+            ///
+            /// P3 -- P2
+            /// |     |
+            /// P0 -- P1.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_30;
+            public Vector2 m_corner2DP0;
 
             /// <summary>
-            /// 0,1-th element of this matrix.
+            /// Corner2D P1.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_01;
+            public Vector2 m_corner2DP1;
 
             /// <summary>
-            /// 1,1-th element of this matrix.
+            /// Corner2D P2.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_11;
+            public Vector2 m_corner2DP2;
 
             /// <summary>
-            /// 2,1-th element of this matrix.
+            /// Corner2D P3.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_21;
+            public Vector2 m_corner2DP3;
 
             /// <summary>
-            /// 3,1-th element of this matrix.
+            /// Marker corners in the output frame, which is defined in Unity World space. The
+            /// locations of the corners are the same as in m_corner2DP* fields.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_31;
+            public Vector3 m_corner3DP0;
 
             /// <summary>
-            /// 0,2-th element of this matrix.
+            /// Corner3D P1.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_02;
+            public Vector3 m_corner3DP1;
 
             /// <summary>
-            /// 1,2-th element of this matrix.
+            /// Corner3D P2.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_12;
+            public Vector3 m_corner3DP2;
 
             /// <summary>
-            /// 2,2-th element of this matrix.
+            /// Corner3D P3.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_22;
+            public Vector3 m_corner3DP3;
 
             /// <summary>
-            /// 3,2-th element of this matrix.
+            /// Marker pose - orientation is a Unity quaternion. 
+            /// Both translation and orientation are defined in the Unity World space.
+            /// The marker pose defines a marker local frame, in which:
+            ///  X = to the right on the tag
+            ///  Y = to the up on the tag
+            ///  Z = pointing forward from the user's perspective.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_32;
+            public Vector3 m_translation;
+            public Quaternion m_orientation;
+        }
+
+        /// <summary>
+        /// A structure to define contents of a marker, which can be any of the
+        /// marker types supported.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        public struct APIMarker
+        {
+            /// <summary>
+            /// The type of the marker.
+            /// </summary>
+            [MarshalAs(UnmanagedType.I4)]
+            public MarkerType m_type;
 
             /// <summary>
-            /// 0,3-th element of this matrix.
+            /// The timestamp of the image from which the marker was detected.
             /// </summary>
             [MarshalAs(UnmanagedType.R8)]
-            public double m_03;
+            public double m_timestamp;
 
             /// <summary>
-            /// 1,3-th element of this matrix.
+            /// The content of the marker. For AR tags, this is the string format of the
+            /// tag id. For QR codes, this is the string content of the code.
+            /// </summary>
+            [MarshalAs(UnmanagedType.LPStr)]
+            public string m_content;
+
+            /// <summary>
+            /// The size of content, in bytes.
+            /// </summary>
+            [MarshalAs(UnmanagedType.I4)]
+            public int m_contentSize;
+
+            /// <summary>
+            /// Marker corners in input image pixel coordinates.
+            /// For all marker types, the first corner is the lower left corner, the
+            /// second corner is the lower right corner, the third corner is the upper
+            /// right corner, and the last corner is the upper left corner.
+            ///
+            /// P3 -- P2
+            /// |     |
+            /// P0 -- P1.
+            /// </summary>
+            public Vector2 m_corner2DP0;
+
+            /// <summary>
+            /// Corner2D P1.
+            /// </summary>
+            public Vector2 m_corner2DP1;
+
+            /// <summary>
+            /// Corner2D P2.
+            /// </summary>
+            public Vector2 m_corner2DP2;
+
+            /// <summary>
+            /// Corner2D P3.
+            /// </summary>
+            public Vector2 m_corner2DP3;
+
+            /// <summary>
+            /// Marker corners in the output frame, which is defined by the translation
+            /// and orientation pair passed to TangoSupport_detectMarkers() function. The
+            /// location of the corner is the same as in corners_2d field.
+            /// </summary>
+            public Vector3 m_corner3DP0;
+
+            /// <summary>
+            /// Corner3D P1.
+            /// </summary>
+            public Vector3 m_corner3DP1;
+
+            /// <summary>
+            /// Corner3D P2.
+            /// </summary>
+            public Vector3 m_corner3DP2;
+            
+            /// <summary>
+            /// Corner3D P3.
+            /// </summary>
+            public Vector3 m_corner3DP3;
+
+            /// <summary>
+            /// Marker pose - orientation is a Hamilton quaternion specified as
+            /// (x, y, z, w). Both translation and orientation are defined in the output
+            /// frame, which is defined by the translation and orientation pair passed to
+            /// TangoSupport_detectMarkers() function.
+            /// The marker pose defines a marker local frame, in which:
+            ///  X = to the right on the tag
+            ///  Y = to the up on the tag
+            ///  Z = pointing out of the tag towards the user.
+            /// </summary>
+            public DVector3 m_translation;
+            public DVector4 m_rotation;
+        }
+
+        /// <summary>
+        /// A structure to define parameters for passing marker detection
+        /// parameters.
+        /// </summary>
+        [StructLayout(LayoutKind.Sequential)]
+        private struct APIMarkerParam
+        {
+            /// <summary>
+            /// Type of marker to be detected.
+            /// </summary>
+            [MarshalAs(UnmanagedType.I4)]
+            public MarkerType m_type;
+
+            /// <summary>
+            /// The physical size of the marker in meters.
             /// </summary>
             [MarshalAs(UnmanagedType.R8)]
-            public double m_13;
+            public double m_markerSize;
 
             /// <summary>
-            /// 2,3-th element of this matrix.
+            /// Construct APIMarkerParam from type and marker's size.
             /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_23;
-
-            /// <summary>
-            /// 3,3-th element of this matrix.
-            /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_33;
-
-            /// <summary>
-            /// Creates a new double-precision matrix from the given
-            /// single-precision matrix.
-            /// </summary>
-            /// <param name="matrix">A single-precision matrix.</param>
-            public DMatrix4x4(Matrix4x4 matrix)
+            /// <param name="type">Marker's type.</param>
+            /// <param name="markerSize">Marker's physical size.</param>
+            public APIMarkerParam(MarkerType type, double markerSize)
             {
-                m_00 = matrix.m00;
-                m_10 = matrix.m10;
-                m_20 = matrix.m20;
-                m_30 = matrix.m30;
-
-                m_01 = matrix.m01;
-                m_11 = matrix.m11;
-                m_21 = matrix.m21;
-                m_31 = matrix.m31;
-
-                m_02 = matrix.m02;
-                m_12 = matrix.m12;
-                m_22 = matrix.m22;
-                m_32 = matrix.m32;
-
-                m_03 = matrix.m03;
-                m_13 = matrix.m13;
-                m_23 = matrix.m23;
-                m_33 = matrix.m33;
-            }
-
-            /// <summary>
-            /// Returns a single-precision matrix representation of this
-            /// double-precision matrix.
-            /// </summary>
-            /// <returns>A single-precision matrix.</returns>
-            public Matrix4x4 ToMatrix4x4()
-            {
-                return new Matrix4x4
-                {
-                    m00 = (float)m_00, m01 = (float)m_01, m02 = (float)m_02, m03 = (float)m_03,
-                    m10 = (float)m_10, m11 = (float)m_11, m12 = (float)m_12, m13 = (float)m_13,
-                    m20 = (float)m_20, m21 = (float)m_21, m22 = (float)m_22, m23 = (float)m_23,
-                    m30 = (float)m_30, m31 = (float)m_31, m32 = (float)m_32, m33 = (float)m_33
-                };
-            }
-
-            /// <summary>
-            /// Returns a string representation of this matrix.
-            /// </summary>
-            /// <returns>A string.</returns>
-            public override string ToString()
-            {
-                return string.Format("{0}\t{1}\t{2}\t{3}\n{4}\t{5}\t{6}\t{7}\n{8}\t{9}\t{10}\t{11}\n{12}\t{13}\t{14}\t{15}\n",
-                    m_00, m_01, m_02, m_03,
-                    m_10, m_11, m_12, m_13,
-                    m_20, m_21, m_22, m_23,
-                    m_30, m_31, m_32, m_33);
+                m_type = type;
+                m_markerSize = markerSize;
             }
         }
 
         /// <summary>
-        /// A double-precision 3D vector.
+        /// A structure that stores a list of markers. After calling
+        /// TangoSupport_detectMarkers() with a TangoSupportAPIMarkerList object, the
+        /// object needs to be released by calling TangoSupport_freeMarkersList()
+        /// function.
         /// </summary>
-        private struct DVector3
+        [StructLayout(LayoutKind.Sequential)]
+        private struct APIMarkerList 
         {
-            /// <summary>
-            /// X component of this vector.
-            /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_x;
-
-            /// <summary>
-            /// Y component of this vector.
-            /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_y;
-
-            /// <summary>
-            /// Z component of this vector.
-            /// </summary>
-            [MarshalAs(UnmanagedType.R8)]
-            public double m_z;
-
-            /// <summary>
-            /// Creates a new double-precision vector from the given
-            /// single-precision vector.
-            /// </summary>
-            /// <param name="vector">A single-precision vector.</param>
-            public DVector3(Vector3 vector)
-            {
-                m_x = vector.x;
-                m_y = vector.y;
-                m_z = vector.z;
-            }
-
-            /// <summary>
-            /// Returns a single-precision vector representation of this
-            /// double-precision vector.
-            /// </summary>
-            /// <returns>A single-precision vector.</returns>
-            public Vector3 ToVector3()
-            {
-                return new Vector3((float)m_x, (float)m_y, (float)m_z);
-            }
-
-            /// <summary>
-            /// Returns a string representation of this vector.
-            /// </summary>
-            /// <returns>A string.</returns>
-            public override string ToString()
-            {
-                return string.Format("({0}, {1}, {2})", m_x, m_y, m_z);
-            }
+            public IntPtr markers;
+            
+            [MarshalAs(UnmanagedType.I4)]
+            public int markerCount;
         }
+#endregion
 
-        #region API_Functions
+#region API_Functions
         /// <summary>
         /// Wraps the Tango Support C API.
         /// </summary>
@@ -764,55 +860,106 @@ namespace Tango
         private struct TangoSupportAPI
         {
 #if UNITY_ANDROID && !UNITY_EDITOR
+            /// <summary>
+            /// Note that we intentionally using Common.TANGO_UNITY_DLL to call support library
+            /// initialization function so that all function pointers are set up from C layer directly.
+            /// </summary>
+            [DllImport(Common.TANGO_UNITY_DLL)]
+            public static extern void TangoUnity_initializeTangoSupportLibrary();
+
             [DllImport(TANGO_SUPPORT_UNITY_DLL)]
-            public static extern int TangoSupport_fitPlaneModelNearPointMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                ref DMatrix4x4 matrix, ref Vector2 uvCoordinates,
+            public static extern int TangoSupport_calculateRelativePose(
+                double bseTimestamp, TangoEnums.TangoCoordinateFrameType baseFrame,
+                double targetTimestampe, TangoEnums.TangoCoordinateFrameType target,
+                [In, Out] TangoPoseData pose);
+
+            [DllImport(TANGO_SUPPORT_UNITY_DLL)]
+            public static extern int TangoSupport_fitPlaneModelNearPoint(
+                ref TangoPointCloudIntPtr pointCloud, 
+                ref DVector3 pointCloudTranslation,
+                ref DVector4 pointCloundOrientation,
+                ref Vector2 uvCoordinates,
+                OrientationManager.Rotation rotation,
+                ref DVector3 cameraTranslation,
+                ref DVector4 cameraOrientation,
                 out DVector3 intersectionPoint,
-                [Out, MarshalAs(UnmanagedType.LPArray, SizeConst = 4)] double[] planeModel);
+                out DVector4 planeModel);
 
             [DllImport(TANGO_SUPPORT_UNITY_DLL)]
-            public static extern int TangoSupport_getDepthAtPointBilateralCameraIntrinsicsMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                TangoImageBuffer colorImage, ref DMatrix4x4 matrix,
-                ref Vector2 uvCoordinates, out Vector3 colorCameraPoint,
-                [Out, MarshalAs(UnmanagedType.I4)] out int isValidPoint);
+            public static extern int TangoSupport_getDepthAtPointNearestNeighbor(
+                ref TangoPointCloudIntPtr point_cloud, 
+                ref DVector3 poitnCloudTranslation,
+                ref DVector4 pointCloudOrientation,
+                ref Vector2 uvCoordinatesInColorCamera,
+                OrientationManager.Rotation display_rotation,
+                ref DVector3 colorCameraTranslation,
+                ref DVector4 colorCameraOrientation,
+                out Vector3 outputPoint);
 
             [DllImport(TANGO_SUPPORT_UNITY_DLL)]
-            public static extern int TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                ref DMatrix4x4 matrix, ref Vector2 uvCoordinates,
-                out Vector3 colorCameraPoint,
-                [Out, MarshalAs(UnmanagedType.I4)] out int isValidPoint);
+            public static extern int TangoSupport_detectMarkers(ref TangoImageBuffer image,
+                TangoEnums.TangoCameraId cameraId,
+                ref DVector3 translation,
+                ref DVector4 orientation,
+                ref APIMarkerParam param,
+                ref APIMarkerList apiMarkerList);
+
+            [DllImport(TANGO_SUPPORT_UNITY_DLL)]
+            public static extern void TangoSupport_freeMarkerList(ref APIMarkerList list);
 #else
-            public static int TangoSupport_fitPlaneModelNearPointMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                ref DMatrix4x4 matrix, ref Vector2 uvCoordinates,
-                out DVector3 intersectionPoint, double[] planeModel)
+            public static int TangoUnity_initializeTangoSupportLibrary()
             {
-                intersectionPoint = new DVector3();
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoSupport_getDepthAtPointBilateralCameraIntrinsicsMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                TangoImageBuffer colorImage, ref DMatrix4x4 matrix,
-                ref Vector2 uvCoordinates, out Vector3 colorCameraPoint,
-                out int isValidPoint)
+            public static int TangoSupport_calculateRelativePose(
+                double bseTimestamp, TangoEnums.TangoCoordinateFrameType baseFrame,
+                double targetTimestampe, TangoEnums.TangoCoordinateFrameType target,
+                TangoPoseData pose)
             {
-                colorCameraPoint = Vector3.zero;
-                isValidPoint = 1;
                 return Common.ErrorType.TANGO_SUCCESS;
             }
 
-            public static int TangoSupport_getDepthAtPointNearestNeighborMatrixTransform(
-                TangoXYZij pointCloud, TangoCameraIntrinsics cameraIntrinsics,
-                ref DMatrix4x4 matrix, ref Vector2 uvCoordinates,
-                out Vector3 colorCameraPoint, out int isValidPoint)
+            public static int TangoSupport_fitPlaneModelNearPoint(
+                ref TangoPointCloudIntPtr pointCloud, 
+                ref DVector3 pointCloudTranslation,
+                ref DVector4 pointCloundOrientation,
+                ref Vector2 uvCoordinates,
+                OrientationManager.Rotation rotation,
+                ref DVector3 cameraTranslation,
+                ref DVector4 cameraOrientation,
+                out DVector3 intersectionPoint,
+                out DVector4 planeModel)
+                {
+                    intersectionPoint = new DVector3();
+                    planeModel = new DVector4();
+                    return Common.ErrorType.TANGO_SUCCESS;
+                }
+
+            public static int TangoSupport_getDepthAtPointNearestNeighbor(
+                ref TangoPointCloudIntPtr point_cloud, 
+                ref DVector3 poitnCloudTranslation,
+                ref DVector4 pointCloudOrientation,
+                ref Vector2 uvCoordinatesInColorCamera,
+                OrientationManager.Rotation display_rotation,
+                ref DVector3 colorCameraTranslation,
+                ref DVector4 colorCameraOrientation,
+                out Vector3 outputPoint)
             {
-                colorCameraPoint = Vector3.zero;
-                isValidPoint = 1;
+                outputPoint = Vector3.zero;
                 return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static int TangoSupport_detectMarkers(ref TangoImageBuffer image,
+                TangoEnums.TangoCameraId cameraId, ref DVector3 translation, ref DVector4 orientation,
+                ref APIMarkerParam param, ref APIMarkerList apiMarkerList)
+            {
+                apiMarkerList = new APIMarkerList();
+                return Common.ErrorType.TANGO_SUCCESS;
+            }
+
+            public static void TangoSupport_freeMarkerList(ref APIMarkerList list)
+            {
             }
 #endif
         }

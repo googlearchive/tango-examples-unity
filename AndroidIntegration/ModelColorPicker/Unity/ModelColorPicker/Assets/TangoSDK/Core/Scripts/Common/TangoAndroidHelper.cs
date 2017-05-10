@@ -17,7 +17,6 @@
 //
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Collections;
 using UnityEngine;
 
 /// <summary>
@@ -25,7 +24,7 @@ using UnityEngine;
 /// </summary>
 public partial class AndroidHelper
 {
-    internal const int TANGO_MINIMUM_VERSION_CODE = 10592;
+    internal const int TANGO_MINIMUM_VERSION_CODE = 14694;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
     private static AndroidJavaObject m_tangoHelper = null;
@@ -79,7 +78,7 @@ public partial class AndroidHelper
         return null;
 #endif
     }
-    
+
     /// <summary>
     /// Start the Tango permissions activity, requesting that permission.
     /// </summary>
@@ -87,7 +86,7 @@ public partial class AndroidHelper
     public static void StartTangoPermissionsActivity(string permissionsType)
     {
         AndroidJavaObject tangoObject = GetTangoHelperObject();
-        
+
         if (tangoObject != null)
         {
             int requestCode = 0;
@@ -119,7 +118,7 @@ public partial class AndroidHelper
         {
             return tangoObject.Call<bool>("hasPermission", permissionType);
         }
-        
+
         return false;
     }
 
@@ -212,7 +211,7 @@ public partial class AndroidHelper
         {
             return tangoObject.Call<int>("getTangoCoreVersionCode") != 0;
         }
-        
+
         return false;
 #endif
     }
@@ -355,9 +354,9 @@ public partial class AndroidHelper
 
         if (tangoObject != null)
         {
-            tangoObject.Call("startExportAreaDescriptionActivity", 
+            tangoObject.Call("startExportAreaDescriptionActivity",
                              Tango.Common.TANGO_ADF_EXPORT_REQUEST_CODE,
-                             srcAdfUuid, 
+                             srcAdfUuid,
                              exportLocation);
         }
     }
@@ -372,7 +371,7 @@ public partial class AndroidHelper
 
         if (tangoObject != null)
         {
-            tangoObject.Call("startImportAreaDescriptionActivity", 
+            tangoObject.Call("startImportAreaDescriptionActivity",
                              Tango.Common.TANGO_ADF_IMPORT_REQUEST_CODE,
                              adfPath);
         }

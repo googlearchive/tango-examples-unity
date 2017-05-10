@@ -325,9 +325,9 @@ public class TangoInspector : Editor
             }
 
             EditorGUI.indentLevel++;
-            tangoApplication.m_3drResolutionMeters = EditorGUILayout.FloatField(
-                "Resolution (meters)", tangoApplication.m_3drResolutionMeters);
-            tangoApplication.m_3drResolutionMeters = Mathf.Max(tangoApplication.m_3drResolutionMeters, 0.001f);
+            tangoApplication.ReconstructionMeshResolution = EditorGUILayout.FloatField(
+                "Resolution (meters)", tangoApplication.ReconstructionMeshResolution);
+            tangoApplication.ReconstructionMeshResolution = Mathf.Max(tangoApplication.ReconstructionMeshResolution, 0.001f);
             tangoApplication.m_3drGenerateColor = EditorGUILayout.Toggle(
                 "Generate Color", tangoApplication.m_3drGenerateColor);
 

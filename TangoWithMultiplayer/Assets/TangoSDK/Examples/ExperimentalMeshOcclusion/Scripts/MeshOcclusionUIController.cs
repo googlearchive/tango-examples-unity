@@ -617,11 +617,16 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
                 m_savedUUID = m_curAreaDescription.m_uuid;    
                 metadata.m_name = metadata.m_dateTime.ToLongTimeString();
                 m_curAreaDescription.SaveMetadata(metadata);
-
-                // Save the tango dynamic mesh to file.
-                StartCoroutine(_DoSaveTangoDynamicMesh());
             });
             m_saveThread.Start();
+
+            while (m_saveThread.IsAlive)
+            {
+                yield return null;
+            }
+            
+            // Save the tango dynamic mesh to file.
+            StartCoroutine(_DoSaveTangoDynamicMesh());
         }
         else
         {

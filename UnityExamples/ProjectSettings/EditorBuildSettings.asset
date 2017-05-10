@@ -6,6 +6,10 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Tests/Profiling/Scenes/MemoryProfilerHomeScene.unity
+  - enabled: 1
+    path: Assets/Tests/Profiling/Scenes/MemoryProfilerSummaryScene.unity
+  - enabled: 1
     path: Assets/TangoSDK/Examples/Scenes/DetectTangoCore.unity
   - enabled: 1
     path: Assets/TangoSDK/Examples/Scenes/MotionTracking.unity
@@ -21,6 +25,8 @@ EditorBuildSettings:
     path: Assets/TangoSDK/Examples/Scenes/SimpleAugmentedReality.unity
   - enabled: 0
     path: Assets/TangoSDK/Examples/Scenes/AugmentedReality.unity
+  - enabled: 0
+    path: Assets/TangoSDK/Examples/Scenes/MarkerDetection.unity
   - enabled: 0
     path: Assets/TangoSDK/Examples/Scenes/ExperimentalMeshBuilderWithColor.unity
   - enabled: 0

@@ -21,15 +21,21 @@
 namespace Tango
 {
     using System;
+    using System.Runtime.InteropServices;
 
     /// <summary>
     /// Double precision vector in 4D.
     /// </summary>
+    [StructLayout(LayoutKind.Sequential)]
     public struct DVector4
     {
+        [MarshalAs(UnmanagedType.R8)]
         public double x;
+        [MarshalAs(UnmanagedType.R8)]
         public double y;
+        [MarshalAs(UnmanagedType.R8)]
         public double z;
+        [MarshalAs(UnmanagedType.R8)]
         public double w;
 
         /// <summary>
@@ -45,6 +51,15 @@ namespace Tango
             this.y = y;
             this.z = z;
             this.w = w;
+        }
+
+        /// <summary>
+        /// Gets identity quaternion in DVector4 format.
+        /// </summary>
+        /// <value>Identity quaternion.</value>
+        public static DVector4 IdentityQuaternion
+        {
+            get { return new DVector4(0.0, 0.0, 0.0, 1.0); }
         }
 
         /// <summary>
@@ -66,10 +81,12 @@ namespace Tango
         }
 
         /// <summary>
-        /// Access the x, y, z, w components using [0], [1], [2], [3] respectively.
+        /// Get or set x,y,z,w components (double) as 0,1,2,3 - other values throw an IndexOutOfRange exception.
         /// </summary>
-        /// <param name="index">Vector index.</param>
-        /// <returns>The value at the specified index.</returns>
+        /// <param name="index">Set a component of the quaternion by int index.</param>
+        /// <returns>
+        /// A <see cref="System.Double"/> in the quaternion.
+        /// </returns>
         public double this[int index]
         {
             get
@@ -85,7 +102,28 @@ namespace Tango
                     case 3:
                         return w;
                     default:
-                        throw new IndexOutOfRangeException("Invalid vector index!");
+                        throw new System.IndexOutOfRangeException();
+                }
+            }
+            
+            set
+            {
+                switch (index)
+                {
+                    case 0:
+                        x = value;
+                        return;
+                    case 1:
+                        y = value;
+                        return;
+                    case 2:
+                        z = value;
+                        return;
+                    case 3:
+                        w = value;
+                        return;
+                    default:
+                        throw new System.IndexOutOfRangeException();
                 }
             }
         }
@@ -137,5 +175,14 @@ namespace Tango
         {
             return new DVector4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
         }
+
+        /// <summary>
+        /// Overrided ToString function to formatted DVector4 string output.
+        /// </summary>
+        /// <returns>Formatted string of this DVector4.</returns>
+        public override string ToString()
+        {
+            return string.Format("{0}, {1}, {2}, {3}", x, y, z, w);
+        } 
     }
 }

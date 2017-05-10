@@ -69,6 +69,34 @@ namespace Tango
         }
 
         /// <summary>
+        /// Creates a new double-precision matrix from the given
+        /// single-precision matrix.
+        /// </summary>
+        /// <param name="matrix">A single-precision matrix.</param>
+        public DMatrix4x4(Matrix4x4 matrix)
+        {
+            m00 = matrix.m00;
+            m10 = matrix.m10;
+            m20 = matrix.m20;
+            m30 = matrix.m30;
+
+            m01 = matrix.m01;
+            m11 = matrix.m11;
+            m21 = matrix.m21;
+            m31 = matrix.m31;
+
+            m02 = matrix.m02;
+            m12 = matrix.m12;
+            m22 = matrix.m22;
+            m32 = matrix.m32;
+
+            m03 = matrix.m03;
+            m13 = matrix.m13;
+            m23 = matrix.m23;
+            m33 = matrix.m33;
+        }
+
+        /// <summary>
         /// Construct matrix from array.
         /// </summary>
         /// <param name="arr">Array of matrix's elements.</param>
@@ -398,10 +426,10 @@ namespace Tango
         /// <summary>
         /// Create a translation and rotation matrix.
         /// </summary>
-        /// <param name="translation">Translation as 3 doubles in a TangoTranslation struct.</param>
-        /// <param name="orientation">Orientation as 4 doubles in a TangoOrientation struct.</param>
+        /// <param name="translation">Translation as 3 doubles in a DVector3 struct.</param>
+        /// <param name="orientation">Orientation as 4 doubles in a DVector4 struct.</param>
         /// <returns>Double matrix.</returns>
-        public static DMatrix4x4 TR(Tango.TangoTranslation translation, Tango.TangoOrientation orientation)
+        public static DMatrix4x4 TR(DVector3 translation, DVector4 orientation)
         {
             double[] dTranslation = new double[3];
             double[] dOrientation = new double[4];

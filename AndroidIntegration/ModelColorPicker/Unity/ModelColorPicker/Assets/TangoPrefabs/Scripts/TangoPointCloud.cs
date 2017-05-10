@@ -124,9 +124,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     // Convenience matrix for Matrix4x4.Inverse(m_imuTDevice) * m_imuTDepthCamera
     private DMatrix4x4 m_deviceTDepthCamera;
 
-    // Matrix for transforming the Unity camera space to the color camera space.
-    private DMatrix4x4 m_colorCameraTUnityCamera;
-
     /// <summary>
     /// Color camera intrinsics.
     /// </summary>
@@ -163,6 +160,16 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     /// </summary>
     private List<float> m_nonNoiseBuckets;
 
+    /// <summary>
+    /// The most recent point cloud data received.
+    /// </summary>
+    private TangoPointCloudData m_mostRecentPointCloud;
+
+    /// <summary>
+    /// Transformation for the most recent point cloud.
+    /// </summary>
+    private Matrix4x4 m_mostRecentUnityWorldTDepthCamera;
+
     /// @cond
     /// <summary>
     /// Use this for initialization.
@@ -173,12 +180,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
         m_tangoApplication.Register(this);
 
         m_tangoDeltaPoseController = FindObjectOfType<TangoDeltaPoseController>();
-
-        // Constant matrix converting Unity world frame frame to device frame.
-        m_colorCameraTUnityCamera = new DMatrix4x4(1.0, 0.0, 0.0, 0.0,
-                                                   0.0, -1.0, 0.0, 0.0,
-                                                   0.0, 0.0, 1.0, 0.0,
-                                                   0.0f, 0.0f, 0.0f, 1.0f);
 
         // Assign triangles, note: this is just for visualizing point in the mesh data.
         m_points = new Vector3[MAX_POINT_COUNT];
@@ -207,6 +208,8 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     /// <param name="pointCloud">Depth information from Tango.</param>
     public void OnTangoPointCloudAvailable(TangoPointCloudData pointCloud)
     {
+        m_mostRecentPointCloud = pointCloud;
+
         // Calculate the time since the last successful depth data
         // collection.
         if (m_depthTimestamp != 0.0)
@@ -251,14 +254,13 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             transform.rotation = Quaternion.identity;
 
             // Add offset to the point cloud depending on the offset from TangoDeltaPoseController.
-            Matrix4x4 unityWorldOffsetTDepthCamera;
             if (m_tangoDeltaPoseController != null)
             {
-                unityWorldOffsetTDepthCamera = m_tangoDeltaPoseController.UnityWorldOffset * unityWorldTDepthCamera.ToMatrix4x4();
+                m_mostRecentUnityWorldTDepthCamera = m_tangoDeltaPoseController.UnityWorldOffset * unityWorldTDepthCamera.ToMatrix4x4();
             }
             else
             {
-                unityWorldOffsetTDepthCamera = unityWorldTDepthCamera.ToMatrix4x4();
+                m_mostRecentUnityWorldTDepthCamera = unityWorldTDepthCamera.ToMatrix4x4();
             }
 
             // Converting points array to world space.
@@ -266,7 +268,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             for (int i = 0; i < m_pointsCount; ++i)
             {
                 Vector3 point = pointCloud[i];
-                m_points[i] = unityWorldOffsetTDepthCamera.MultiplyPoint3x4(point);
+                m_points[i] = m_mostRecentUnityWorldTDepthCamera.MultiplyPoint3x4(point);
                 m_overallZ += point.z;
             }
 
@@ -288,7 +290,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             }
 
             // The color should be pose relative; we need to store enough info to go back to pose values.
-            m_renderer.material.SetMatrix("depthCameraTUnityWorld", unityWorldOffsetTDepthCamera.inverse);
+            m_renderer.material.SetMatrix("depthCameraTUnityWorld", m_mostRecentUnityWorldTDepthCamera.inverse);
 
             // Try to find the floor using this set of depth points if requested.
             if (m_findFloorWithDepth)
@@ -359,7 +361,7 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
     public bool EstimateDepthOnScreen(Camera cam, Vector2 pos, out Vector3 colorCameraPoint)
     {
         // Set up parameters
-        Matrix4x4 colorCameraTUnityWorld = m_colorCameraTUnityCamera.ToMatrix4x4() * cam.transform.worldToLocalMatrix;
+        Matrix4x4 colorCameraTUnityWorld = TangoSupport.COLOR_CAMERA_T_UNITY_CAMERA * cam.transform.worldToLocalMatrix;
         Vector2 normalizedPos = cam.ScreenToViewportPoint(pos);
 
         // If the camera has a TangoARScreen attached, it is not displaying the entire color camera image.  Correct
@@ -370,18 +372,13 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             normalizedPos = arScreen.ViewportPointToCameraImagePoint(normalizedPos);
         }
 
-        bool isValidPoint;
-        int returnType = TangoSupport.ScreenCoordinateToWorldNearestNeighbor(
-                             m_points,
-                             m_pointsCount,
-                             m_depthTimestamp,
-                             m_colorCameraIntrinsics,
-                             ref colorCameraTUnityWorld,
-                             normalizedPos,
-                             out colorCameraPoint,
-                             out isValidPoint);
+        bool returnValue = TangoSupport.ScreenCoordinateToWorldNearestNeighbor(
+            m_mostRecentPointCloud,
+            arScreen.m_screenUpdateTime,
+            normalizedPos,
+            out colorCameraPoint);
 
-        return (returnType == Common.ErrorType.TANGO_SUCCESS) && isValidPoint;
+        return returnValue;
     }
 
     /// <summary>
@@ -407,7 +404,6 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             return false;
         }
 
-        Matrix4x4 colorCameraTUnityWorld = m_colorCameraTUnityCamera.ToMatrix4x4() * cam.transform.worldToLocalMatrix;
         Vector2 normalizedPos = cam.ScreenToViewportPoint(pos);
 
         // If the camera has a TangoARScreen attached, it is not displaying the entire color camera image.  Correct
@@ -418,21 +414,27 @@ public class TangoPointCloud : MonoBehaviour, ITangoPointCloud
             normalizedPos = arScreen.ViewportPointToCameraImagePoint(normalizedPos);
         }
 
-        TangoCameraIntrinsics alignedIntrinsics = new TangoCameraIntrinsics();
-        VideoOverlayProvider.GetDeviceOrientationAlignedIntrinsics(TangoEnums.TangoCameraId.TANGO_CAMERA_COLOR,
-            alignedIntrinsics);
-        int returnValue = TangoSupport.FitPlaneModelNearClick(
-                              m_points, m_pointsCount, m_depthTimestamp, alignedIntrinsics, ref colorCameraTUnityWorld,
-                              normalizedPos, out planeCenter, out plane);
+        DVector4 planeModel = new DVector4();
 
-        if (returnValue == Common.ErrorType.TANGO_SUCCESS)
-        {
-            return true;
-        }
-        else
-        {
-            return false;
-        }
+        bool returnValue = TangoSupport.FitPlaneModelNearClick(
+            m_mostRecentPointCloud,
+            arScreen.m_screenUpdateTime,
+            normalizedPos,
+            out planeCenter,
+            out planeModel);
+
+        planeCenter = m_mostRecentUnityWorldTDepthCamera.MultiplyPoint3x4(planeCenter);
+        Vector3 normal = new Vector3((float)planeModel.x,
+                                     (float)planeModel.y,
+                                     (float)planeModel.z);
+
+        normal = m_mostRecentUnityWorldTDepthCamera.MultiplyVector(normal);
+        Vector3.Normalize(normal);
+        float distance = (float)planeModel.w / normal.magnitude;
+
+        plane = new Plane(normal, distance);
+
+        return returnValue;
     }
 
     /// <summary>
