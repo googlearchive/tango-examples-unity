@@ -191,9 +191,6 @@ public class AreaDescriptionPickerUIController : Photon.PunBehaviour, ITangoLife
             Destroy(t.gameObject);
         }
 
-#if UNITY_EDITOR
-        AreaDescription.GenerateEmulatedSavePath();
-#endif
         AreaDescription[] areaDescriptionList = AreaDescription.GetList();
 
         if (areaDescriptionList == null)

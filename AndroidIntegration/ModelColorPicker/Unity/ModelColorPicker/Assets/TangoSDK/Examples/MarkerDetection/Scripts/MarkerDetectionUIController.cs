@@ -30,9 +30,9 @@ using UnityEngine;
 public class MarkerDetectionUIController : MonoBehaviour, ITangoVideoOverlay
 {
     /// <summary>
-    /// The prefabs of planets.
+    /// The prefabs of marker.
     /// </summary>
-    public GameObject[] m_planetsPrefabs;
+    public GameObject m_markerPrefab;
     
     /// <summary>
     /// Length of side of the physical AR Tag marker in meters.
@@ -40,9 +40,9 @@ public class MarkerDetectionUIController : MonoBehaviour, ITangoVideoOverlay
     private const double MARKER_SIZE = 0.1397;
 
     /// <summary>
-    /// The objects of all planets.
+    /// The objects of all markers.
     /// </summary>
-    private GameObject[] m_planets;
+    private Dictionary<String, GameObject> m_markerObjects;
 
     /// <summary>
     /// The list of markers detected in each frame.
@@ -69,8 +69,8 @@ public class MarkerDetectionUIController : MonoBehaviour, ITangoVideoOverlay
             Debug.Log("No Tango Manager found in scene.");
         }
 
-        m_planets = new GameObject[m_planetsPrefabs.Length];
         m_markerList = new List<TangoSupport.Marker>();
+        m_markerObjects = new Dictionary<String, GameObject>();
     }
 
     /// <summary>
@@ -91,16 +91,18 @@ public class MarkerDetectionUIController : MonoBehaviour, ITangoVideoOverlay
         for (int i = 0; i < m_markerList.Count; ++i) 
         {
             TangoSupport.Marker marker = m_markerList[i];
-            int markerId = Convert.ToInt32(marker.m_content);
-            int planetIndex = (markerId - 1) % m_planets.Length;
-            
-            if (m_planets[planetIndex] == null) 
-            {
-                m_planets[planetIndex] = Instantiate<GameObject>(m_planetsPrefabs[planetIndex]);
-            }
 
-            m_planets[planetIndex].transform.position = marker.m_translation;
-            m_planets[planetIndex].transform.rotation = marker.m_orientation;
+            if (m_markerObjects.ContainsKey(marker.m_content))
+            {
+                GameObject markerObject = m_markerObjects[marker.m_content];
+                markerObject.GetComponent<MarkerVisualizationObject>().SetMarker(marker);
+            }
+            else
+            {
+                GameObject markerObject = Instantiate<GameObject>(m_markerPrefab);
+                m_markerObjects.Add(marker.m_content, markerObject);
+                markerObject.GetComponent<MarkerVisualizationObject>().SetMarker(marker);
+            }
         }
     }
 }

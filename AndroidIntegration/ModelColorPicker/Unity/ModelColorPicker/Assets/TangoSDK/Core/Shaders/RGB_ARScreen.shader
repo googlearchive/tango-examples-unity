@@ -1,4 +1,8 @@
-﻿Shader "Hidden/Tango/RGB_ARScreen"
+﻿// Don't remove the following line. It is used to bypass Unity
+// upgrader change. This is necessary to make sure the shader 
+// continues to compile on Unity 5.2
+// UNITY_SHADER_NO_UPGRADE
+Shader "Hidden/Tango/RGB_ARScreen"
 {
     Properties
     {

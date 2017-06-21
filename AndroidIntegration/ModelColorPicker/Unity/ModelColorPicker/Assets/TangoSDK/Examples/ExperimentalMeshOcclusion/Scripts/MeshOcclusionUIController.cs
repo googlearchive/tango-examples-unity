@@ -133,7 +133,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
     /// <summary>
     /// The AR pose controller.
     /// </summary>
-    private TangoARPoseController m_arPoseController;
+    private TangoPoseController m_poseController;
 
     /// <summary>
     /// The tango application, to create and clear 3d construction.
@@ -181,7 +181,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_meshSavePath = Application.persistentDataPath + "/meshes";
         Directory.CreateDirectory(m_meshSavePath);
 
-        m_arPoseController = FindObjectOfType<TangoARPoseController>();
+        m_poseController = FindObjectOfType<TangoPoseController>();
         m_tangoDynamicMesh = FindObjectOfType<TangoDynamicMesh>();
 
         m_areaDescriptionLoaderPanel.SetActive(true);
@@ -261,7 +261,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         if (permissionsGranted)
         {
             m_tangoApplication.Set3DReconstructionEnabled(false);
-            m_arPoseController.gameObject.SetActive(false);
+            m_poseController.gameObject.SetActive(false);
             _PopulateAreaDescriptionUIList();
         }
         else
@@ -338,8 +338,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_menuOpen = false;
 
         // Enable the pose controller, but disable the AR screen.
-        m_arPoseController.gameObject.SetActive(true);
-        m_arPoseController.gameObject.GetComponent<TangoARScreen>().enabled = false;
+        m_poseController.gameObject.SetActive(true);
+        m_poseController.gameObject.GetComponent<TangoARScreen>().enabled = false;
 
         // Need to enable depth to build the mesh.
         m_tangoApplication.m_enableDepth = true;
@@ -354,7 +354,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         {
             m_curAreaDescription = null;
             m_tangoApplication.m_areaDescriptionLearningMode = true;
-            m_arPoseController.m_useAreaDescriptionPose = false;
+            m_poseController.m_baseFrameMode = TangoPoseController.BaseFrameSelectionModeEnum.USE_START_OF_SERVICE;
             m_relocalizeImage.gameObject.SetActive(false);
             m_tangoApplication.Startup(null);
         }
@@ -364,7 +364,7 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
             {
                 m_curAreaDescription = AreaDescription.ForUUID(m_savedUUID);
                 m_tangoApplication.m_areaDescriptionLearningMode = false;
-                m_arPoseController.m_useAreaDescriptionPose = true;
+                m_poseController.m_baseFrameMode = TangoPoseController.BaseFrameSelectionModeEnum.USE_AREA_DESCRIPTION;
                 m_relocalizeImage.gameObject.SetActive(true);
                 m_tangoApplication.Startup(m_curAreaDescription);
             }
@@ -398,8 +398,8 @@ public class MeshOcclusionUIController : MonoBehaviour, ITangoLifecycle, ITangoP
         m_menuOpen = false;
 
         // Enable objects needed to use Area Description and mesh for occlusion.
-        m_arPoseController.gameObject.SetActive(true);
-        m_arPoseController.m_useAreaDescriptionPose = true;
+        m_poseController.gameObject.SetActive(true);
+        m_poseController.m_baseFrameMode = TangoPoseController.BaseFrameSelectionModeEnum.USE_AREA_DESCRIPTION;
 
         // Disable unused components in tango application.
         m_tangoApplication.m_areaDescriptionLearningMode = false;
