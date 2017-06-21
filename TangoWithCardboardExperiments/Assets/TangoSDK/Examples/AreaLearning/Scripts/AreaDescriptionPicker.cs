@@ -59,11 +59,11 @@ public class AreaDescriptionPicker : MonoBehaviour, ITangoLifecycle
     public Toggle m_enableLearningToggle;
 
     /// <summary>
-    /// The reference of the TangoDeltaPoseController object.
+    /// The reference of the TangoPoseController object.
     /// 
-    /// TangoDeltaPoseController listens to pose updates and applies the correct pose to itself and its built-in camera.
+    /// TangoPoseController listens to pose updates and applies the correct pose to itself and its built-in camera.
     /// </summary>
-    public TangoARPoseController m_poseController;
+    public TangoPoseController m_poseController;
 
     /// <summary>
     /// Control panel game object.

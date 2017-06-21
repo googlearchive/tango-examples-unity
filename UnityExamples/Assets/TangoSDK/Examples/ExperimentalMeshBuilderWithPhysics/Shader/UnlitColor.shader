@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// Don't remove the following line. It is used to bypass Unity
+// upgrader change. This is necessary to make sure the shader 
+// continues to compile on Unity 5.2
+// UNITY_SHADER_NO_UPGRADE
 Shader "Custom/UnlitColor" {
     Properties {
          _Color ("Color", Color) = (1,1,1,1)

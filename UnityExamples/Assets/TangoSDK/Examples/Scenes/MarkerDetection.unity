@@ -122,50 +122,19 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 484544, guid: b65144e12d543401285d34c736b7ec92, type: 2}
       propertyPath: m_RootOrder
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 11410340, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_tangoARScreen
-      value: 
-      objectReference: {fileID: 918872817}
-    - target: {fileID: 0}
-      propertyPath: m_IsActive
       value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2034540, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-      propertyPath: m_CullingMask.m_Bits
-      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
       propertyPath: m_Name
       value: Tango Camera
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 0}
-    - {fileID: 11469732, guid: b65144e12d543401285d34c736b7ec92, type: 2}
+    - target: {fileID: 11496890, guid: b65144e12d543401285d34c736b7ec92, type: 2}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: b65144e12d543401285d34c736b7ec92, type: 2}
   m_IsPrefabParent: 0
---- !u!1 &918872816 stripped
-GameObject:
-  m_PrefabParentObject: {fileID: 103230, guid: b65144e12d543401285d34c736b7ec92, type: 2}
-  m_PrefabInternal: {fileID: 918872815}
---- !u!114 &918872817
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 918872816}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9d2fb8dda2d8e7445a90ba8bcf89f17d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_enableOcclusion: 0
-  m_occlusionShader: {fileID: 4800000, guid: f196a49a50fca482db453a9646bc81f1, type: 3}
 --- !u!1 &1018655264
 GameObject:
   m_ObjectHideFlags: 0
@@ -225,7 +194,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 1
+  m_RootOrder: 2
 --- !u!1001 &1083991804
 Prefab:
   m_ObjectHideFlags: 0
@@ -311,10 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6c9aa1a2884f42efbf4e37e57d2b0df, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_planetsPrefabs:
-  - {fileID: 191204, guid: 2eb14160929c5412fbf5d15ff42c14f5, type: 2}
-  - {fileID: 171298, guid: a09323df3cef344fd9d1b9137d5a650b, type: 2}
-  - {fileID: 154848, guid: ed8d3cb16833841cd925a5f8757ad4e4, type: 2}
+  m_markerPrefab: {fileID: 168740, guid: 328b7ac5f5cf545c6857d21ea7340a33, type: 2}
 --- !u!4 &1748006323
 Transform:
   m_ObjectHideFlags: 0
@@ -326,4 +292,4 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: 1
